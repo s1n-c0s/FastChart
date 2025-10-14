@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState, useCallback, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
+import { CopyNotification } from '@/components/ui/CopyNotification' // 💡 นำเข้า Component ที่ถูกแยกออกไป
 import {
   DndContext,
   closestCenter,
@@ -165,8 +166,9 @@ export default function DataVisualizer() {
     { id: generateId(), label: 'C', value: 18, color: presetColors[2] },
   ])
   const [stackedHorizontal, setStackedHorizontal] = useState(true)
-  // --- REMOVED `dataView` state as it's no longer needed ---
   const [markdownInput, setMarkdownInput] = useState<string>(`| Label | Value | Color |\n|------:|------:|:-----:|\n| A     | 12    |       |\n| B     | 30    |       |\n| C     | 18    |       |`)
+  // State สำหรับการแสดง Notification
+  const [showCopyNotification, setShowCopyNotification] = useState(false)
 
   const barCardRef = useRef<HTMLDivElement>(null)
   const pieCardRef = useRef<HTMLDivElement>(null)
@@ -183,6 +185,13 @@ export default function DataVisualizer() {
       }
       const xml = new XMLSerializer().serializeToString(clone)
       await navigator.clipboard.writeText(xml)
+      
+      // การจัดการ Notification
+      setShowCopyNotification(true)
+      setTimeout(() => {
+        setShowCopyNotification(false)
+      }, 2000) // ซ่อน Notification หลังจาก 2 วินาที
+
     } catch {
       // ignore copy failures
     }
@@ -325,7 +334,6 @@ export default function DataVisualizer() {
         <p className="text-sm text-muted-foreground">Edit values in either panel to update the charts live.</p>
       </div>
 
-      {/* --- NEW LAYOUT: Grid container for side-by-side panels --- */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         {/* --- Left Panel: Data Table --- */}
@@ -407,7 +415,7 @@ export default function DataVisualizer() {
         </div>
       </div>
 
-      {/* --- Charts Section (Unchanged) --- */}
+      {/* --- Charts Section --- */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div ref={barCardRef} className="rounded-lg border p-4 h-[380px]">
           <div className="flex items-center justify-between mb-3">
@@ -515,6 +523,10 @@ export default function DataVisualizer() {
           </LineChart>
         </ResponsiveContainer>
       </div>
+      
+      {/* แสดง Notification Bubble ที่ Import มา */}
+      <CopyNotification isVisible={showCopyNotification} />
+
     </div>
   )
 }
