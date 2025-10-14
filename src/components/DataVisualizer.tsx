@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Bar,
@@ -42,6 +42,26 @@ export default function DataVisualizer() {
     { id: generateId(), label: 'C', value: 18, color: presetColors[2] },
   ])
   const [stackedHorizontal, setStackedHorizontal] = useState(true)
+
+  const barCardRef = useRef<HTMLDivElement>(null)
+  const pieCardRef = useRef<HTMLDivElement>(null)
+  const stackedCardRef = useRef<HTMLDivElement>(null)
+  const lineCardRef = useRef<HTMLDivElement>(null)
+
+  async function copyChartSvg(containerEl: HTMLElement | null) {
+    try {
+      const svg = containerEl?.querySelector('svg') as SVGSVGElement | null
+      if (!svg) return
+      const clone = svg.cloneNode(true) as SVGSVGElement
+      if (!clone.getAttribute('xmlns')) {
+        clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+      }
+      const xml = new XMLSerializer().serializeToString(clone)
+      await navigator.clipboard.writeText(xml)
+    } catch {
+      // ignore copy failures
+    }
+  }
 
   const total = useMemo(() => data.reduce((sum, d) => sum + (isFinite(d.value) ? d.value : 0), 0), [data])
 
@@ -199,8 +219,11 @@ export default function DataVisualizer() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="rounded-lg border p-4 h-[380px]">
-          <h3 className="text-base font-medium mb-3">Bar Chart</h3>
+        <div ref={barCardRef} className="rounded-lg border p-4 h-[380px]">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-base font-medium">Bar Chart</h3>
+            <Button size="sm" variant="secondary" onClick={() => copyChartSvg(barCardRef.current)} aria-label="Copy Bar Chart as SVG">Copy SVG</Button>
+          </div>
           <ResponsiveContainer width="100%" height="95%">
             <BarChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
@@ -216,8 +239,11 @@ export default function DataVisualizer() {
           </ResponsiveContainer>
         </div>
 
-        <div className="rounded-lg border p-4 h-[380px]">
-          <h3 className="text-base font-medium mb-3">Pie Chart</h3>
+        <div ref={pieCardRef} className="rounded-lg border p-4 h-[380px]">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-base font-medium">Pie Chart</h3>
+            <Button size="sm" variant="secondary" onClick={() => copyChartSvg(pieCardRef.current)} aria-label="Copy Pie Chart as SVG">Copy SVG</Button>
+          </div>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Tooltip />
@@ -241,7 +267,7 @@ export default function DataVisualizer() {
         </div>
       </div>
 
-      <div className="rounded-lg border p-4 h-[320px]">
+      <div ref={stackedCardRef} className="rounded-lg border p-4 h-[320px]">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-base font-medium">100% Stacked Chart</h3>
           <Button
@@ -251,6 +277,7 @@ export default function DataVisualizer() {
           >
             {stackedHorizontal ? 'Vertical' : 'Horizontal'}
           </Button>
+          <Button size="sm" variant="secondary" onClick={() => copyChartSvg(stackedCardRef.current)} aria-label="Copy Stacked Chart as SVG">Copy SVG</Button>
         </div>
         <ResponsiveContainer width="100%" height="90%">
           <BarChart
@@ -281,8 +308,11 @@ export default function DataVisualizer() {
         </ResponsiveContainer>
       </div>
 
-      <div className="rounded-lg border p-4 h-[320px]">
-        <h3 className="text-base font-medium mb-3">Line Chart</h3>
+      <div ref={lineCardRef} className="rounded-lg border p-4 h-[320px]">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-base font-medium">Line Chart</h3>
+          <Button size="sm" variant="secondary" onClick={() => copyChartSvg(lineCardRef.current)} aria-label="Copy Line Chart as SVG">Copy SVG</Button>
+        </div>
         <ResponsiveContainer width="100%" height="95%">
           <LineChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
