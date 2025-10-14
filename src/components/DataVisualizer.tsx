@@ -41,7 +41,7 @@ export default function DataVisualizer() {
     { id: generateId(), label: 'B', value: 30, color: presetColors[1] },
     { id: generateId(), label: 'C', value: 18, color: presetColors[2] },
   ])
-  const [stackedHorizontal, setStackedHorizontal] = useState(false)
+  const [stackedHorizontal, setStackedHorizontal] = useState(true)
 
   const total = useMemo(() => data.reduce((sum, d) => sum + (isFinite(d.value) ? d.value : 0), 0), [data])
 
@@ -52,6 +52,54 @@ export default function DataVisualizer() {
     }
     return [obj]
   }, [data])
+
+  const idToLabel = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const d of data) m.set(d.id, d.label)
+    return m
+  }, [data])
+
+  const labelToId = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const d of data) m.set(d.label, d.id)
+    return m
+  }, [data])
+
+  const idToValue = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const d of data) m.set(d.id, Math.max(0, isFinite(d.value) ? d.value : 0))
+    return m
+  }, [data])
+
+  const stackedSum = useMemo(() => {
+    return data.reduce((s, d) => s + Math.max(0, isFinite(d.value) ? d.value : 0), 0)
+  }, [data])
+
+  function StackedTooltip({ active, payload }: { active?: boolean; payload?: Array<{ name?: string; value: number } & Record<string, unknown>> }) {
+    if (!active || !payload || payload.length === 0) return null
+    // Recharts passes one entry per visible Bar
+    return (
+      <div className="rounded-md border bg-background p-2 text-xs shadow-sm">
+        <div className="font-medium mb-1">All</div>
+        <div className="space-y-0.5">
+          {payload.map((p, idx) => {
+            const maybeDataKey = (p as unknown as { dataKey?: string }).dataKey
+            const name = p.name ?? ''
+            const id = maybeDataKey ?? labelToId.get(name) ?? name
+            const label = idToLabel.get(id) ?? id
+            const raw = idToValue.get(id) ?? 0
+            const percent = stackedSum > 0 ? (raw / stackedSum) * 100 : 0
+            return (
+              <div key={idx} className="flex items-center justify-between gap-4">
+                <span>{label}</span>
+                <span>{raw} ({percent.toFixed(1)}%)</span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
 
   function updateLabel(id: string, label: string) {
     setData(prev => prev.map(d => (d.id === id ? { ...d, label } : d)))
@@ -151,7 +199,7 @@ export default function DataVisualizer() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="rounded-lg border p-4 h-[320px]">
+        <div className="rounded-lg border p-4 h-[360px]">
           <h3 className="text-base font-medium mb-3">Bar Chart</h3>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
@@ -223,9 +271,9 @@ export default function DataVisualizer() {
                 <YAxis tickFormatter={(v) => `${Math.round((v as number) * 100)}%`} tickLine={false} axisLine={false} />
               </>
             )}
-            <Tooltip formatter={(value: number) => `${Math.round(value * 100)}%`} />
+            <Tooltip content={<StackedTooltip />} />
             {data.map((d) => (
-              <Bar key={d.id} dataKey={d.id} stackId="one">
+              <Bar key={d.id} dataKey={d.id} stackId="one" name={d.label}>
                 <Cell fill={d.color} />
               </Bar>
             ))}
