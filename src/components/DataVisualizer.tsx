@@ -1,7 +1,18 @@
+"use client"
+
 import { useMemo, useRef, useState, useCallback, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { CopyNotification } from '@/components/ui/CopyNotification'
-import { RemoveButton } from '@/components/ui/RemoveButton'; // ตรวจสอบการ Import
+import { RemoveButton } from '@/components/ui/RemoveButton';
+import { CopyNotification } from '@/components/ui/CopyNotification' 
+// 💡 Components ใหม่สำหรับ Shadcn Select
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select" 
+
 import {
   DndContext,
   closestCenter,
@@ -29,7 +40,7 @@ import {
   LineChart,
   Pie,
   Cell,
-  Label, // ต้อง Import Label
+  Label, 
   PieChart,
   ResponsiveContainer,
   Tooltip,
@@ -128,24 +139,47 @@ function SortableRow({
           onTouchStart={e => e.stopPropagation()}
         />
       </td>
+      
+      {/* 💡 TD Color: ใช้ Shadcn Select */}
       <td className="py-2 pr-2">
-        <select
-          className="w-full rounded-md border bg-background px-2 py-1"
-          aria-label={`Color for ${row.label}`}
-          value={row.color}
-          onChange={e => onUpdateColor(row.id, e.target.value)}
-          onMouseDown={e => e.stopPropagation()}
-          onTouchStart={e => e.stopPropagation()}
-        >
-          {presetColors.map(c => (
-            <option key={c} value={c} style={{ color: c }}>
-              {c}
-            </option>
-          ))}
-        </select>
+        <div className="flex items-center gap-2"> 
+
+          <Select
+            value={row.color}
+            onValueChange={(newColor) => onUpdateColor(row.id, newColor)}
+          >
+            <SelectTrigger className="w-full h-9"> {/* ปรับความสูงให้เข้ากับ input */}
+              <SelectValue asChild>
+                <div className="flex items-center gap-2 w-full text-left">
+                   {/* วงกลมสีเล็กๆ ที่แสดงใน Select Box ขณะที่ยังไม่ได้เปิด */}
+                  <div 
+                    className="size-3 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: row.color }}
+                  />
+                  <span className="truncate text-sm">{row.color}</span>
+                </div>
+              </SelectValue>
+            </SelectTrigger>
+            
+            <SelectContent>
+              {presetColors.map(c => (
+                <SelectItem key={c} value={c} className="pr-4">
+                  {/* 💡 เนื้อหาที่กำหนดเอง: วงกลมสีจริง */}
+                  <div className="flex items-center gap-2">
+                    <div 
+                      className="size-4 rounded-full border border-gray-300 dark:border-gray-700 flex-shrink-0"
+                      style={{ backgroundColor: c }}
+                    />
+                    <span className="font-mono text-xs">{c}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </td>
+      
       <td className="py-2 pr-2">
-        {/* 💡 ใช้ RemoveButton ที่มีไอคอน */}
         <RemoveButton 
           onClick={() => onRemove(row.id)}
           label={row.label}
@@ -174,7 +208,7 @@ export default function DataVisualizer() {
   const [stackedHorizontal, setStackedHorizontal] = useState(true)
   const [markdownInput, setMarkdownInput] = useState<string>(`| Label | Value | Color |\n|------:|------:|:-----:|\n| A     | 12    |       |\n| B     | 30    |       |\n| C     | 18    |       |`)
   
-  // State และ Ref สำหรับการจัดการ Notification
+  // 💡 State และ Ref สำหรับ Custom Notification
   const [showCopyNotification, setShowCopyNotification] = useState(false)
   const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -194,20 +228,20 @@ export default function DataVisualizer() {
       const xml = new XMLSerializer().serializeToString(clone)
       await navigator.clipboard.writeText(xml)
       
-      // การจัดการ Notification: เคลียร์ Timer เก่าและตั้ง Timer ใหม่
+      // การจัดการ Notification
       if (copyTimeoutRef.current) {
         clearTimeout(copyTimeoutRef.current)
       }
 
       setShowCopyNotification(true)
 
-      const newTimeout = setTimeout(() => {
+      const newTimeout = setTimeout(() => { 
         setShowCopyNotification(false)
         copyTimeoutRef.current = null
       }, 2000)
       
       copyTimeoutRef.current = newTimeout
-
+      
     } catch {
       // ignore copy failures
     }
@@ -357,8 +391,8 @@ export default function DataVisualizer() {
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-medium">Data Table</h2>
             <div className="flex items-center gap-2">
+              <div className="text-sm text-muted-foreground">Total: {total.toLocaleString()}</div>
               <Button variant="secondary" onClick={addRow}>Add Row</Button>
-              <div className="text-sm text-muted-foreground">Total: {total}</div>
             </div>
           </div>
           <div className="overflow-x-auto">
@@ -453,7 +487,6 @@ export default function DataVisualizer() {
           </ResponsiveContainer>
         </div>
 
-        {/* 💡 PIE CHART: อัปเดตเป็น Donut with Text */}
         <div ref={pieCardRef} className="rounded-lg border p-4 h-[380px]">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-base font-medium">Pie Chart - Donut with Total</h3>
@@ -472,7 +505,7 @@ export default function DataVisualizer() {
                 outerRadius={100}
                 paddingAngle={2}
                 cornerRadius={6}
-                strokeWidth={5} // เพิ่ม strokeWidth เล็กน้อยตามตัวอย่าง
+                strokeWidth={5}
               >
                 {data.map((entry) => (
                   <Cell key={entry.id} fill={entry.color} />
@@ -491,7 +524,7 @@ export default function DataVisualizer() {
                           <tspan
                             x={viewBox.cx}
                             y={viewBox.cy}
-                            className="fill-foreground text-2xl font-bold" // ปรับขนาดตามที่เหมาะสม
+                            className="fill-foreground text-2xl font-bold"
                           >
                             {total.toLocaleString()} 
                           </tspan>
@@ -511,7 +544,6 @@ export default function DataVisualizer() {
             </PieChart>
           </ResponsiveContainer>
         </div>
-        {/* 💡 สิ้นสุดการอัปเดต Pie Chart */}
       </div>
 
       <div ref={stackedCardRef} className="rounded-lg border p-4 h-[320px]">
@@ -573,7 +605,7 @@ export default function DataVisualizer() {
         </ResponsiveContainer>
       </div>
       
-      {/* แสดง Notification Bubble ที่ Import มา */}
+      {/* 💡 Custom Notification Component */}
       <CopyNotification isVisible={showCopyNotification} />
 
     </div>
