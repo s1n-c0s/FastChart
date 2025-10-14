@@ -1,6 +1,8 @@
 import { useMemo, useRef, useState, useCallback, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { CopyNotification } from '@/components/ui/CopyNotification' // นำเข้า Notification ที่แยกไฟล์
+import { CopyNotification } from '@/components/ui/CopyNotification' 
+import { RemoveButton } from '@/components/ui/RemoveButton';
+
 import {
   DndContext,
   closestCenter,
@@ -143,7 +145,7 @@ function SortableRow({
         </select>
       </td>
       <td className="py-2 pr-2">
-        <Button variant="ghost" onClick={() => onRemove(row.id)}>Remove</Button>
+        <RemoveButton variant="ghost" onClick={() => onRemove(row.id)}>Remove</RemoveButton>
       </td>
     </tr>
   )
@@ -351,8 +353,8 @@ export default function DataVisualizer() {
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-medium">Data Table</h2>
             <div className="flex items-center gap-2">
-              <Button variant="secondary" onClick={addRow}>Add Row</Button>
               <div className="text-sm text-muted-foreground">Total: {total}</div>
+              <Button variant="secondary" onClick={addRow}>Add Row</Button>
             </div>
           </div>
           <div className="overflow-x-auto">
