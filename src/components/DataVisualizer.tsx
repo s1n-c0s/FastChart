@@ -199,9 +199,9 @@ export default function DataVisualizer() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="rounded-lg border p-4 h-[360px]">
+        <div className="rounded-lg border p-4 h-[380px]">
           <h3 className="text-base font-medium mb-3">Bar Chart</h3>
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="95%">
             <BarChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
               <XAxis dataKey="label" tickLine={false} axisLine={false} />
@@ -216,7 +216,7 @@ export default function DataVisualizer() {
           </ResponsiveContainer>
         </div>
 
-        <div className="rounded-lg border p-4 h-[360px]">
+        <div className="rounded-lg border p-4 h-[380px]">
           <h3 className="text-base font-medium mb-3">Pie Chart</h3>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -252,7 +252,7 @@ export default function DataVisualizer() {
             {stackedHorizontal ? 'Vertical' : 'Horizontal'}
           </Button>
         </div>
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="90%">
           <BarChart
             data={stackedData}
             stackOffset="expand"
