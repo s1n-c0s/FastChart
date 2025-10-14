@@ -1,6 +1,25 @@
 import { useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import {
+  useSortable,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import {
   Bar,
   BarChart,
   CartesianGrid,
@@ -146,6 +165,94 @@ export default function DataVisualizer() {
     setData(prev => (prev.length > 1 ? prev.filter(d => d.id !== id) : prev))
   }
 
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (over && active.id !== over.id) {
+      setData(prev => {
+        const oldIndex = prev.findIndex(d => d.id === active.id)
+        const newIndex = prev.findIndex(d => d.id === over.id)
+        return arrayMove(prev, oldIndex, newIndex)
+      })
+    }
+  }
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  function SortableRow({ row }: { row: Datum }) {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+    } = useSortable({ id: row.id })
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+    }
+
+    return (
+      <tr
+        ref={setNodeRef}
+        style={style}
+        className="border-b last:border-0"
+        {...attributes}
+      >
+        <td className="py-2 pr-2">
+          <div className="flex items-center gap-2">
+            <button
+              {...listeners}
+              className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded"
+              aria-label={`Drag to reorder ${row.label}`}
+            >
+              ⋮⋮
+            </button>
+            <input
+              className="w-full rounded-md border bg-background px-2 py-1"
+              aria-label={`Label for row ${row.label}`}
+              placeholder="Label"
+              value={row.label}
+              onChange={e => updateLabel(row.id, e.target.value)}
+            />
+          </div>
+        </td>
+        <td className="py-2 pr-2">
+          <input
+            className="w-full rounded-md border bg-background px-2 py-1"
+            type="number"
+            aria-label={`Value for ${row.label}`}
+            placeholder="0"
+            value={Number.isFinite(row.value) ? row.value : 0}
+            onChange={e => updateValue(row.id, e.target.value)}
+          />
+        </td>
+        <td className="py-2 pr-2">
+          <select
+            className="w-full rounded-md border bg-background px-2 py-1"
+            aria-label={`Color for ${row.label}`}
+            value={row.color}
+            onChange={e => updateColor(row.id, e.target.value)}
+          >
+            {presetColors.map(c => (
+              <option key={c} value={c} style={{ color: c }}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </td>
+        <td className="py-2 pr-2">
+          <Button variant="ghost" onClick={() => removeRow(row.id)}>Remove</Button>
+        </td>
+      </tr>
+    )
+  }
+
   return (
     <div className="p-4 space-y-6">
       <div>
@@ -173,46 +280,17 @@ export default function DataVisualizer() {
               </tr>
             </thead>
             <tbody>
-              {data.map(row => (
-                <tr key={row.id} className="border-b last:border-0">
-                  <td className="py-2 pr-2">
-                    <input
-                      className="w-full rounded-md border bg-background px-2 py-1"
-                      aria-label={`Label for row ${row.label}`}
-                      placeholder="Label"
-                      value={row.label}
-                      onChange={e => updateLabel(row.id, e.target.value)}
-                    />
-                  </td>
-                  <td className="py-2 pr-2">
-                    <input
-                      className="w-full rounded-md border bg-background px-2 py-1"
-                      type="number"
-                      aria-label={`Value for ${row.label}`}
-                      placeholder="0"
-                      value={Number.isFinite(row.value) ? row.value : 0}
-                      onChange={e => updateValue(row.id, e.target.value)}
-                    />
-                  </td>
-                  <td className="py-2 pr-2">
-                    <select
-                      className="w-full rounded-md border bg-background px-2 py-1"
-                      aria-label={`Color for ${row.label}`}
-                      value={row.color}
-                      onChange={e => updateColor(row.id, e.target.value)}
-                    >
-                      {presetColors.map(c => (
-                        <option key={c} value={c} style={{ color: c }}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="py-2 pr-2">
-                    <Button variant="ghost" onClick={() => removeRow(row.id)}>Remove</Button>
-                  </td>
-                </tr>
-              ))}
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext items={data.map(d => d.id)} strategy={verticalListSortingStrategy}>
+                  {data.map(row => (
+                    <SortableRow key={row.id} row={row} />
+                  ))}
+                </SortableContext>
+              </DndContext>
             </tbody>
           </table>
         </div>
