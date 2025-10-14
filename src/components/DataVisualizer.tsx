@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, useCallback, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { CopyNotification } from '@/components/ui/CopyNotification' // 💡 นำเข้า Component ที่ถูกแยกออกไป
+import { CopyNotification } from '@/components/ui/CopyNotification' // นำเข้า Notification ที่แยกไฟล์
 import {
   DndContext,
   closestCenter,
@@ -167,8 +167,10 @@ export default function DataVisualizer() {
   ])
   const [stackedHorizontal, setStackedHorizontal] = useState(true)
   const [markdownInput, setMarkdownInput] = useState<string>(`| Label | Value | Color |\n|------:|------:|:-----:|\n| A     | 12    |       |\n| B     | 30    |       |\n| C     | 18    |       |`)
-  // State สำหรับการแสดง Notification
+  
+  // State และ Ref สำหรับการจัดการ Notification
   const [showCopyNotification, setShowCopyNotification] = useState(false)
+  const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const barCardRef = useRef<HTMLDivElement>(null)
   const pieCardRef = useRef<HTMLDivElement>(null)
@@ -186,11 +188,19 @@ export default function DataVisualizer() {
       const xml = new XMLSerializer().serializeToString(clone)
       await navigator.clipboard.writeText(xml)
       
-      // การจัดการ Notification
+      // การจัดการ Notification: เคลียร์ Timer เก่าและตั้ง Timer ใหม่
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current)
+      }
+
       setShowCopyNotification(true)
-      setTimeout(() => {
+
+      const newTimeout = setTimeout(() => {
         setShowCopyNotification(false)
-      }, 2000) // ซ่อน Notification หลังจาก 2 วินาที
+        copyTimeoutRef.current = null
+      }, 2000)
+      
+      copyTimeoutRef.current = newTimeout
 
     } catch {
       // ignore copy failures

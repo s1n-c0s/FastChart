@@ -12,7 +12,7 @@ export function CopyNotification({ isVisible }: CopyNotificationProps) {
   const baseClasses = `
     fixed bottom-4 left-1/2 z-50
     px-4 py-2 bg-green-500 text-white text-sm rounded-lg shadow-xl
-    transition-all duration-200 ease-in transform
+    transition-all duration-150 ease-in transform
   `;
   
   // คลาสตามสถานะ: ควบคุมการเคลื่อนไหวและการซ่อน
