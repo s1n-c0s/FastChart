@@ -45,8 +45,6 @@ function generateId() {
   return Math.random().toString(36).slice(2, 9)
 }
 
-// --- MODIFIED COMPONENT START ---
-// The SortableRow is now a self-contained component that manages its own input state.
 function SortableRow({
   row,
   onUpdateLabel,
@@ -70,11 +68,9 @@ function SortableRow({
     transition,
   } = useSortable({ id: row.id })
 
-  // 1. Add local state for the inputs to avoid re-rendering the parent on every keystroke.
   const [localLabel, setLocalLabel] = useState(row.label)
   const [localValue, setLocalValue] = useState<number | ''>(row.value)
 
-  // 2. Sync local state if the props from the parent change (e.g., after pasting markdown).
   useEffect(() => {
     setLocalLabel(row.label)
   }, [row.label])
@@ -108,10 +104,8 @@ function SortableRow({
             className="w-full rounded-md border bg-background px-2 py-1"
             aria-label={`Label for row ${row.label}`}
             placeholder="Label"
-            // 3. Use local state for value and update it with onChange.
             value={localLabel}
             onChange={e => setLocalLabel(e.target.value)}
-            // 4. Update the parent's global state only onBlur.
             onBlur={() => onUpdateLabel(row.id, localLabel)}
             onMouseDown={e => e.stopPropagation()}
             onTouchStart={e => e.stopPropagation()}
@@ -153,7 +147,6 @@ function SortableRow({
     </tr>
   )
 }
-// --- MODIFIED COMPONENT END ---
 
 
 export default function DataVisualizer() {
@@ -172,7 +165,7 @@ export default function DataVisualizer() {
     { id: generateId(), label: 'C', value: 18, color: presetColors[2] },
   ])
   const [stackedHorizontal, setStackedHorizontal] = useState(true)
-  const [dataView, setDataView] = useState<'table' | 'paste'>('table')
+  // --- REMOVED `dataView` state as it's no longer needed ---
   const [markdownInput, setMarkdownInput] = useState<string>(`| Label | Value | Color |\n|------:|------:|:-----:|\n| A     | 12    |       |\n| B     | 30    |       |\n| C     | 18    |       |`)
 
   const barCardRef = useRef<HTMLDivElement>(null)
@@ -201,12 +194,10 @@ export default function DataVisualizer() {
       .map(l => l.trim())
       .filter(Boolean)
     if (lines.length === 0) return []
-    // Find header and start after the separator row containing ---
     let startIdx = 0
     if (lines.length > 1 && /-\s*-/.test(lines[1])) {
       startIdx = 2
     } else if (lines.length > 0 && /\|/.test(lines[0])) {
-      // If first row has pipes but no explicit separator, assume first is header
       startIdx = 1
     }
     const result: Datum[] = []
@@ -231,7 +222,6 @@ export default function DataVisualizer() {
   }
 
   const total = useMemo(() => data.reduce((sum, d) => sum + (isFinite(d.value) ? d.value : 0), 0), [data])
-
   const stackedData = useMemo(() => {
     const obj: Record<string, number | string> = { name: 'All' }
     for (const d of data) {
@@ -239,32 +229,27 @@ export default function DataVisualizer() {
     }
     return [obj]
   }, [data])
-
   const idToLabel = useMemo(() => {
     const m = new Map<string, string>()
     for (const d of data) m.set(d.id, d.label)
     return m
   }, [data])
-
   const labelToId = useMemo(() => {
     const m = new Map<string, string>()
     for (const d of data) m.set(d.label, d.id)
     return m
   }, [data])
-
   const idToValue = useMemo(() => {
     const m = new Map<string, number>()
     for (const d of data) m.set(d.id, Math.max(0, isFinite(d.value) ? d.value : 0))
     return m
   }, [data])
-
   const stackedSum = useMemo(() => {
     return data.reduce((s, d) => s + Math.max(0, isFinite(d.value) ? d.value : 0), 0)
   }, [data])
 
   function StackedTooltip({ active, payload }: { active?: boolean; payload?: Array<{ name?: string; value: number } & Record<string, unknown>> }) {
     if (!active || !payload || payload.length === 0) return null
-    // Recharts passes one entry per visible Bar
     return (
       <div className="rounded-md border bg-background p-2 text-xs shadow-sm">
         <div className="font-medium mb-1">All</div>
@@ -291,12 +276,10 @@ export default function DataVisualizer() {
   const updateLabel = useCallback((id: string, label: string) => {
     setData(prev => prev.map(d => (d.id === id ? { ...d, label } : d)))
   }, [])
-
   const updateValue = useCallback((id: string, next: string) => {
     const parsed = Number(next)
     setData(prev => prev.map(d => (d.id === id ? { ...d, value: isFinite(parsed) ? parsed : 0 } : d)))
   }, [])
-
   const updateColor = useCallback((id: string, color: string) => {
     setData(prev => prev.map(d => (d.id === id ? { ...d, color } : d)))
   }, [])
@@ -339,28 +322,28 @@ export default function DataVisualizer() {
     <div className="p-4 space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Data Visualizer</h1>
-        <p className="text-sm text-muted-foreground">Edit values to update charts live.</p>
+        <p className="text-sm text-muted-foreground">Edit values in either panel to update the charts live.</p>
       </div>
 
-      <div className="rounded-lg border p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-medium">Data</h2>
-          <div className="flex items-center gap-2">
-            <Button variant={dataView === 'table' ? 'default' : 'secondary'} onClick={() => setDataView('table')}>Table</Button>
-            <Button variant={dataView === 'paste' ? 'default' : 'secondary'} onClick={() => setDataView('paste')}>Paste Markdown</Button>
-            <Button variant="secondary" onClick={addRow}>Add Row</Button>
-            <div className="text-sm text-muted-foreground">Total: {total}</div>
+      {/* --- NEW LAYOUT: Grid container for side-by-side panels --- */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        {/* --- Left Panel: Data Table --- */}
+        <div className="rounded-lg border p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-medium">Data Table</h2>
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" onClick={addRow}>Add Row</Button>
+              <div className="text-sm text-muted-foreground">Total: {total}</div>
+            </div>
           </div>
-        </div>
-
-        {dataView === 'table' ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-2 pr-2 w-[160px]">Label</th>
-                  <th className="text-left py-2 pr-2 w-[160px]">Value</th>
-                  <th className="text-left py-2 pr-2 w-[160px]">Color</th>
+                  <th className="text-left py-2 pr-2 min-w-[160px]">Label</th>
+                  <th className="text-left py-2 pr-2 min-w-[120px]">Value</th>
+                  <th className="text-left py-2 pr-2 min-w-[120px]">Color</th>
                   <th className="text-left py-2 pr-2">Actions</th>
                 </tr>
               </thead>
@@ -372,8 +355,6 @@ export default function DataVisualizer() {
                 >
                   <SortableContext items={data.map(d => d.id)} strategy={verticalListSortingStrategy}>
                     {data.map(row => (
-                      // --- MODIFIED USAGE START ---
-                      // Pass the callback functions down to the SortableRow component as props.
                       <SortableRow
                         key={row.id}
                         row={row}
@@ -383,14 +364,19 @@ export default function DataVisualizer() {
                         onRemove={removeRow}
                         presetColors={presetColors}
                       />
-                      // --- MODIFIED USAGE END ---
                     ))}
                   </SortableContext>
                 </DndContext>
               </tbody>
             </table>
           </div>
-        ) : (
+        </div>
+
+        {/* --- Right Panel: Markdown Input --- */}
+        <div className="rounded-lg border p-4">
+          <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-medium">Paste Markdown</h2>
+          </div>
           <div className="grid grid-cols-1 gap-3">
             <textarea
               className="min-h-[160px] w-full rounded-md border bg-background px-3 py-2 font-mono text-xs"
@@ -418,9 +404,10 @@ export default function DataVisualizer() {
               Columns: Label | Value | Color (optional). Header row is optional.
             </p>
           </div>
-        )}
+        </div>
       </div>
 
+      {/* --- Charts Section (Unchanged) --- */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div ref={barCardRef} className="rounded-lg border p-4 h-[380px]">
           <div className="flex items-center justify-between mb-3">
