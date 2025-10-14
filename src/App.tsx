@@ -1,9 +1,10 @@
+import { Button } from '@/components/ui/button'
+import DataVisualizer from '@/components/DataVisualizer'
+
 function App() {
   return (
     <>
-      <div className="text-4xl">
-        Hello World
-      </div>
+      <DataVisualizer />
     </>
   )
 }
