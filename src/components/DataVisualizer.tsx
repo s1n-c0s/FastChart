@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState, useCallback, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   DndContext,
@@ -7,7 +7,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent,
+  type DragEndEvent,
 } from '@dnd-kit/core'
 import {
   arrayMove,
@@ -45,6 +45,117 @@ function generateId() {
   return Math.random().toString(36).slice(2, 9)
 }
 
+// --- MODIFIED COMPONENT START ---
+// The SortableRow is now a self-contained component that manages its own input state.
+function SortableRow({
+  row,
+  onUpdateLabel,
+  onUpdateValue,
+  onUpdateColor,
+  onRemove,
+  presetColors,
+}: {
+  row: Datum
+  onUpdateLabel: (id: string, label: string) => void
+  onUpdateValue: (id: string, value: string) => void
+  onUpdateColor: (id: string, color: string) => void
+  onRemove: (id: string) => void
+  presetColors: string[]
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: row.id })
+
+  // 1. Add local state for the inputs to avoid re-rendering the parent on every keystroke.
+  const [localLabel, setLocalLabel] = useState(row.label)
+  const [localValue, setLocalValue] = useState<number | ''>(row.value)
+
+  // 2. Sync local state if the props from the parent change (e.g., after pasting markdown).
+  useEffect(() => {
+    setLocalLabel(row.label)
+  }, [row.label])
+
+  useEffect(() => {
+    setLocalValue(row.value)
+  }, [row.value])
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <tr
+      ref={setNodeRef}
+      style={style}
+      className="border-b last:border-0"
+      {...attributes}
+    >
+      <td className="py-2 pr-2">
+        <div className="flex items-center gap-2">
+          <button
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded"
+            aria-label={`Drag to reorder ${row.label}`}
+          >
+            ⋮⋮
+          </button>
+          <input
+            className="w-full rounded-md border bg-background px-2 py-1"
+            aria-label={`Label for row ${row.label}`}
+            placeholder="Label"
+            // 3. Use local state for value and update it with onChange.
+            value={localLabel}
+            onChange={e => setLocalLabel(e.target.value)}
+            // 4. Update the parent's global state only onBlur.
+            onBlur={() => onUpdateLabel(row.id, localLabel)}
+            onMouseDown={e => e.stopPropagation()}
+            onTouchStart={e => e.stopPropagation()}
+          />
+        </div>
+      </td>
+      <td className="py-2 pr-2">
+        <input
+          className="w-full rounded-md border bg-background px-2 py-1"
+          type="number"
+          aria-label={`Value for ${row.label}`}
+          placeholder="0"
+          value={localValue}
+          onChange={e => setLocalValue(e.target.value === '' ? '' : Number(e.target.value))}
+          onBlur={() => onUpdateValue(row.id, String(localValue === '' ? 0 : localValue))}
+          onMouseDown={e => e.stopPropagation()}
+          onTouchStart={e => e.stopPropagation()}
+        />
+      </td>
+      <td className="py-2 pr-2">
+        <select
+          className="w-full rounded-md border bg-background px-2 py-1"
+          aria-label={`Color for ${row.label}`}
+          value={row.color}
+          onChange={e => onUpdateColor(row.id, e.target.value)}
+          onMouseDown={e => e.stopPropagation()}
+          onTouchStart={e => e.stopPropagation()}
+        >
+          {presetColors.map(c => (
+            <option key={c} value={c} style={{ color: c }}>
+              {c}
+            </option>
+          ))}
+        </select>
+      </td>
+      <td className="py-2 pr-2">
+        <Button variant="ghost" onClick={() => onRemove(row.id)}>Remove</Button>
+      </td>
+    </tr>
+  )
+}
+// --- MODIFIED COMPONENT END ---
+
+
 export default function DataVisualizer() {
   const presetColors = [
     '#3b82f6', // blue-500
@@ -61,6 +172,8 @@ export default function DataVisualizer() {
     { id: generateId(), label: 'C', value: 18, color: presetColors[2] },
   ])
   const [stackedHorizontal, setStackedHorizontal] = useState(true)
+  const [dataView, setDataView] = useState<'table' | 'paste'>('table')
+  const [markdownInput, setMarkdownInput] = useState<string>(`| Label | Value | Color |\n|------:|------:|:-----:|\n| A     | 12    |       |\n| B     | 30    |       |\n| C     | 18    |       |`)
 
   const barCardRef = useRef<HTMLDivElement>(null)
   const pieCardRef = useRef<HTMLDivElement>(null)
@@ -80,6 +193,41 @@ export default function DataVisualizer() {
     } catch {
       // ignore copy failures
     }
+  }
+
+  function parseMarkdownTable(md: string): Datum[] {
+    const lines = md
+      .split(/\r?\n/)
+      .map(l => l.trim())
+      .filter(Boolean)
+    if (lines.length === 0) return []
+    // Find header and start after the separator row containing ---
+    let startIdx = 0
+    if (lines.length > 1 && /-\s*-/.test(lines[1])) {
+      startIdx = 2
+    } else if (lines.length > 0 && /\|/.test(lines[0])) {
+      // If first row has pipes but no explicit separator, assume first is header
+      startIdx = 1
+    }
+    const result: Datum[] = []
+    let colorIndex = 0
+    for (let i = startIdx; i < lines.length; i++) {
+      const row = lines[i]
+      if (!row.includes('|')) continue
+      const parts = row
+        .split('|')
+        .map(s => s.trim())
+        .filter((s, idx, arr) => !(idx === 0 && s === '') && !(idx === arr.length - 1 && s === ''))
+      if (parts.length < 2) continue
+      const label = parts[0] || `Item ${i - startIdx + 1}`
+      const valueStr = parts[1] || '0'
+      const colorStr = parts[2] || ''
+      const value = Number(valueStr.replace(/,/g, ''))
+      const color = colorStr || presetColors[colorIndex % presetColors.length]
+      colorIndex++
+      result.push({ id: generateId(), label, value: isFinite(value) ? value : 0, color })
+    }
+    return result
   }
 
   const total = useMemo(() => data.reduce((sum, d) => sum + (isFinite(d.value) ? d.value : 0), 0), [data])
@@ -140,24 +288,24 @@ export default function DataVisualizer() {
     )
   }
 
-  function updateLabel(id: string, label: string) {
+  const updateLabel = useCallback((id: string, label: string) => {
     setData(prev => prev.map(d => (d.id === id ? { ...d, label } : d)))
-  }
+  }, [])
 
-  function updateValue(id: string, next: string) {
+  const updateValue = useCallback((id: string, next: string) => {
     const parsed = Number(next)
     setData(prev => prev.map(d => (d.id === id ? { ...d, value: isFinite(parsed) ? parsed : 0 } : d)))
-  }
+  }, [])
 
-  function updateColor(id: string, color: string) {
+  const updateColor = useCallback((id: string, color: string) => {
     setData(prev => prev.map(d => (d.id === id ? { ...d, color } : d)))
-  }
+  }, [])
 
   function addRow() {
-    const nextIndex = data.length + 1
+    const nextIndex = data.length
     setData(prev => [
       ...prev,
-      { id: generateId(), label: `Item ${nextIndex}`, value: 0, color: presetColors[nextIndex % presetColors.length] },
+      { id: generateId(), label: `Item ${nextIndex + 1}`, value: 0, color: presetColors[nextIndex % presetColors.length] },
     ])
   }
 
@@ -177,81 +325,15 @@ export default function DataVisualizer() {
   }
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   )
-
-  function SortableRow({ row }: { row: Datum }) {
-    const {
-      attributes,
-      listeners,
-      setNodeRef,
-      transform,
-      transition,
-    } = useSortable({ id: row.id })
-
-    const style = {
-      transform: CSS.Transform.toString(transform),
-      transition,
-    }
-
-    return (
-      <tr
-        ref={setNodeRef}
-        style={style}
-        className="border-b last:border-0"
-        {...attributes}
-      >
-        <td className="py-2 pr-2">
-          <div className="flex items-center gap-2">
-            <button
-              {...listeners}
-              className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded"
-              aria-label={`Drag to reorder ${row.label}`}
-            >
-              ⋮⋮
-            </button>
-            <input
-              className="w-full rounded-md border bg-background px-2 py-1"
-              aria-label={`Label for row ${row.label}`}
-              placeholder="Label"
-              value={row.label}
-              onChange={e => updateLabel(row.id, e.target.value)}
-            />
-          </div>
-        </td>
-        <td className="py-2 pr-2">
-          <input
-            className="w-full rounded-md border bg-background px-2 py-1"
-            type="number"
-            aria-label={`Value for ${row.label}`}
-            placeholder="0"
-            value={Number.isFinite(row.value) ? row.value : 0}
-            onChange={e => updateValue(row.id, e.target.value)}
-          />
-        </td>
-        <td className="py-2 pr-2">
-          <select
-            className="w-full rounded-md border bg-background px-2 py-1"
-            aria-label={`Color for ${row.label}`}
-            value={row.color}
-            onChange={e => updateColor(row.id, e.target.value)}
-          >
-            {presetColors.map(c => (
-              <option key={c} value={c} style={{ color: c }}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </td>
-        <td className="py-2 pr-2">
-          <Button variant="ghost" onClick={() => removeRow(row.id)}>Remove</Button>
-        </td>
-      </tr>
-    )
-  }
 
   return (
     <div className="p-4 space-y-6">
@@ -262,38 +344,81 @@ export default function DataVisualizer() {
 
       <div className="rounded-lg border p-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-medium">Data Table</h2>
+          <h2 className="text-lg font-medium">Data</h2>
           <div className="flex items-center gap-2">
+            <Button variant={dataView === 'table' ? 'default' : 'secondary'} onClick={() => setDataView('table')}>Table</Button>
+            <Button variant={dataView === 'paste' ? 'default' : 'secondary'} onClick={() => setDataView('paste')}>Paste Markdown</Button>
             <Button variant="secondary" onClick={addRow}>Add Row</Button>
             <div className="text-sm text-muted-foreground">Total: {total}</div>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left py-2 pr-2 w-[160px]">Label</th>
-                <th className="text-left py-2 pr-2 w-[160px]">Value</th>
-                <th className="text-left py-2 pr-2 w-[160px]">Color</th>
-                <th className="text-left py-2 pr-2">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
+        {dataView === 'table' ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2 pr-2 w-[160px]">Label</th>
+                  <th className="text-left py-2 pr-2 w-[160px]">Value</th>
+                  <th className="text-left py-2 pr-2 w-[160px]">Color</th>
+                  <th className="text-left py-2 pr-2">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext items={data.map(d => d.id)} strategy={verticalListSortingStrategy}>
+                    {data.map(row => (
+                      // --- MODIFIED USAGE START ---
+                      // Pass the callback functions down to the SortableRow component as props.
+                      <SortableRow
+                        key={row.id}
+                        row={row}
+                        onUpdateLabel={updateLabel}
+                        onUpdateValue={updateValue}
+                        onUpdateColor={updateColor}
+                        onRemove={removeRow}
+                        presetColors={presetColors}
+                      />
+                      // --- MODIFIED USAGE END ---
+                    ))}
+                  </SortableContext>
+                </DndContext>
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3">
+            <textarea
+              className="min-h-[160px] w-full rounded-md border bg-background px-3 py-2 font-mono text-xs"
+              aria-label="Markdown table input"
+              value={markdownInput}
+              onChange={e => setMarkdownInput(e.target.value)}
+            />
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => {
+                  const rows = parseMarkdownTable(markdownInput)
+                  if (rows.length) setData(rows)
+                }}
               >
-                <SortableContext items={data.map(d => d.id)} strategy={verticalListSortingStrategy}>
-                  {data.map(row => (
-                    <SortableRow key={row.id} row={row} />
-                  ))}
-                </SortableContext>
-              </DndContext>
-            </tbody>
-          </table>
-        </div>
+                Transform to Table
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setMarkdownInput('| Label | Value | Color |\n|------:|------:|:-----:|\n| A     | 12    |       |\n| B     | 30    |       |\n| C     | 18    |       |')}
+              >
+                Reset Example
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Columns: Label | Value | Color (optional). Header row is optional.
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -348,14 +473,16 @@ export default function DataVisualizer() {
       <div ref={stackedCardRef} className="rounded-lg border p-4 h-[320px]">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-base font-medium">100% Stacked Chart</h3>
-          <Button
-            variant="secondary"
-            aria-label="Toggle stacked chart orientation"
-            onClick={() => setStackedHorizontal(v => !v)}
-          >
-            {stackedHorizontal ? 'Vertical' : 'Horizontal'}
-          </Button>
-          <Button size="sm" variant="secondary" onClick={() => copyChartSvg(stackedCardRef.current)} aria-label="Copy Stacked Chart as SVG">Copy SVG</Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              aria-label="Toggle stacked chart orientation"
+              onClick={() => setStackedHorizontal(v => !v)}
+            >
+              {stackedHorizontal ? 'Vertical' : 'Horizontal'}
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => copyChartSvg(stackedCardRef.current)} aria-label="Copy Stacked Chart as SVG">Copy SVG</Button>
+          </div>
         </div>
         <ResponsiveContainer width="100%" height="90%">
           <BarChart
@@ -404,5 +531,3 @@ export default function DataVisualizer() {
     </div>
   )
 }
-
-
