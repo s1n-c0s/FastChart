@@ -1,8 +1,7 @@
 import { useMemo, useRef, useState, useCallback, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { CopyNotification } from '@/components/ui/CopyNotification' 
-import { RemoveButton } from '@/components/ui/RemoveButton';
-
+import { CopyNotification } from '@/components/ui/CopyNotification'
+import { RemoveButton } from '@/components/ui/RemoveButton'; // ตรวจสอบการ Import
 import {
   DndContext,
   closestCenter,
@@ -30,6 +29,7 @@ import {
   LineChart,
   Pie,
   Cell,
+  Label, // ต้อง Import Label
   PieChart,
   ResponsiveContainer,
   Tooltip,
@@ -145,7 +145,11 @@ function SortableRow({
         </select>
       </td>
       <td className="py-2 pr-2">
-        <RemoveButton variant="ghost" onClick={() => onRemove(row.id)}>Remove</RemoveButton>
+        {/* 💡 ใช้ RemoveButton ที่มีไอคอน */}
+        <RemoveButton 
+          onClick={() => onRemove(row.id)}
+          label={row.label}
+        />
       </td>
     </tr>
   )
@@ -353,8 +357,8 @@ export default function DataVisualizer() {
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-medium">Data Table</h2>
             <div className="flex items-center gap-2">
-              <div className="text-sm text-muted-foreground">Total: {total}</div>
               <Button variant="secondary" onClick={addRow}>Add Row</Button>
+              <div className="text-sm text-muted-foreground">Total: {total}</div>
             </div>
           </div>
           <div className="overflow-x-auto">
@@ -449,9 +453,10 @@ export default function DataVisualizer() {
           </ResponsiveContainer>
         </div>
 
+        {/* 💡 PIE CHART: อัปเดตเป็น Donut with Text */}
         <div ref={pieCardRef} className="rounded-lg border p-4 h-[380px]">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-base font-medium">Pie Chart</h3>
+            <h3 className="text-base font-medium">Pie Chart - Donut with Total</h3>
             <Button size="sm" variant="secondary" onClick={() => copyChartSvg(pieCardRef.current)} aria-label="Copy Pie Chart as SVG">Copy SVG</Button>
           </div>
           <ResponsiveContainer width="100%" height="100%">
@@ -467,14 +472,46 @@ export default function DataVisualizer() {
                 outerRadius={100}
                 paddingAngle={2}
                 cornerRadius={6}
+                strokeWidth={5} // เพิ่ม strokeWidth เล็กน้อยตามตัวอย่าง
               >
                 {data.map((entry) => (
                   <Cell key={entry.id} fill={entry.color} />
                 ))}
+                
+                <Label
+                  content={({ viewBox }) => {
+                    if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                      return (
+                        <text
+                          x={viewBox.cx}
+                          y={viewBox.cy}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                        >
+                          <tspan
+                            x={viewBox.cx}
+                            y={viewBox.cy}
+                            className="fill-foreground text-2xl font-bold" // ปรับขนาดตามที่เหมาะสม
+                          >
+                            {total.toLocaleString()} 
+                          </tspan>
+                          <tspan
+                            x={viewBox.cx}
+                            y={(viewBox.cy || 0) + 24}
+                            className="fill-muted-foreground text-sm"
+                          >
+                            Total
+                          </tspan>
+                        </text>
+                      )
+                    }
+                  }}
+                />
               </Pie>
             </PieChart>
           </ResponsiveContainer>
         </div>
+        {/* 💡 สิ้นสุดการอัปเดต Pie Chart */}
       </div>
 
       <div ref={stackedCardRef} className="rounded-lg border p-4 h-[320px]">
