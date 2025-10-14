@@ -283,7 +283,7 @@ export default function DataVisualizer() {
 
       <div className="rounded-lg border p-4 h-[320px]">
         <h3 className="text-base font-medium mb-3">Line Chart</h3>
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="95%">
           <LineChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
             <XAxis dataKey="label" tickLine={false} axisLine={false} />
