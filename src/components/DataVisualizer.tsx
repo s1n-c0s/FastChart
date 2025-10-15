@@ -210,7 +210,7 @@ export default function DataVisualizer() {
   
   // 💡 State และ Ref สำหรับ Custom Notification
   const [showCopyNotification, setShowCopyNotification] = useState(false)
-  const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const barCardRef = useRef<HTMLDivElement>(null)
   const pieCardRef = useRef<HTMLDivElement>(null)

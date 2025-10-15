@@ -1,6 +1,6 @@
 // src/components/ui/RemoveButton.tsx (หรือตามโครงสร้างโปรเจกต์ของคุณ)
 
-import React from 'react';
+// import React from 'react';
 // สมมติว่าคุณกำลังใช้ Lucide icons หรือไลบรารีที่คล้ายกัน
 // หากไม่มี Lucide icon library ติดตั้งอยู่ คุณอาจจะต้องใช้ไอคอน SVG หรือไอคอนตัวอักษรแทน
 // ในตัวอย่างนี้ ผมจะใช้ไอคอน X แบบพื้นฐาน

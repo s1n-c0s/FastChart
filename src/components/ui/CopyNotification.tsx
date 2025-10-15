@@ -1,6 +1,6 @@
 // src/components/ui/CopyNotification.tsx
 
-import React from 'react';
+// import React from 'react';
 
 interface CopyNotificationProps {
   isVisible: boolean;
