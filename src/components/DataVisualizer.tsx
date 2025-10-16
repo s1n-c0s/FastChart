@@ -206,9 +206,10 @@ export default function DataVisualizer() {
     { id: generateId(), label: 'C', value: 18, color: presetColors[2] },
   ])
   const [stackedHorizontal, setStackedHorizontal] = useState(true)
-  const [markdownInput, setMarkdownInput] = useState<string>(`| Label | Value | Color |\n|------:|------:|:-----:|\n| A     | 12    |       |\n| B     | 30    |       |\n| C     | 18    |       |`)
+  // 💡 อัปเดตตัวอย่างเริ่มต้นเพื่อใช้ CSV Header
+  const [markdownInput, setMarkdownInput] = useState<string>(`Label,Value,Color\nitem1,"5",#F032E6\nitem2,"4",#46F0F0\nitem3,"5",#06b6d4`);
   
-  // 💡 NEW: State สำหรับการจัดเรียง
+  // 💡 State สำหรับการจัดเรียง
   const [sortConfig, setSortConfig] = useState<{ key: 'label' | 'value'; direction: 'asc' | 'desc' } | null>(null)
 
   // 💡 State และ Ref สำหรับ Custom Notification
@@ -256,14 +257,93 @@ export default function DataVisualizer() {
       .map(l => l.trim())
       .filter(Boolean)
     if (lines.length === 0) return []
+    
+    const result: Datum[] = []
+    let colorIndex = 0
+    let itemCount = 0; // 💡 NEW: ตัวนับรายการที่ถูกต้อง
+    
+    // ตรวจสอบว่าเป็น Markdown Table หรือไม่
+    const isMarkdownTable = lines.some(l => l.includes('|'))
+    
+    if (!isMarkdownTable) {
+        // 💡 NEW LOGIC: ประมวลผลเป็น CSV
+        
+        const headerLine = lines[0]?.toLowerCase().replace(/\s/g, '') || ''
+        const dataLines = lines.slice(1)
+
+        let labelIndex = 0
+        let valueIndex = 1
+        let colorIndexCSV = 2
+        let hasHeader = false
+        
+        // ตรวจสอบส่วนหัว CSV ที่ชัดเจน (Label,Value,Color)
+        if (headerLine.includes('label') && headerLine.includes('value')) {
+            const headerParts = headerLine.split(',').map(s => s.trim())
+            labelIndex = headerParts.indexOf('label')
+            valueIndex = headerParts.indexOf('value')
+            colorIndexCSV = headerParts.indexOf('color')
+            hasHeader = true
+        }
+        
+        const linesToProcess = hasHeader ? dataLines : lines;
+        
+        linesToProcess.forEach((line) => {
+            const parts = line.split(',').map(s => s.trim())
+            
+            // ต้องมี Label และ Value (หรืออย่างน้อยมี 2 ส่วน)
+            if (parts.length >= 2) { 
+                const rawLabel = parts[labelIndex] || ''
+                const rawValue = parts[valueIndex] || ''
+                const rawColor = parts[colorIndexCSV] || ''
+
+                const label = hasHeader ? rawLabel : parts[0]
+                const valueStr = hasHeader ? rawValue : parts[1]
+                const colorStr = hasHeader && parts.length > 2 ? rawColor : (parts[2] || '')
+                
+                // 💡 FIX: ลบเครื่องหมาย " และ , ออกจากตัวเลข
+                const value = Number(valueStr.replace(/["\s,]/g, ''))
+                
+                if (isFinite(value)) { 
+                    const color = colorStr || presetColors[itemCount % presetColors.length]
+                    
+                    result.push({ 
+                        id: generateId(), 
+                        label: label || `Item ${itemCount + 1}`, 
+                        value: Math.max(0, value), 
+                        color 
+                    })
+                    itemCount++; // เพิ่มตัวนับเมื่อเพิ่มข้อมูลถูกต้อง
+                }
+            } else if (parts.length === 1 && isFinite(Number(parts[0].replace(/["\s,]/g, '')))) {
+                // รองรับกรณีพิเศษ: หากมีแค่ค่าเดียว (value)
+                const value = Number(parts[0].replace(/["\s,]/g, ''))
+                 if (isFinite(value)) { 
+                    const color = presetColors[itemCount % presetColors.length]
+                    result.push({ 
+                        id: generateId(), 
+                        label: `Item ${itemCount + 1}`,
+                        value: Math.max(0, value), 
+                        color 
+                    })
+                    itemCount++; // เพิ่มตัวนับเมื่อเพิ่มข้อมูลถูกต้อง
+                 }
+            }
+        })
+        
+        if (result.length > 0) return result
+    }
+    
+    // 💡 ORIGINAL LOGIC: ประมวลผล Markdown Table (หากพบเครื่องหมาย '|')
     let startIdx = 0
     if (lines.length > 1 && /-\s*-/.test(lines[1])) {
       startIdx = 2
     } else if (lines.length > 0 && /\|/.test(lines[0])) {
       startIdx = 1
     }
-    const result: Datum[] = []
-    let colorIndex = 0
+    
+    itemCount = 0; // รีเซ็ตตัวนับสำหรับ Markdown
+    const markdownResult: Datum[] = []; 
+    
     for (let i = startIdx; i < lines.length; i++) {
       const row = lines[i]
       if (!row.includes('|')) continue
@@ -272,20 +352,34 @@ export default function DataVisualizer() {
         .map(s => s.trim())
         .filter((s, idx, arr) => !(idx === 0 && s === '') && !(idx === arr.length - 1 && s === ''))
       if (parts.length < 2) continue
-      const label = parts[0] || `Item ${i - startIdx + 1}`
+      
       const valueStr = parts[1] || '0'
-      const colorStr = parts[2] || ''
-      const value = Number(valueStr.replace(/,/g, ''))
-      const color = colorStr || presetColors[colorIndex % presetColors.length]
-      colorIndex++
-      result.push({ id: generateId(), label, value: isFinite(value) ? value : 0, color })
+      // 💡 FIX: ลบเครื่องหมาย " และ , ออกจากตัวเลข
+      const value = Number(valueStr.replace(/["\s,]/g, ''))
+      
+      if (isFinite(value)) {
+          const label = parts[0] || `Item ${itemCount + 1}`
+          const colorStr = parts[2] || ''
+          const color = colorStr || presetColors[itemCount % presetColors.length]
+          
+          markdownResult.push({ 
+              id: generateId(), 
+              label, 
+              value: Math.max(0, value), 
+              color 
+          })
+          itemCount++;
+      }
     }
-    return result
+    
+    if (markdownResult.length > 0) return markdownResult;
+    
+    return result; 
   }
 
   const total = useMemo(() => data.reduce((sum, d) => sum + (isFinite(d.value) ? d.value : 0), 0), [data])
   
-  // 💡 NEW: ข้อมูลที่จัดเรียงแล้ว
+  // 💡 ข้อมูลที่จัดเรียงแล้ว
   const sortedData = useMemo(() => {
     let sortableData = [...data] 
     
@@ -300,11 +394,10 @@ export default function DataVisualizer() {
         return 0
       })
     }
-    // หากมีการจัดเรียง เราจะไม่ให้ dnd-kit ทำงาน ซึ่งจะทำให้อันดับคงที่
     return sortableData
   }, [data, sortConfig])
   
-  // 💡 NEW: ฟังก์ชันจัดการการคลิกปุ่มจัดเรียง
+  // 💡 ฟังก์ชันจัดการการคลิกปุ่มจัดเรียง
   const requestSort = (key: 'label' | 'value') => {
     let direction: 'asc' | 'desc' = 'asc'
     if (
@@ -484,15 +577,10 @@ export default function DataVisualizer() {
                 </tr>
               </thead>
               <tbody>
-                {/* 💡 ห่อด้วย DndContext เพื่อให้สามารถลากได้เมื่อไม่ได้จัดเรียง */}
                 <DndContext
                   sensors={sensors}
                   collisionDetection={closestCenter}
                   onDragEnd={handleDragEnd}
-                  // ปิดการใช้งาน DndContext เมื่อกำลังจัดเรียงอยู่
-                  // หากมีการจัดเรียง (sortConfig !== null) เราจะไม่ใช้ DND เพราะอันดับจะถูกกำหนดโดย sortedData
-                  // แต่เรายังต้องคง DndContext ไว้เพื่อใช้ SortableRow
-                  // เราจัดการการปิดการลากภายใน handleDragEnd แทน
                 >
                   {/* 💡 ใช้ sortedData ใน SortableContext และ map */}
                   <SortableContext items={sortedData.map(d => d.id)} strategy={verticalListSortingStrategy}>
@@ -548,7 +636,7 @@ export default function DataVisualizer() {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Columns: Label | Value | Color (optional). Header row is optional.
+              Accepts Markdown Table (Label | Value | Color) or **Structured CSV (Label,Value,Color)**.
             </p>
           </div>
         </div>
@@ -686,14 +774,15 @@ export default function DataVisualizer() {
           <h3 className="text-base font-medium">Line Chart - Linear</h3> {/* 💡 เปลี่ยนชื่อหัวข้อ */}
           <Button size="sm" variant="secondary" onClick={() => copyChartSvg(lineCardRef.current)} aria-label="Copy Line Chart as SVG">Copy SVG</Button>
         </div>
-        <ResponsiveContainer width="100%" height="90%">
+        <ResponsiveContainer width="100%" height="95%">
+          {/* 💡 ใช้ sortedData */}
           <LineChart data={sortedData} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
             <XAxis dataKey="label" tickLine={false} axisLine={false} />
             <YAxis tickLine={false} axisLine={false} />
             <Tooltip />
             <Line 
-              type="linear"  // 💡 แก้ไขตรงนี้: เปลี่ยนจาก "monotone" เป็น "linear"
+              type="linear" // 💡 แก้ไข: เปลี่ยนเป็น "linear"
               dataKey="value" 
               stroke="oklch(0.488 0.243 264.376)" 
               strokeWidth={2} 
