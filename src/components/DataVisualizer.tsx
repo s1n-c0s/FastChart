@@ -208,6 +208,9 @@ export default function DataVisualizer() {
   const [stackedHorizontal, setStackedHorizontal] = useState(true)
   const [markdownInput, setMarkdownInput] = useState<string>(`| Label | Value | Color |\n|------:|------:|:-----:|\n| A     | 12    |       |\n| B     | 30    |       |\n| C     | 18    |       |`)
   
+  // 💡 NEW: State สำหรับการจัดเรียง
+  const [sortConfig, setSortConfig] = useState<{ key: 'label' | 'value'; direction: 'asc' | 'desc' } | null>(null)
+
   // 💡 State และ Ref สำหรับ Custom Notification
   const [showCopyNotification, setShowCopyNotification] = useState(false)
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -281,31 +284,69 @@ export default function DataVisualizer() {
   }
 
   const total = useMemo(() => data.reduce((sum, d) => sum + (isFinite(d.value) ? d.value : 0), 0), [data])
+  
+  // 💡 NEW: ข้อมูลที่จัดเรียงแล้ว
+  const sortedData = useMemo(() => {
+    let sortableData = [...data] 
+    
+    if (sortConfig !== null) {
+      sortableData.sort((a, b) => {
+        if (a[sortConfig.key] < b[sortConfig.key]) {
+          return sortConfig.direction === 'asc' ? -1 : 1
+        }
+        if (a[sortConfig.key] > b[sortConfig.key]) {
+          return sortConfig.direction === 'asc' ? 1 : -1
+        }
+        return 0
+      })
+    }
+    // หากมีการจัดเรียง เราจะไม่ให้ dnd-kit ทำงาน ซึ่งจะทำให้อันดับคงที่
+    return sortableData
+  }, [data, sortConfig])
+  
+  // 💡 NEW: ฟังก์ชันจัดการการคลิกปุ่มจัดเรียง
+  const requestSort = (key: 'label' | 'value') => {
+    let direction: 'asc' | 'desc' = 'asc'
+    if (
+      sortConfig &&
+      sortConfig.key === key &&
+      sortConfig.direction === 'asc'
+    ) {
+      direction = 'desc'
+    } else if (sortConfig && sortConfig.key === key && sortConfig.direction === 'desc') {
+       // หากคลิกซ้ำเป็นครั้งที่ 3 ให้ยกเลิกการจัดเรียง (กลับเป็น null)
+       setSortConfig(null)
+       return
+    }
+    setSortConfig({ key, direction })
+  }
+  
+  // 💡 ปรับใช้ sortedData กับการคำนวณสำหรับแผนภูมิ
   const stackedData = useMemo(() => {
     const obj: Record<string, number | string> = { name: 'All' }
-    for (const d of data) {
+    for (const d of sortedData) { 
       obj[d.id] = Math.max(0, isFinite(d.value) ? d.value : 0)
     }
     return [obj]
-  }, [data])
+  }, [sortedData])
   const idToLabel = useMemo(() => {
     const m = new Map<string, string>()
-    for (const d of data) m.set(d.id, d.label)
+    for (const d of sortedData) m.set(d.id, d.label)
     return m
-  }, [data])
+  }, [sortedData])
   const labelToId = useMemo(() => {
     const m = new Map<string, string>()
-    for (const d of data) m.set(d.label, d.id)
+    for (const d of sortedData) m.set(d.label, d.id)
     return m
-  }, [data])
+  }, [sortedData])
   const idToValue = useMemo(() => {
     const m = new Map<string, number>()
-    for (const d of data) m.set(d.id, Math.max(0, isFinite(d.value) ? d.value : 0))
+    for (const d of sortedData) m.set(d.id, Math.max(0, isFinite(d.value) ? d.value : 0))
     return m
-  }, [data])
+  }, [sortedData])
   const stackedSum = useMemo(() => {
-    return data.reduce((s, d) => s + Math.max(0, isFinite(d.value) ? d.value : 0), 0)
-  }, [data])
+    return sortedData.reduce((s, d) => s + Math.max(0, isFinite(d.value) ? d.value : 0), 0)
+  }, [sortedData])
 
   function StackedTooltip({ active, payload }: { active?: boolean; payload?: Array<{ name?: string; value: number } & Record<string, unknown>> }) {
     if (!active || !payload || payload.length === 0) return null
@@ -356,6 +397,9 @@ export default function DataVisualizer() {
   }
 
   function handleDragEnd(event: DragEndEvent) {
+    // ไม่อนุญาตให้ลากจัดเรียงหากกำลังอยู่ในโหมดจัดเรียง (sort)
+    if (sortConfig !== null) return
+    
     const { active, over } = event
     if (over && active.id !== over.id) {
       setData(prev => {
@@ -376,12 +420,15 @@ export default function DataVisualizer() {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   )
+  
+  // 💡 ตัวแปรสำหรับตรวจสอบว่าควรเปิดใช้งานการลากได้หรือไม่
+  const isDndEnabled = sortConfig === null
 
   return (
     <div className="p-4 space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Data Visualizer</h1>
-        <p className="text-sm text-muted-foreground">Edit values in either panel to update the charts live.</p>
+        <p className="text-sm text-muted-foreground">Edit values in either panel to update the charts live. Click Label/Value headers to sort.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -389,7 +436,7 @@ export default function DataVisualizer() {
         {/* --- Left Panel: Data Table --- */}
         <div className="rounded-lg border p-4">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-medium">Data Table</h2>
+            <h2 className="text-lg font-medium">Data Table {sortConfig && <span className="text-sm text-primary">(Sorted)</span>}</h2>
             <div className="flex items-center gap-2">
               <div className="text-sm text-muted-foreground">Total: {total.toLocaleString()}</div>
               <Button variant="secondary" onClick={addRow}>Add Row</Button>
@@ -399,20 +446,57 @@ export default function DataVisualizer() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-2 pr-2 min-w-[160px]">Label</th>
-                  <th className="text-left py-2 pr-2 min-w-[120px]">Value</th>
+                  <th className="text-left py-2 pr-2 min-w-[160px]">
+                    {/* 💡 Sort Button สำหรับ Label */}
+                    <button
+                      className="inline-flex items-center gap-1 font-semibold hover:text-foreground/80 transition-colors"
+                      onClick={() => requestSort('label')}
+                      aria-label="Sort by Label"
+                    >
+                      Label
+                      {sortConfig?.key === 'label' && (
+                         // แสดงไอคอนลูกศรขึ้นหรือลง
+                        <span aria-hidden="true">
+                          {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                      {isDndEnabled && <span className="text-xs text-muted-foreground ml-1">(Drag)</span>}
+                    </button>
+                  </th>
+                  <th className="text-left py-2 pr-2 min-w-[120px]">
+                    {/* 💡 Sort Button สำหรับ Value */}
+                    <button
+                      className="inline-flex items-center gap-1 font-semibold hover:text-foreground/80 transition-colors"
+                      onClick={() => requestSort('value')}
+                      aria-label="Sort by Value"
+                    >
+                      Value
+                      {sortConfig?.key === 'value' && (
+                         // แสดงไอคอนลูกศรขึ้นหรือลง
+                        <span aria-hidden="true">
+                          {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </button>
+                  </th>
                   <th className="text-left py-2 pr-2 min-w-[120px]">Color</th>
                   <th className="text-left py-2 pr-2">Actions</th>
                 </tr>
               </thead>
               <tbody>
+                {/* 💡 ห่อด้วย DndContext เพื่อให้สามารถลากได้เมื่อไม่ได้จัดเรียง */}
                 <DndContext
                   sensors={sensors}
                   collisionDetection={closestCenter}
                   onDragEnd={handleDragEnd}
+                  // ปิดการใช้งาน DndContext เมื่อกำลังจัดเรียงอยู่
+                  // หากมีการจัดเรียง (sortConfig !== null) เราจะไม่ใช้ DND เพราะอันดับจะถูกกำหนดโดย sortedData
+                  // แต่เรายังต้องคง DndContext ไว้เพื่อใช้ SortableRow
+                  // เราจัดการการปิดการลากภายใน handleDragEnd แทน
                 >
-                  <SortableContext items={data.map(d => d.id)} strategy={verticalListSortingStrategy}>
-                    {data.map(row => (
+                  {/* 💡 ใช้ sortedData ใน SortableContext และ map */}
+                  <SortableContext items={sortedData.map(d => d.id)} strategy={verticalListSortingStrategy}>
+                    {sortedData.map(row => (
                       <SortableRow
                         key={row.id}
                         row={row}
@@ -447,13 +531,18 @@ export default function DataVisualizer() {
                 onClick={() => {
                   const rows = parseMarkdownTable(markdownInput)
                   if (rows.length) setData(rows)
+                  // หากมีการนำเข้าข้อมูลใหม่ ให้ยกเลิกการจัดเรียง
+                  setSortConfig(null)
                 }}
               >
                 Transform to Table
               </Button>
               <Button
                 variant="ghost"
-                onClick={() => setMarkdownInput('| Label | Value | Color |\n|------:|------:|:-----:|\n| A     | 12    |       |\n| B     | 30    |       |\n| C     | 18    |       |')}
+                onClick={() => {
+                  setMarkdownInput('| Label | Value | Color |\n|------:|------:|:-----:|\n| A     | 12    |       |\n| B     | 30    |       |\n| C     | 18    |       |')
+                  setSortConfig(null)
+                }}
               >
                 Reset Example
               </Button>
@@ -473,13 +562,14 @@ export default function DataVisualizer() {
             <Button size="sm" variant="secondary" onClick={() => copyChartSvg(barCardRef.current)} aria-label="Copy Bar Chart as SVG">Copy SVG</Button>
           </div>
           <ResponsiveContainer width="100%" height="95%">
-            <BarChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
+            {/* 💡 ใช้ sortedData */}
+            <BarChart data={sortedData} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
               <XAxis dataKey="label" tickLine={false} axisLine={false} />
               <YAxis tickLine={false} axisLine={false} />
               <Tooltip />
               <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                {data.map((entry) => (
+                {sortedData.map((entry) => (
                   <Cell key={entry.id} fill={entry.color} />
                 ))}
               </Bar>
@@ -496,7 +586,8 @@ export default function DataVisualizer() {
             <PieChart>
               <Tooltip />
               <Pie
-                data={data}
+                // 💡 ใช้ sortedData
+                data={sortedData}
                 dataKey="value"
                 nameKey="label"
                 cx="50%"
@@ -507,7 +598,7 @@ export default function DataVisualizer() {
                 cornerRadius={6}
                 strokeWidth={5}
               >
-                {data.map((entry) => (
+                {sortedData.map((entry) => (
                   <Cell key={entry.id} fill={entry.color} />
                 ))}
                 
@@ -562,7 +653,7 @@ export default function DataVisualizer() {
         </div>
         <ResponsiveContainer width="100%" height="90%">
           <BarChart
-            data={stackedData}
+            data={stackedData} // ใช้ stackedData ที่คำนวณจาก sortedData
             stackOffset="expand"
             margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
             layout={stackedHorizontal ? 'vertical' : 'horizontal'}
@@ -580,7 +671,8 @@ export default function DataVisualizer() {
               </>
             )}
             <Tooltip content={<StackedTooltip />} />
-            {data.map((d) => (
+            {/* 💡 ใช้ sortedData */}
+            {sortedData.map((d) => (
               <Bar key={d.id} dataKey={d.id} stackId="one" name={d.label}>
                 <Cell fill={d.color} />
               </Bar>
@@ -595,7 +687,8 @@ export default function DataVisualizer() {
           <Button size="sm" variant="secondary" onClick={() => copyChartSvg(lineCardRef.current)} aria-label="Copy Line Chart as SVG">Copy SVG</Button>
         </div>
         <ResponsiveContainer width="100%" height="95%">
-          <LineChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
+          {/* 💡 ใช้ sortedData */}
+          <LineChart data={sortedData} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
             <XAxis dataKey="label" tickLine={false} axisLine={false} />
             <YAxis tickLine={false} axisLine={false} />
