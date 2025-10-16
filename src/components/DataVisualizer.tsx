@@ -259,6 +259,7 @@ export default function DataVisualizer() {
     if (lines.length === 0) return []
     
     const result: Datum[] = []
+    let colorIndex = 0
     let itemCount = 0; // 💡 NEW: ตัวนับรายการที่ถูกต้อง
     
     // ตรวจสอบว่าเป็น Markdown Table หรือไม่
@@ -613,7 +614,7 @@ export default function DataVisualizer() {
               value={markdownInput}
               onChange={e => setMarkdownInput(e.target.value)}
             />
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between gap-2">
               <Button
                 onClick={() => {
                   const rows = parseMarkdownTable(markdownInput)
@@ -624,15 +625,30 @@ export default function DataVisualizer() {
               >
                 Transform to Table
               </Button>
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setMarkdownInput('| Label | Value | Color |\n|------:|------:|:-----:|\n| A     | 12    |       |\n| B     | 30    |       |\n| C     | 18    |       |')
-                  setSortConfig(null)
-                }}
-              >
-                Reset Example
-              </Button>
+              
+              {/* 💡 Grouped Buttons (ButtonGroup Style) */}
+              <div className="flex gap-2"> 
+                  <Button
+                      variant="outline" // ใช้ variant="outline"
+                      onClick={() => {
+                          setMarkdownInput(`Label,Value,Color\nA, 12, #3b82f6\nB, 30, #22c55e\nC, 18, #ef4444`)
+                          setSortConfig(null)
+                      }}
+                      aria-label="Load CSV Example"
+                  >
+                      CSV Example
+                  </Button>
+                  <Button
+                      variant="outline" // ใช้ variant="outline"
+                      onClick={() => {
+                          setMarkdownInput('| Label | Value | Color |\n|------:|------:|:-----:|\n| A     | 12    | #3b82f6 |\n| B     | 30    | #22c55e |\n| C     | 18    | #ef4444 |')
+                          setSortConfig(null)
+                      }}
+                      aria-label="Load Markdown Example"
+                  >
+                      Markdown Example
+                  </Button>
+              </div>
             </div>
             <p className="text-xs text-muted-foreground">
               Accepts Markdown Table (Label | Value | Color) or **Structured CSV (Label,Value,Color)**.
