@@ -3,7 +3,8 @@
 import { useMemo, useRef, useState, useCallback, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { RemoveButton } from '@/components/ui/RemoveButton';
-import { CopyNotification } from '@/components/ui/CopyNotification' 
+import toast, { Toaster } from 'react-hot-toast' // 💡 NEW: นำเข้า toast และ Toaster
+
 // 💡 Components ใหม่สำหรับ Shadcn Select
 import {
   Select,
@@ -212,14 +213,23 @@ export default function DataVisualizer() {
   // 💡 State สำหรับการจัดเรียง
   const [sortConfig, setSortConfig] = useState<{ key: 'label' | 'value'; direction: 'asc' | 'desc' } | null>(null)
 
-  // 💡 State และ Ref สำหรับ Custom Notification
-  const [showCopyNotification, setShowCopyNotification] = useState(false)
-  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // ❌ ลบ State และ Ref เดิมที่ใช้สำหรับ Custom Notification ออกทั้งหมด
+  // const [showCopyNotification, setShowCopyNotification] = useState(false)
+  // const [notificationMessage, setNotificationMessage] = useState('Copied!')
+  // const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const barCardRef = useRef<HTMLDivElement>(null)
   const pieCardRef = useRef<HTMLDivElement>(null)
   const stackedCardRef = useRef<HTMLDivElement>(null)
   const lineCardRef = useRef<HTMLDivElement>(null)
+
+  // 💡 NEW: ฟังก์ชัน Notification ใหม่ที่ใช้ react-hot-toast
+  const triggerNotification = useCallback((message: string) => { 
+    toast.success(message, {
+        duration: 2000, 
+        position: 'bottom-center',
+    })
+  }, [])
 
   async function copyChartSvg(containerEl: HTMLElement | null) {
     try {
@@ -232,22 +242,11 @@ export default function DataVisualizer() {
       const xml = new XMLSerializer().serializeToString(clone)
       await navigator.clipboard.writeText(xml)
       
-      // การจัดการ Notification
-      if (copyTimeoutRef.current) {
-        clearTimeout(copyTimeoutRef.current)
-      }
-
-      setShowCopyNotification(true)
-
-      const newTimeout = setTimeout(() => { 
-        setShowCopyNotification(false)
-        copyTimeoutRef.current = null
-      }, 2000)
-      
-      copyTimeoutRef.current = newTimeout
+      // 💡 เรียกใช้ toast พร้อมข้อความเฉพาะ
+      triggerNotification('SVG Copied to Clipboard!') 
       
     } catch {
-      // ignore copy failures
+      toast.error('Failed to copy SVG.')
     }
   }
 
@@ -259,13 +258,12 @@ export default function DataVisualizer() {
     if (lines.length === 0) return []
     
     const result: Datum[] = []
-    let itemCount = 0; // 💡 NEW: ตัวนับรายการที่ถูกต้อง
+    let itemCount = 0; 
     
-    // ตรวจสอบว่าเป็น Markdown Table หรือไม่
     const isMarkdownTable = lines.some(l => l.includes('|'))
     
     if (!isMarkdownTable) {
-        // 💡 NEW LOGIC: ประมวลผลเป็น CSV
+        // 💡 LOGIC: ประมวลผลเป็น CSV
         
         const headerLine = lines[0]?.toLowerCase().replace(/\s/g, '') || ''
         const dataLines = lines.slice(1)
@@ -275,7 +273,6 @@ export default function DataVisualizer() {
         let colorIndexCSV = 2
         let hasHeader = false
         
-        // ตรวจสอบส่วนหัว CSV ที่ชัดเจน (Label,Value,Color)
         if (headerLine.includes('label') && headerLine.includes('value')) {
             const headerParts = headerLine.split(',').map(s => s.trim())
             labelIndex = headerParts.indexOf('label')
@@ -289,7 +286,6 @@ export default function DataVisualizer() {
         linesToProcess.forEach((line) => {
             const parts = line.split(',').map(s => s.trim())
             
-            // ต้องมี Label และ Value (หรืออย่างน้อยมี 2 ส่วน)
             if (parts.length >= 2) { 
                 const rawLabel = parts[labelIndex] || ''
                 const rawValue = parts[valueIndex] || ''
@@ -299,7 +295,6 @@ export default function DataVisualizer() {
                 const valueStr = hasHeader ? rawValue : parts[1]
                 const colorStr = hasHeader && parts.length > 2 ? rawColor : (parts[2] || '')
                 
-                // 💡 FIX: ลบเครื่องหมาย " และ , ออกจากตัวเลข
                 const value = Number(valueStr.replace(/["\s,]/g, ''))
                 
                 if (isFinite(value)) { 
@@ -311,7 +306,7 @@ export default function DataVisualizer() {
                         value: Math.max(0, value), 
                         color 
                     })
-                    itemCount++; // เพิ่มตัวนับเมื่อเพิ่มข้อมูลถูกต้อง
+                    itemCount++; 
                 }
             } else if (parts.length === 1 && isFinite(Number(parts[0].replace(/["\s,]/g, '')))) {
                 // รองรับกรณีพิเศษ: หากมีแค่ค่าเดียว (value)
@@ -324,7 +319,7 @@ export default function DataVisualizer() {
                         value: Math.max(0, value), 
                         color 
                     })
-                    itemCount++; // เพิ่มตัวนับเมื่อเพิ่มข้อมูลถูกต้อง
+                    itemCount++; 
                  }
             }
         })
@@ -332,7 +327,7 @@ export default function DataVisualizer() {
         if (result.length > 0) return result
     }
     
-    // 💡 ORIGINAL LOGIC: ประมวลผล Markdown Table (หากพบเครื่องหมาย '|')
+    // 💡 LOGIC: ประมวลผล Markdown Table 
     let startIdx = 0
     if (lines.length > 1 && /-\s*-/.test(lines[1])) {
       startIdx = 2
@@ -340,7 +335,7 @@ export default function DataVisualizer() {
       startIdx = 1
     }
     
-    itemCount = 0; // รีเซ็ตตัวนับสำหรับ Markdown
+    itemCount = 0; 
     const markdownResult: Datum[] = []; 
     
     for (let i = startIdx; i < lines.length; i++) {
@@ -353,7 +348,6 @@ export default function DataVisualizer() {
       if (parts.length < 2) continue
       
       const valueStr = parts[1] || '0'
-      // 💡 FIX: ลบเครื่องหมาย " และ , ออกจากตัวเลข
       const value = Number(valueStr.replace(/["\s,]/g, ''))
       
       if (isFinite(value)) {
@@ -378,7 +372,6 @@ export default function DataVisualizer() {
 
   const total = useMemo(() => data.reduce((sum, d) => sum + (isFinite(d.value) ? d.value : 0), 0), [data])
   
-  // 💡 ข้อมูลที่จัดเรียงแล้ว
   const sortedData = useMemo(() => {
     const sortableData = [...data] 
     
@@ -396,7 +389,6 @@ export default function DataVisualizer() {
     return sortableData
   }, [data, sortConfig])
   
-  // 💡 ฟังก์ชันจัดการการคลิกปุ่มจัดเรียง
   const requestSort = (key: 'label' | 'value') => {
     let direction: 'asc' | 'desc' = 'asc'
     if (
@@ -406,14 +398,12 @@ export default function DataVisualizer() {
     ) {
       direction = 'desc'
     } else if (sortConfig && sortConfig.key === key && sortConfig.direction === 'desc') {
-       // หากคลิกซ้ำเป็นครั้งที่ 3 ให้ยกเลิกการจัดเรียง (กลับเป็น null)
        setSortConfig(null)
        return
     }
     setSortConfig({ key, direction })
   }
   
-  // 💡 ปรับใช้ sortedData กับการคำนวณสำหรับแผนภูมิ
   const stackedData = useMemo(() => {
     const obj: Record<string, number | string> = { name: 'All' }
     for (const d of sortedData) { 
@@ -489,7 +479,6 @@ export default function DataVisualizer() {
   }
 
   function handleDragEnd(event: DragEndEvent) {
-    // ไม่อนุญาตให้ลากจัดเรียงหากกำลังอยู่ในโหมดจัดเรียง (sort)
     if (sortConfig !== null) return
     
     const { active, over } = event
@@ -513,7 +502,6 @@ export default function DataVisualizer() {
     })
   )
   
-  // 💡 ตัวแปรสำหรับตรวจสอบว่าควรเปิดใช้งานการลากได้หรือไม่
   const isDndEnabled = sortConfig === null
 
   return (
@@ -539,7 +527,6 @@ export default function DataVisualizer() {
               <thead>
                 <tr className="border-b">
                   <th className="text-left py-2 pr-2 min-w-[160px]">
-                    {/* 💡 Sort Button สำหรับ Label */}
                     <button
                       className="inline-flex items-center gap-1 font-semibold hover:text-foreground/80 transition-colors"
                       onClick={() => requestSort('label')}
@@ -547,7 +534,6 @@ export default function DataVisualizer() {
                     >
                       Label
                       {sortConfig?.key === 'label' && (
-                         // แสดงไอคอนลูกศรขึ้นหรือลง
                         <span aria-hidden="true">
                           {sortConfig.direction === 'asc' ? '↑' : '↓'}
                         </span>
@@ -556,7 +542,6 @@ export default function DataVisualizer() {
                     </button>
                   </th>
                   <th className="text-left py-2 pr-2 min-w-[120px]">
-                    {/* 💡 Sort Button สำหรับ Value */}
                     <button
                       className="inline-flex items-center gap-1 font-semibold hover:text-foreground/80 transition-colors"
                       onClick={() => requestSort('value')}
@@ -564,7 +549,6 @@ export default function DataVisualizer() {
                     >
                       Value
                       {sortConfig?.key === 'value' && (
-                         // แสดงไอคอนลูกศรขึ้นหรือลง
                         <span aria-hidden="true">
                           {sortConfig.direction === 'asc' ? '↑' : '↓'}
                         </span>
@@ -581,7 +565,6 @@ export default function DataVisualizer() {
                   collisionDetection={closestCenter}
                   onDragEnd={handleDragEnd}
                 >
-                  {/* 💡 ใช้ sortedData ใน SortableContext และ map */}
                   <SortableContext items={sortedData.map(d => d.id)} strategy={verticalListSortingStrategy}>
                     {sortedData.map(row => (
                       <SortableRow
@@ -617,8 +600,13 @@ export default function DataVisualizer() {
               <Button
                 onClick={() => {
                   const rows = parseMarkdownTable(markdownInput)
-                  if (rows.length) setData(rows)
-                  // หากมีการนำเข้าข้อมูลใหม่ ให้ยกเลิกการจัดเรียง
+                  if (rows.length) {
+                    setData(rows)
+                    // 💡 ใช้ toast แจ้งเตือนเมื่อแปลงสำเร็จ
+                    triggerNotification('Transform to Table Complete!') 
+                  } else {
+                     toast.error('Error: Invalid data format or no data found.')
+                  }
                   setSortConfig(null)
                 }}
               >
@@ -628,7 +616,7 @@ export default function DataVisualizer() {
               {/* 💡 Grouped Buttons (ButtonGroup Style) */}
               <div className="flex gap-2"> 
                   <Button
-                      variant="outline" // ใช้ variant="outline"
+                      variant="outline"
                       onClick={() => {
                           setMarkdownInput(`Label,Value,Color\nA, 12, #3b82f6\nB, 30, #22c55e\nC, 18, #ef4444`)
                           setSortConfig(null)
@@ -638,7 +626,7 @@ export default function DataVisualizer() {
                       CSV Example
                   </Button>
                   <Button
-                      variant="outline" // ใช้ variant="outline"
+                      variant="outline"
                       onClick={() => {
                           setMarkdownInput('| Label | Value | Color |\n|------:|------:|:-----:|\n| A     | 12    | #3b82f6 |\n| B     | 30    | #22c55e |\n| C     | 18    | #ef4444 |')
                           setSortConfig(null)
@@ -664,7 +652,6 @@ export default function DataVisualizer() {
             <Button size="sm" variant="secondary" onClick={() => copyChartSvg(barCardRef.current)} aria-label="Copy Bar Chart as SVG">Copy SVG</Button>
           </div>
           <ResponsiveContainer width="100%" height="95%">
-            {/* 💡 ใช้ sortedData */}
             <BarChart data={sortedData} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
               <XAxis dataKey="label" tickLine={false} axisLine={false} />
@@ -688,7 +675,6 @@ export default function DataVisualizer() {
             <PieChart>
               <Tooltip />
               <Pie
-                // 💡 ใช้ sortedData
                 data={sortedData}
                 dataKey="value"
                 nameKey="label"
@@ -755,7 +741,7 @@ export default function DataVisualizer() {
         </div>
         <ResponsiveContainer width="100%" height="90%">
           <BarChart
-            data={stackedData} // ใช้ stackedData ที่คำนวณจาก sortedData
+            data={stackedData}
             stackOffset="expand"
             margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
             layout={stackedHorizontal ? 'vertical' : 'horizontal'}
@@ -773,7 +759,6 @@ export default function DataVisualizer() {
               </>
             )}
             <Tooltip content={<StackedTooltip />} />
-            {/* 💡 ใช้ sortedData */}
             {sortedData.map((d) => (
               <Bar key={d.id} dataKey={d.id} stackId="one" name={d.label}>
                 <Cell fill={d.color} />
@@ -785,18 +770,17 @@ export default function DataVisualizer() {
 
       <div ref={lineCardRef} className="rounded-lg border p-4 h-[320px]">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-base font-medium">Line Chart - Linear</h3> {/* 💡 เปลี่ยนชื่อหัวข้อ */}
+          <h3 className="text-base font-medium">Line Chart - Linear</h3>
           <Button size="sm" variant="secondary" onClick={() => copyChartSvg(lineCardRef.current)} aria-label="Copy Line Chart as SVG">Copy SVG</Button>
         </div>
         <ResponsiveContainer width="100%" height="95%">
-          {/* 💡 ใช้ sortedData */}
           <LineChart data={sortedData} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
             <XAxis dataKey="label" tickLine={false} axisLine={false} />
             <YAxis tickLine={false} axisLine={false} />
             <Tooltip />
             <Line 
-              type="linear" // 💡 แก้ไข: เปลี่ยนเป็น "linear"
+              type="linear"
               dataKey="value" 
               stroke="oklch(0.488 0.243 264.376)" 
               strokeWidth={2} 
@@ -806,8 +790,8 @@ export default function DataVisualizer() {
         </ResponsiveContainer>
       </div>
       
-      {/* 💡 Custom Notification Component */}
-      <CopyNotification isVisible={showCopyNotification} />
+      {/* 💡 NEW: Toaster Component จาก react-hot-toast */}
+      <Toaster />
 
     </div>
   )
