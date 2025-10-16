@@ -259,7 +259,6 @@ export default function DataVisualizer() {
     if (lines.length === 0) return []
     
     const result: Datum[] = []
-    let colorIndex = 0
     let itemCount = 0; // 💡 NEW: ตัวนับรายการที่ถูกต้อง
     
     // ตรวจสอบว่าเป็น Markdown Table หรือไม่
