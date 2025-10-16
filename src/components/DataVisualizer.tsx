@@ -380,7 +380,7 @@ export default function DataVisualizer() {
   
   // 💡 ข้อมูลที่จัดเรียงแล้ว
   const sortedData = useMemo(() => {
-    let sortableData = [...data] 
+    const sortableData = [...data] 
     
     if (sortConfig !== null) {
       sortableData.sort((a, b) => {
