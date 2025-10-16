@@ -3,9 +3,9 @@
 import { useMemo, useRef, useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { RemoveButton } from "@/components/ui/RemoveButton";
-import toast, { Toaster } from "react-hot-toast"; // 💡 NEW: นำเข้า toast และ Toaster
+import toast, { Toaster } from "react-hot-toast";
 
-// 💡 Components ใหม่สำหรับ Shadcn Select
+// Components ใหม่สำหรับ Shadcn Select
 import {
   Select,
   SelectContent,
@@ -58,6 +58,7 @@ function generateId() {
   return Math.random().toString(36).slice(2, 9);
 }
 
+// 💡 SortableRow is already a good component separation.
 function SortableRow({
   row,
   onUpdateLabel,
@@ -138,7 +139,7 @@ function SortableRow({
         />
       </td>
 
-      {/* 💡 TD Color: ใช้ Shadcn Select */}
+      {/* TD Color: ใช้ Shadcn Select */}
       <td className="py-2 pr-2">
         <div className="flex items-center gap-2">
           <Select
@@ -163,7 +164,7 @@ function SortableRow({
             <SelectContent>
               {presetColors.map((c) => (
                 <SelectItem key={c} value={c} className="pr-4">
-                  {/* 💡 เนื้อหาที่กำหนดเอง: วงกลมสีจริง */}
+                  {/* เนื้อหาที่กำหนดเอง: วงกลมสีจริง */}
                   <div className="flex items-center gap-2">
                     <div
                       className="size-4 rounded-full border border-gray-300 dark:border-gray-700 flex-shrink-0"
@@ -201,21 +202,14 @@ export default function DataVisualizer() {
     { id: generateId(), label: "C", value: 18, color: presetColors[2] },
   ]);
   const [stackedHorizontal, setStackedHorizontal] = useState(true);
-  // 💡 อัปเดตตัวอย่างเริ่มต้นเพื่อใช้ CSV Header
   const [markdownInput, setMarkdownInput] = useState<string>(
     `Label,Value,Color\nitem1,"5",#F032E6\nitem2,"4",#46F0F0\nitem3,"5",#06b6d4`
   );
 
-  // 💡 State สำหรับการจัดเรียง
   const [sortConfig, setSortConfig] = useState<{
     key: "label" | "value";
     direction: "asc" | "desc";
   } | null>(null);
-
-  // ❌ ลบ State และ Ref เดิมที่ใช้สำหรับ Custom Notification ออกทั้งหมด
-  // const [showCopyNotification, setShowCopyNotification] = useState(false)
-  // const [notificationMessage, setNotificationMessage] = useState('Copied!')
-  // const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const barCardRef = useRef<HTMLDivElement>(null);
   const pieCardRef = useRef<HTMLDivElement>(null);
@@ -233,8 +227,16 @@ export default function DataVisualizer() {
 
       const xml = new XMLSerializer().serializeToString(clone);
       await navigator.clipboard.writeText(xml);
-      toast.success("SVG Copied to Clipboard!");
+      // ✅ Copy SVG: ใช้ toast ธรรมดา + สไตล์สีเขียวโดยตรง + ไอคอน
+      toast.success("SVG Copied to Clipboard!", {
+        duration: 850,
+        style: {
+          background: "#0EC04F", // สีเขียวเข้ม
+          color: "#ffffff",
+        },
+      });
     } catch {
+      // ✅ Error: ใช้ toast.error ดึงสไตล์สีดำ/ไอคอนแดงจาก Default Toaster
       toast.error("Failed to copy SVG.");
     }
   }
@@ -252,7 +254,7 @@ export default function DataVisualizer() {
     const isMarkdownTable = lines.some((l) => l.includes("|"));
 
     if (!isMarkdownTable) {
-      // 💡 LOGIC: ประมวลผลเป็น CSV
+      // LOGIC: ประมวลผลเป็น CSV
 
       const headerLine = lines[0]?.toLowerCase().replace(/\s/g, "") || "";
       const dataLines = lines.slice(1);
@@ -321,7 +323,7 @@ export default function DataVisualizer() {
       if (result.length > 0) return result;
     }
 
-    // 💡 LOGIC: ประมวลผล Markdown Table
+    // LOGIC: ประมวลผล Markdown Table
     let startIdx = 0;
     if (lines.length > 1 && /-\s*-/.test(lines[1])) {
       startIdx = 2;
@@ -367,6 +369,7 @@ export default function DataVisualizer() {
     return result;
   }
 
+  // 💡 Optimization: useMemo hooks help prevent re-calculation unless dependencies change
   const total = useMemo(
     () => data.reduce((sum, d) => sum + (isFinite(d.value) ? d.value : 0), 0),
     [data]
@@ -408,6 +411,7 @@ export default function DataVisualizer() {
     setSortConfig({ key, direction });
   };
 
+  // Memoized data for stacked chart
   const stackedData = useMemo(() => {
     const obj: Record<string, number | string> = { name: "All" };
     for (const d of sortedData) {
@@ -474,6 +478,7 @@ export default function DataVisualizer() {
     );
   }
 
+  // 💡 Refactored to use useCallback for stable function references
   const updateLabel = useCallback((id: string, label: string) => {
     setData((prev) => prev.map((d) => (d.id === id ? { ...d, label } : d)));
   }, []);
@@ -500,12 +505,8 @@ export default function DataVisualizer() {
         color: presetColors[nextIndex % presetColors.length],
       },
     ]);
-    toast.success("Add Row", {
-      style: {
-        background: "black",
-        color: "#ffffff",
-      },
-    });
+    // ✅ Add Row: ใช้ toast ธรรมดา + ไอคอน ✅ (Black Version)
+    toast.success("Row added!", { duration: 900 });
   }
 
   function removeRow(id: string) {
@@ -656,14 +657,12 @@ export default function DataVisualizer() {
                   const rows = parseMarkdownTable(markdownInput);
                   if (rows.length) {
                     setData(rows);
-                    // 💡 ใช้ toast แจ้งเตือนเมื่อแปลงสำเร็จ
+                    // ✅ Transform: ใช้ toast ธรรมดา + ไอคอน ✅ (Black Version)
                     toast.success("Data transformed successfully!", {
-                      style: {
-                        background: "black",
-                        color: "#ffffff",
-                      },
+                      duration: 900,
                     });
                   } else {
+                    // ✅ Error: ใช้ toast.error ดึงสไตล์สีดำ/ไอคอนแดง
                     toast.error("Error: Invalid data format or no data found.");
                   }
                   setSortConfig(null);
@@ -672,7 +671,7 @@ export default function DataVisualizer() {
                 Transform to Table
               </Button>
 
-              {/* 💡 Grouped Buttons (ButtonGroup Style) */}
+              {/* Grouped Buttons (ButtonGroup Style) */}
               <div className="flex gap-2">
                 <Button
                   variant="outline"
@@ -681,12 +680,8 @@ export default function DataVisualizer() {
                       `Label,Value,Color\nA, 12, #3b82f6\nB, 30, #22c55e\nC, 18, #ef4444`
                     );
                     setSortConfig(null);
-                    toast.success("Load CSV", {
-                      style: {
-                        background: "black",
-                        color: "#ffffff",
-                      },
-                    });
+                    // ✅ Load CSV: ใช้ toast ธรรมดา + ไอคอน ✅ (Black Version)
+                    toast.success("CSV Example loaded!", { duration: 900 });
                   }}
                   aria-label="Load CSV Example"
                 >
@@ -699,11 +694,9 @@ export default function DataVisualizer() {
                       "| Label | Value | Color |\n|------:|------:|:-----:|\n| A     | 12    | #3b82f6 |\n| B     | 30    | #22c55e |\n| C     | 18    | #ef4444 |"
                     );
                     setSortConfig(null);
-                    toast.success("Load Markdown", {
-                      style: {
-                        background: "black",
-                        color: "#ffffff",
-                      },
+                    // ✅ Load Markdown: ใช้ toast ธรรมดา + ไอคอน ✅ (Black Version)
+                    toast.success("Markdown Example loaded!", {
+                      duration: 900,
                     });
                   }}
                   aria-label="Load Markdown Example"
@@ -916,31 +909,35 @@ export default function DataVisualizer() {
         </ResponsiveContainer>
       </div>
 
+      {/* --- Toaster Component: Centralized Configuration --- */}
       <Toaster
-        position="bottom-center" // ✅ ตำแหน่งหลักที่ถูกต้อง
+        position="bottom-center"
         reverseOrder={false}
-        gutter={8}
+        gutter={3}
         containerClassName=""
         containerStyle={{}}
         toastOptions={{
-          // Define default options (สำหรับ toast() ทั่วไปที่ไม่ใช่ success/error)
+          // 1. Default Style: เป็นพื้นฐานสำหรับ toast() และใช้เป็นพื้นหลังสำหรับ toast.error()
           className: "",
           duration: 900,
           style: {
-            background: "#363636", // สีพื้นหลังเริ่มต้นสำหรับ toast() ธรรมดา
-            color: "#fff",
+            background: "black",
+            color: "#ffff",
           },
-          // Default options for specific types
-          success: {
+          // 💡 Icon Theme สำหรับ Black Toast (ใช้กับ toast() และ toast.error)
+          iconTheme: {
+            primary: "white",
+            secondary: "black",
+          },
+
+          // ❌ ลบ Success Style ออก เพราะ Copy SVG กำหนดสไตล์โดยตรงแล้ว
+
+          // 3. Error Style: ใช้ Default background (black) แต่ Override ไอคอนเป็นสีแดง
+          error: {
+            duration: 900,
             iconTheme: {
-              primary: "white",
+              primary: "#ef4444", // red-500
               secondary: "black",
-            },
-            // style ถูก Override ใน copyChartSvg แต่ใช้ duration จากที่นี่
-            duration: 850,
-            style: {
-              background: "#0EC04F", // สีเขียวเข้มที่คุณต้องการ
-              color: "#ffffff", // ข้อความสีขาว
             },
           },
         }}
