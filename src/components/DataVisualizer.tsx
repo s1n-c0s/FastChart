@@ -604,7 +604,7 @@ export default function DataVisualizer() {
         {/* --- Right Panel: Markdown Input --- */}
         <div className="rounded-lg border p-4">
           <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-medium">Paste Markdown</h2>
+              <h2 className="text-lg font-medium">Paste Data</h2>
           </div>
           <div className="grid grid-cols-1 gap-3">
             <textarea
