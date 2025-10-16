@@ -683,17 +683,22 @@ export default function DataVisualizer() {
 
       <div ref={lineCardRef} className="rounded-lg border p-4 h-[320px]">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-base font-medium">Line Chart</h3>
+          <h3 className="text-base font-medium">Line Chart - Linear</h3> {/* 💡 เปลี่ยนชื่อหัวข้อ */}
           <Button size="sm" variant="secondary" onClick={() => copyChartSvg(lineCardRef.current)} aria-label="Copy Line Chart as SVG">Copy SVG</Button>
         </div>
-        <ResponsiveContainer width="100%" height="95%">
-          {/* 💡 ใช้ sortedData */}
+        <ResponsiveContainer width="100%" height="90%">
           <LineChart data={sortedData} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
             <XAxis dataKey="label" tickLine={false} axisLine={false} />
             <YAxis tickLine={false} axisLine={false} />
             <Tooltip />
-            <Line type="monotone" dataKey="value" stroke="oklch(0.488 0.243 264.376)" strokeWidth={2} dot={false} />
+            <Line 
+              type="linear"  // 💡 แก้ไขตรงนี้: เปลี่ยนจาก "monotone" เป็น "linear"
+              dataKey="value" 
+              stroke="oklch(0.488 0.243 264.376)" 
+              strokeWidth={2} 
+              dot={false} 
+            />
           </LineChart>
         </ResponsiveContainer>
       </div>
