@@ -1,11 +1,11 @@
 "use client";
 
 import { useMemo, useRef, useState, useCallback, useEffect } from "react";
+// สมมติว่ามีการตั้งค่า Shadcn/ui (หรือเทียบเท่า) ไว้แล้วสำหรับ Button และ Select
 import { Button } from "@/components/ui/button";
-import { RemoveButton } from "@/components/ui/RemoveButton";
+import { RemoveButton } from "@/components/ui/RemoveButton"; // สมมติว่ามี Component นี้
 import toast, { Toaster } from "react-hot-toast";
 
-// Components ใหม่สำหรับ Shadcn Select
 import {
   Select,
   SelectContent,
@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+// สำหรับ Drag and Drop
 import {
   DndContext,
   closestCenter,
@@ -31,6 +32,8 @@ import {
 } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+
+// สำหรับการวาดกราฟ Recharts
 import {
   Bar,
   BarChart,
@@ -46,7 +49,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import React from "react"; 
 
+// --- Types & Constants ---
 type Datum = {
   id: string;
   label: string;
@@ -58,7 +63,12 @@ function generateId() {
   return Math.random().toString(36).slice(2, 9);
 }
 
-// 💡 SortableRow is already a good component separation.
+const BAR_CHART_ID = 'bar';
+const PIE_CHART_ID = 'pie';
+const STACKED_CHART_ID = 'stacked';
+const LINE_CHART_ID = 'line';
+
+// --- SortableRow Component ---
 function SortableRow({
   row,
   onUpdateLabel,
@@ -139,7 +149,6 @@ function SortableRow({
         />
       </td>
 
-      {/* TD Color: ใช้ Shadcn Select */}
       <td className="py-2 pr-2">
         <div className="flex items-center gap-2">
           <Select
@@ -148,10 +157,8 @@ function SortableRow({
           >
             <SelectTrigger className="w-full h-9">
               {" "}
-              {/* ปรับความสูงให้เข้ากับ input */}
               <SelectValue asChild>
                 <div className="flex items-center gap-2 w-full text-left">
-                  {/* วงกลมสีเล็กๆ ที่แสดงใน Select Box ขณะที่ยังไม่ได้เปิด */}
                   <div
                     className="size-3 rounded-full flex-shrink-0"
                     style={{ backgroundColor: row.color }}
@@ -164,7 +171,6 @@ function SortableRow({
             <SelectContent>
               {presetColors.map((c) => (
                 <SelectItem key={c} value={c} className="pr-4">
-                  {/* เนื้อหาที่กำหนดเอง: วงกลมสีจริง */}
                   <div className="flex items-center gap-2">
                     <div
                       className="size-4 rounded-full border border-gray-300 dark:border-gray-700 flex-shrink-0"
@@ -186,14 +192,273 @@ function SortableRow({
   );
 }
 
+// --- ChartCard Component ---
+const ChartCard = ({
+  id,
+  title,
+  ref,
+  children,
+  setFullPanelId,
+  copyChartSvg,
+  height,
+  actionButtons,
+}: {
+  id: string;
+  title: string;
+  ref: React.RefObject<HTMLDivElement>;
+  children: React.ReactNode;
+  setFullPanelId: (id: string | null) => void;
+  copyChartSvg: (el: HTMLElement | null) => Promise<void>;
+  height: string; 
+  actionButtons?: React.ReactNode;
+}) => (
+  <div ref={ref} className={`rounded-lg border p-4 ${height}`}>
+    <div className="flex items-center justify-between mb-3">
+      <h3 className="text-base font-medium">{title}</h3>
+      <div className="flex items-center gap-2">
+        {actionButtons}
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => setFullPanelId(id)}
+          aria-label={`Show full panel for ${title}`}
+        >
+          Full Panel
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => copyChartSvg(ref.current)}
+          aria-label={`Copy ${title} as SVG`}
+        >
+          Copy SVG
+        </Button>
+      </div>
+    </div>
+    {children}
+  </div>
+);
+
+// --- ChartContent Component (Logic การวาดกราฟ) ---
+const ChartContent = React.memo(function ChartContent({
+    id,
+    sortedData,
+    stackedData,
+    stackedHorizontal,
+    total,
+    stackedSum,
+    idToLabel,
+    labelToId,
+    idToValue,
+    setStackedHorizontal,
+    heightClass = "h-full" 
+}: {
+    id: string;
+    sortedData: Datum[];
+    stackedData: Record<string, number | string>[];
+    stackedHorizontal: boolean;
+    total: number;
+    stackedSum: number;
+    idToLabel: Map<string, string>;
+    labelToId: Map<string, string>;
+    idToValue: Map<string, number>;
+    setStackedHorizontal?: (v: boolean) => void;
+    heightClass?: string;
+}) {
+
+    function StackedTooltip({
+      active,
+      payload,
+    }: {
+      active?: boolean;
+      payload?: Array<{ name?: string; value: number } & Record<string, unknown>>;
+    }) {
+      if (!active || !payload || payload.length === 0) return null;
+      return (
+        <div className="rounded-md border bg-background p-2 text-xs shadow-sm">
+          <div className="font-medium mb-1">All</div>
+          <div className="space-y-0.5">
+            {payload.map((p, idx) => {
+              const maybeDataKey = (p as unknown as { dataKey?: string }).dataKey;
+              const name = p.name ?? "";
+              const id = maybeDataKey ?? labelToId.get(name) ?? name;
+              const label = idToLabel.get(id) ?? id;
+              const raw = idToValue.get(id) ?? 0;
+              const percent = stackedSum > 0 ? (raw / stackedSum) * 100 : 0;
+              return (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between gap-4"
+                >
+                  <span>{label}</span>
+                  <span>
+                    {raw} ({percent.toFixed(1)}%)
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+    
+    switch (id) {
+        case BAR_CHART_ID:
+            return (
+                <ResponsiveContainer width="100%" className={heightClass}>
+                    <BarChart
+                        data={sortedData}
+                        margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
+                    >
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                        <XAxis dataKey="label" tickLine={false} axisLine={false} />
+                        <YAxis tickLine={false} axisLine={false} />
+                        <Tooltip />
+                        <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                            {sortedData.map((entry) => (
+                                <Cell key={entry.id} fill={entry.color} />
+                            ))}
+                        </Bar>
+                    </BarChart>
+                </ResponsiveContainer>
+            );
+
+        case PIE_CHART_ID:
+            return (
+                <ResponsiveContainer width="100%" className={heightClass}>
+                    <PieChart>
+                        <Tooltip />
+                        <Pie
+                            data={sortedData}
+                            dataKey="value"
+                            nameKey="label"
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={100}
+                            paddingAngle={2}
+                            cornerRadius={6}
+                            strokeWidth={5}
+                        >
+                            {sortedData.map((entry) => (
+                                <Cell key={entry.id} fill={entry.color} />
+                            ))}
+                            <Label
+                                content={({ viewBox }) => {
+                                    if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                                        return (
+                                            <text
+                                                x={viewBox.cx}
+                                                y={viewBox.cy}
+                                                textAnchor="middle"
+                                                dominantBaseline="middle"
+                                            >
+                                                <tspan
+                                                    x={viewBox.cx}
+                                                    y={viewBox.cy}
+                                                    className="fill-foreground text-2xl font-bold"
+                                                >
+                                                    {total.toLocaleString()}
+                                                </tspan>
+                                                <tspan
+                                                    x={viewBox.cx}
+                                                    y={(viewBox.cy || 0) + 24}
+                                                    className="fill-muted-foreground text-sm"
+                                                >
+                                                    Total
+                                                </tspan>
+                                            </text>
+                                        );
+                                    }
+                                }}
+                            />
+                        </Pie>
+                    </PieChart>
+                </ResponsiveContainer>
+            );
+
+        case STACKED_CHART_ID:
+            return (
+                <ResponsiveContainer width="100%" className={heightClass}>
+                    <BarChart
+                        data={stackedData}
+                        stackOffset="expand"
+                        margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
+                        layout={stackedHorizontal ? "vertical" : "horizontal"}
+                    >
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                        {stackedHorizontal ? (
+                            <>
+                                <YAxis
+                                    dataKey="name"
+                                    type="category"
+                                    tickLine={false}
+                                    axisLine={false}
+                                />
+                                <XAxis
+                                    type="number"
+                                    tickFormatter={(v) => `${Math.round((v as number) * 100)}%`}
+                                    tickLine={false}
+                                    axisLine={false}
+                                />
+                            </>
+                        ) : (
+                            <>
+                                <XAxis dataKey="name" tickLine={false} axisLine={false} />
+                                <YAxis
+                                    tickFormatter={(v) => `${Math.round((v as number) * 100)}%`}
+                                    tickLine={false}
+                                    axisLine={false}
+                                />
+                            </>
+                        )}
+                        <Tooltip content={<StackedTooltip />} />
+                        {sortedData.map((d) => (
+                            <Bar key={d.id} dataKey={d.id} stackId="one" name={d.label}>
+                                <Cell fill={d.color} />
+                            </Bar>
+                        ))}
+                    </BarChart>
+                </ResponsiveContainer>
+            );
+
+        case LINE_CHART_ID:
+            return (
+                <ResponsiveContainer width="100%" className={heightClass}>
+                    <LineChart
+                        data={sortedData}
+                        margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
+                    >
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                        <XAxis dataKey="label" tickLine={false} axisLine={false} />
+                        <YAxis tickLine={false} axisLine={false} />
+                        <Tooltip />
+                        <Line
+                            type="linear"
+                            dataKey="value"
+                            stroke="oklch(0.488 0.243 264.376)"
+                            strokeWidth={2}
+                            dot={false}
+                        />
+                    </LineChart>
+                </ResponsiveContainer>
+            );
+
+        default:
+            return null;
+    }
+});
+
+
+// --- Main DataVisualizer Component ---
 export default function DataVisualizer() {
   const presetColors = [
-    "#3b82f6", // blue-500
-    "#22c55e", // green-500
-    "#ef4444", // red-500
-    "#f59e0b", // amber-500
-    "#a855f7", // purple-500
-    "#06b6d4", // cyan-500
+    "#3b82f6", 
+    "#22c55e", 
+    "#ef4444", 
+    "#f59e0b", 
+    "#a855f7", 
+    "#06b6d4", 
   ];
 
   const [data, setData] = useState<Datum[]>([
@@ -211,11 +476,15 @@ export default function DataVisualizer() {
     direction: "asc" | "desc";
   } | null>(null);
 
+  const [fullPanelId, setFullPanelId] = useState<string | null>(null); 
+
+  // Refs สำหรับการ Copy SVG
   const barCardRef = useRef<HTMLDivElement>(null);
   const pieCardRef = useRef<HTMLDivElement>(null);
   const stackedCardRef = useRef<HTMLDivElement>(null);
   const lineCardRef = useRef<HTMLDivElement>(null);
 
+  // Logic สำหรับการ Copy SVG
   async function copyChartSvg(containerEl: HTMLElement | null) {
     try {
       const svg = containerEl?.querySelector("svg") as SVGSVGElement | null;
@@ -227,20 +496,20 @@ export default function DataVisualizer() {
 
       const xml = new XMLSerializer().serializeToString(clone);
       await navigator.clipboard.writeText(xml);
-      // ✅ Copy SVG: ใช้ toast ธรรมดา + สไตล์สีเขียวโดยตรง + ไอคอน
-      toast.success("SVG Copied to Clipboard!", {
+      toast("SVG Copied to Clipboard!", {
         duration: 850,
+        icon: '✅', 
         style: {
-          background: "#0EC04F", // สีเขียวเข้ม
-          color: "#ffffff",
+            background: '#0EC04F', 
+            color: '#ffffff',
         },
       });
     } catch {
-      // ✅ Error: ใช้ toast.error ดึงสไตล์สีดำ/ไอคอนแดงจาก Default Toaster
       toast.error("Failed to copy SVG.");
     }
   }
 
+  // Logic สำหรับการ Parse Data (Markdown/CSV)
   function parseMarkdownTable(md: string): Datum[] {
     const lines = md
       .split(/\r?\n/)
@@ -255,7 +524,6 @@ export default function DataVisualizer() {
 
     if (!isMarkdownTable) {
       // LOGIC: ประมวลผลเป็น CSV
-
       const headerLine = lines[0]?.toLowerCase().replace(/\s/g, "") || "";
       const dataLines = lines.slice(1);
 
@@ -368,8 +636,8 @@ export default function DataVisualizer() {
 
     return result;
   }
-
-  // 💡 Optimization: useMemo hooks help prevent re-calculation unless dependencies change
+  
+  // Memoized values
   const total = useMemo(
     () => data.reduce((sum, d) => sum + (isFinite(d.value) ? d.value : 0), 0),
     [data]
@@ -411,7 +679,6 @@ export default function DataVisualizer() {
     setSortConfig({ key, direction });
   };
 
-  // Memoized data for stacked chart
   const stackedData = useMemo(() => {
     const obj: Record<string, number | string> = { name: "All" };
     for (const d of sortedData) {
@@ -442,43 +709,7 @@ export default function DataVisualizer() {
     );
   }, [sortedData]);
 
-  function StackedTooltip({
-    active,
-    payload,
-  }: {
-    active?: boolean;
-    payload?: Array<{ name?: string; value: number } & Record<string, unknown>>;
-  }) {
-    if (!active || !payload || payload.length === 0) return null;
-    return (
-      <div className="rounded-md border bg-background p-2 text-xs shadow-sm">
-        <div className="font-medium mb-1">All</div>
-        <div className="space-y-0.5">
-          {payload.map((p, idx) => {
-            const maybeDataKey = (p as unknown as { dataKey?: string }).dataKey;
-            const name = p.name ?? "";
-            const id = maybeDataKey ?? labelToId.get(name) ?? name;
-            const label = idToLabel.get(id) ?? id;
-            const raw = idToValue.get(id) ?? 0;
-            const percent = stackedSum > 0 ? (raw / stackedSum) * 100 : 0;
-            return (
-              <div
-                key={idx}
-                className="flex items-center justify-between gap-4"
-              >
-                <span>{label}</span>
-                <span>
-                  {raw} ({percent.toFixed(1)}%)
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
-  // 💡 Refactored to use useCallback for stable function references
+  // Callbacks สำหรับ Data Table
   const updateLabel = useCallback((id: string, label: string) => {
     setData((prev) => prev.map((d) => (d.id === id ? { ...d, label } : d)));
   }, []);
@@ -505,8 +736,7 @@ export default function DataVisualizer() {
         color: presetColors[nextIndex % presetColors.length],
       },
     ]);
-    // ✅ Add Row: ใช้ toast ธรรมดา + ไอคอน ✅ (Black Version)
-    toast.success("Row added!", { duration: 900 });
+    toast("Row added!", { duration: 900, icon: '✅' });
   }
 
   function removeRow(id: string) {
@@ -541,8 +771,134 @@ export default function DataVisualizer() {
 
   const isDndEnabled = sortConfig === null;
 
+  // ... (โค้ดส่วนบนของ DataVisualizer.tsx เหมือนเดิม)
+
+// --- Central Peek Modal Component (70% Width) ---
+  const ChartPeekModal = () => {
+    const panelRef = useRef<HTMLDivElement>(null); 
+
+    // เงื่อนไขการซ่อน/ปิด: ใช้ opacity และ scale ในการสร้าง transition effect
+    if (!fullPanelId) {
+        return (
+            <div 
+                className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none transition-opacity duration-300 opacity-0"
+            >
+                {/* องค์ประกอบซ่อนที่ใช้รักษา Transition Style */}
+                {/* อัปเดต max-w เป็น [70vw] */}
+                <div className="bg-background rounded-lg shadow-2xl w-full max-w-[70vw] h-full max-h-[90vh] flex flex-col p-4 transform scale-95 transition-transform duration-300"></div>
+            </div>
+        );
+    }
+
+    let title = "";
+    let actionButtons = null;
+
+    // ... (Switch case กำหนด title และ actionButtons โค้ดเดิม)
+    switch (fullPanelId) {
+      case BAR_CHART_ID:
+        title = "Bar Chart";
+        break;
+      case PIE_CHART_ID:
+        title = "Pie Chart - Donut with Total";
+        break;
+      case STACKED_CHART_ID:
+        title = "100% Stacked Chart";
+        actionButtons = (
+          <Button
+            variant="secondary"
+            aria-label="Toggle stacked chart orientation"
+            onClick={() => setStackedHorizontal((v) => !v)}
+          >
+            {stackedHorizontal ? "Vertical" : "Horizontal"}
+          </Button>
+        );
+        break;
+      case LINE_CHART_ID:
+        title = "Line Chart - Linear";
+        break;
+      default:
+        return null;
+    }
+
+    // Backdrop Component (โค้ดเดิม)
+    const Backdrop = ({ onClick }: { onClick: () => void }) => (
+        <div 
+            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity duration-300"
+            onClick={onClick}
+            aria-hidden="true"
+        />
+    );
+
+
+    return (
+      <>
+        {/* Backdrop - สำหรับปิดเมื่อคลิกด้านนอก */}
+        <Backdrop onClick={() => setFullPanelId(null)} />
+        
+        {/* Modal Card Content: ใช้ z-50 และปรับความกว้าง */}
+        <div 
+            ref={panelRef} 
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300"
+        >
+            <div 
+                // ✅ แก้ไขคลาส: w-[90vw] (ขนาดเล็ก) และ max-w-[70vw] (ขนาดใหญ่สูงสุด 70%)
+                className="bg-background rounded-lg border shadow-2xl w-[90vw] max-w-[70vw] h-full max-h-[90vh] flex flex-col p-4 transform scale-100 opacity-100 transition-all duration-300"
+                // ป้องกันการคลิก Card แล้ว Modal ปิด
+                onClick={(e) => e.stopPropagation()} 
+            >
+                
+                {/* Header */}
+                <div className="flex items-center justify-between mb-3 border-b pb-2">
+                    <h3 className="text-xl font-medium">{title}</h3>
+                    <div className="flex items-center gap-2">
+                        {actionButtons}
+                        {/* ปุ่ม Close Panel */}
+                        <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => setFullPanelId(null)}
+                            aria-label="Close full panel"
+                        >
+                            Close
+                        </Button>
+                        {/* ปุ่ม Copy SVG */}
+                        <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => copyChartSvg(panelRef.current)} 
+                            aria-label={`Copy ${title} as SVG`}
+                        >
+                            Copy SVG
+                        </Button>
+                    </div>
+                </div>
+
+                {/* Chart Content Area */}
+                <div className="flex-grow min-h-0">
+                    <ChartContent
+                        id={fullPanelId}
+                        sortedData={sortedData}
+                        stackedData={stackedData}
+                        stackedHorizontal={stackedHorizontal}
+                        total={total}
+                        stackedSum={stackedSum}
+                        idToLabel={idToLabel}
+                        labelToId={labelToId}
+                        idToValue={idToValue}
+                        setStackedHorizontal={setStackedHorizontal}
+                        heightClass="h-full" 
+                    />
+                </div>
+            </div>
+        </div>
+      </>
+    );
+  };
+// ... (โค้ดส่วนล่างของ DataVisualizer.tsx เหมือนเดิม)
+
   return (
     <div className="p-4 space-y-6">
+      {/* --- Header หลัก --- */}
       <div>
         <h1 className="text-2xl font-semibold">Data Visualizer</h1>
         <p className="text-sm text-muted-foreground">
@@ -551,6 +907,7 @@ export default function DataVisualizer() {
         </p>
       </div>
 
+      {/* --- Data Table and Input Panel --- */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* --- Left Panel: Data Table --- */}
         <div className="rounded-lg border p-4">
@@ -657,12 +1014,8 @@ export default function DataVisualizer() {
                   const rows = parseMarkdownTable(markdownInput);
                   if (rows.length) {
                     setData(rows);
-                    // ✅ Transform: ใช้ toast ธรรมดา + ไอคอน ✅ (Black Version)
-                    toast.success("Data transformed successfully!", {
-                      duration: 900,
-                    });
+                    toast("Data transformed successfully!", { duration: 900, icon: '✅' });
                   } else {
-                    // ✅ Error: ใช้ toast.error ดึงสไตล์สีดำ/ไอคอนแดง
                     toast.error("Error: Invalid data format or no data found.");
                   }
                   setSortConfig(null);
@@ -671,7 +1024,6 @@ export default function DataVisualizer() {
                 Transform to Table
               </Button>
 
-              {/* Grouped Buttons (ButtonGroup Style) */}
               <div className="flex gap-2">
                 <Button
                   variant="outline"
@@ -680,8 +1032,7 @@ export default function DataVisualizer() {
                       `Label,Value,Color\nA, 12, #3b82f6\nB, 30, #22c55e\nC, 18, #ef4444`
                     );
                     setSortConfig(null);
-                    // ✅ Load CSV: ใช้ toast ธรรมดา + ไอคอน ✅ (Black Version)
-                    toast.success("CSV Example loaded!", { duration: 900 });
+                    toast("CSV Example loaded!", { duration: 900, icon: '✅' });
                   }}
                   aria-label="Load CSV Example"
                 >
@@ -694,10 +1045,7 @@ export default function DataVisualizer() {
                       "| Label | Value | Color |\n|------:|------:|:-----:|\n| A     | 12    | #3b82f6 |\n| B     | 30    | #22c55e |\n| C     | 18    | #ef4444 |"
                     );
                     setSortConfig(null);
-                    // ✅ Load Markdown: ใช้ toast ธรรมดา + ไอคอน ✅ (Black Version)
-                    toast.success("Markdown Example loaded!", {
-                      duration: 900,
-                    });
+                    toast("Markdown Example loaded!", { duration: 900, icon: '✅' });
                   }}
                   aria-label="Load Markdown Example"
                 >
@@ -713,230 +1061,133 @@ export default function DataVisualizer() {
         </div>
       </div>
 
-      {/* --- Charts Section --- */}
+      {/* --- Charts Section (Normal Grid) --- */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div ref={barCardRef} className="rounded-lg border p-4 h-[380px]">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-base font-medium">Bar Chart</h3>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => copyChartSvg(barCardRef.current)}
-              aria-label="Copy Bar Chart as SVG"
-            >
-              Copy SVG
-            </Button>
-          </div>
-          <ResponsiveContainer width="100%" height="95%">
-            <BarChart
-              data={sortedData}
-              margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              <XAxis dataKey="label" tickLine={false} axisLine={false} />
-              <YAxis tickLine={false} axisLine={false} />
-              <Tooltip />
-              <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                {sortedData.map((entry) => (
-                  <Cell key={entry.id} fill={entry.color} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        <ChartCard
+          id={BAR_CHART_ID}
+          title="Bar Chart"
+          ref={barCardRef}
+          setFullPanelId={setFullPanelId}
+          copyChartSvg={copyChartSvg}
+          height="h-[380px]"
+        >
+          <ChartContent 
+            id={BAR_CHART_ID}
+            sortedData={sortedData}
+            stackedData={stackedData}
+            stackedHorizontal={stackedHorizontal}
+            total={total}
+            stackedSum={stackedSum}
+            idToLabel={idToLabel}
+            labelToId={labelToId}
+            idToValue={idToValue}
+            heightClass="h-[95%]" 
+          />
+        </ChartCard>
 
-        <div ref={pieCardRef} className="rounded-lg border p-4 h-[380px]">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-base font-medium">
-              Pie Chart - Donut with Total
-            </h3>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => copyChartSvg(pieCardRef.current)}
-              aria-label="Copy Pie Chart as SVG"
-            >
-              Copy SVG
-            </Button>
-          </div>
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Tooltip />
-              <Pie
-                data={sortedData}
-                dataKey="value"
-                nameKey="label"
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={100}
-                paddingAngle={2}
-                cornerRadius={6}
-                strokeWidth={5}
-              >
-                {sortedData.map((entry) => (
-                  <Cell key={entry.id} fill={entry.color} />
-                ))}
-
-                <Label
-                  content={({ viewBox }) => {
-                    if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                      return (
-                        <text
-                          x={viewBox.cx}
-                          y={viewBox.cy}
-                          textAnchor="middle"
-                          dominantBaseline="middle"
-                        >
-                          <tspan
-                            x={viewBox.cx}
-                            y={viewBox.cy}
-                            className="fill-foreground text-2xl font-bold"
-                          >
-                            {total.toLocaleString()}
-                          </tspan>
-                          <tspan
-                            x={viewBox.cx}
-                            y={(viewBox.cy || 0) + 24}
-                            className="fill-muted-foreground text-sm"
-                          >
-                            Total
-                          </tspan>
-                        </text>
-                      );
-                    }
-                  }}
-                />
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
+        <ChartCard
+          id={PIE_CHART_ID}
+          title="Pie Chart - Donut with Total"
+          ref={pieCardRef}
+          setFullPanelId={setFullPanelId}
+          copyChartSvg={copyChartSvg}
+          height="h-[380px]"
+        >
+           <ChartContent 
+            id={PIE_CHART_ID}
+            sortedData={sortedData}
+            stackedData={stackedData}
+            stackedHorizontal={stackedHorizontal}
+            total={total}
+            stackedSum={stackedSum}
+            idToLabel={idToLabel}
+            labelToId={labelToId}
+            idToValue={idToValue}
+            heightClass="h-full" 
+          />
+        </ChartCard>
       </div>
-
-      <div ref={stackedCardRef} className="rounded-lg border p-4 h-[320px]">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-base font-medium">100% Stacked Chart</h3>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              aria-label="Toggle stacked chart orientation"
-              onClick={() => setStackedHorizontal((v) => !v)}
-            >
-              {stackedHorizontal ? "Vertical" : "Horizontal"}
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => copyChartSvg(stackedCardRef.current)}
-              aria-label="Copy Stacked Chart as SVG"
-            >
-              Copy SVG
-            </Button>
-          </div>
-        </div>
-        <ResponsiveContainer width="100%" height="90%">
-          <BarChart
-            data={stackedData}
-            stackOffset="expand"
-            margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
-            layout={stackedHorizontal ? "vertical" : "horizontal"}
-          >
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-            {stackedHorizontal ? (
-              <>
-                <YAxis
-                  dataKey="name"
-                  type="category"
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <XAxis
-                  type="number"
-                  tickFormatter={(v) => `${Math.round((v as number) * 100)}%`}
-                  tickLine={false}
-                  axisLine={false}
-                />
-              </>
-            ) : (
-              <>
-                <XAxis dataKey="name" tickLine={false} axisLine={false} />
-                <YAxis
-                  tickFormatter={(v) => `${Math.round((v as number) * 100)}%`}
-                  tickLine={false}
-                  axisLine={false}
-                />
-              </>
-            )}
-            <Tooltip content={<StackedTooltip />} />
-            {sortedData.map((d) => (
-              <Bar key={d.id} dataKey={d.id} stackId="one" name={d.label}>
-                <Cell fill={d.color} />
-              </Bar>
-            ))}
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      <div ref={lineCardRef} className="rounded-lg border p-4 h-[320px]">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-base font-medium">Line Chart - Linear</h3>
+      
+      <ChartCard
+        id={STACKED_CHART_ID}
+        title="100% Stacked Chart"
+        ref={stackedCardRef}
+        setFullPanelId={setFullPanelId}
+        copyChartSvg={copyChartSvg}
+        height="h-[320px]"
+        actionButtons={
           <Button
-            size="sm"
             variant="secondary"
-            onClick={() => copyChartSvg(lineCardRef.current)}
-            aria-label="Copy Line Chart as SVG"
+            aria-label="Toggle stacked chart orientation"
+            onClick={() => setStackedHorizontal((v) => !v)}
           >
-            Copy SVG
+            {stackedHorizontal ? "Vertical" : "Horizontal"}
           </Button>
-        </div>
-        <ResponsiveContainer width="100%" height="90%">
-          <LineChart
-            data={sortedData}
-            margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-            <XAxis dataKey="label" tickLine={false} axisLine={false} />
-            <YAxis tickLine={false} axisLine={false} />
-            <Tooltip />
-            <Line
-              type="linear"
-              dataKey="value"
-              stroke="oklch(0.488 0.243 264.376)"
-              strokeWidth={2}
-              dot={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+        }
+      >
+        <ChartContent 
+            id={STACKED_CHART_ID}
+            sortedData={sortedData}
+            stackedData={stackedData}
+            stackedHorizontal={stackedHorizontal}
+            total={total}
+            stackedSum={stackedSum}
+            idToLabel={idToLabel}
+            labelToId={labelToId}
+            idToValue={idToValue}
+            setStackedHorizontal={setStackedHorizontal}
+            heightClass="h-[90%]" 
+        />
+      </ChartCard>
 
-      {/* --- Toaster Component: Centralized Configuration --- */}
+      <ChartCard
+        id={LINE_CHART_ID}
+        title="Line Chart - Linear"
+        ref={lineCardRef}
+        setFullPanelId={setFullPanelId}
+        copyChartSvg={copyChartSvg}
+        height="h-[320px]"
+      >
+         <ChartContent 
+            id={LINE_CHART_ID}
+            sortedData={sortedData}
+            stackedData={stackedData}
+            stackedHorizontal={stackedHorizontal}
+            total={total}
+            stackedSum={stackedSum}
+            idToLabel={idToLabel}
+            labelToId={labelToId}
+            idToValue={idToValue}
+            heightClass="h-[90%]" 
+          />
+      </ChartCard>
+
+
+      {/* 🚀 Central Peek Modal Component */}
+      <ChartPeekModal />
+      
+      {/* --- Toaster Component --- */}
       <Toaster
-        position="bottom-center"
+        position="bottom-center" 
         reverseOrder={false}
         gutter={3}
         containerClassName=""
         containerStyle={{}}
         toastOptions={{
-          // 1. Default Style: เป็นพื้นฐานสำหรับ toast() และใช้เป็นพื้นหลังสำหรับ toast.error()
           className: "",
           duration: 900,
           style: {
-            background: "black",
-            color: "#ffff",
+            background: "black", 
+            color: "#fff",
           },
-          // 💡 Icon Theme สำหรับ Black Toast (ใช้กับ toast() และ toast.error)
-          iconTheme: {
-            primary: "white",
-            secondary: "black",
+          iconTheme: { 
+            primary: "white", 
+            secondary: "black", 
           },
-
-          // ❌ ลบ Success Style ออก เพราะ Copy SVG กำหนดสไตล์โดยตรงแล้ว
-
-          // 3. Error Style: ใช้ Default background (black) แต่ Override ไอคอนเป็นสีแดง
           error: {
             duration: 900,
             iconTheme: {
-              primary: "#ef4444", // red-500
+              primary: "#ef4444", 
               secondary: "black",
             },
           },
