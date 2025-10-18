@@ -4,6 +4,7 @@ import { useMemo, useRef, useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { RemoveButton } from "@/components/ui/RemoveButton";
 import toast, { Toaster } from "react-hot-toast";
+import { X, Maximize2 } from "lucide-react";
 
 // Components ใหม่สำหรับ Shadcn Select
 import {
@@ -203,6 +204,7 @@ export default function DataVisualizer() {
   ]);
   const [stackedHorizontal, setStackedHorizontal] = useState(true);
   const [barHorizontal, setBarHorizontal] = useState(true);
+  const [fullscreenChart, setFullscreenChart] = useState<string | null>(null);
   const [markdownInput, setMarkdownInput] = useState<string>(
     `Label,Value,Color\nitem1,"5",#F032E6\nitem2,"4",#46F0F0\nitem3,"5",#06b6d4`
   );
@@ -542,6 +544,55 @@ export default function DataVisualizer() {
 
   const isDndEnabled = sortConfig === null;
 
+  // Full-screen functions
+  const openFullscreen = (chartType: string) => {
+    setFullscreenChart(chartType);
+  };
+
+  const closeFullscreen = () => {
+    setFullscreenChart(null);
+  };
+
+  // Handle escape key to close fullscreen
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && fullscreenChart) {
+        closeFullscreen();
+      }
+    };
+
+    if (fullscreenChart) {
+      document.addEventListener("keydown", handleEscape);
+      return () => document.removeEventListener("keydown", handleEscape);
+    }
+  }, [fullscreenChart]);
+
+  // Full-screen modal component
+  const FullscreenModal = ({ chartType, children }: { chartType: string; children: React.ReactNode }) => {
+    if (fullscreenChart !== chartType) return null;
+
+    return (
+      <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+        <div className="bg-background rounded-lg border w-full h-full max-w-7xl max-h-[90vh] flex flex-col">
+          <div className="flex items-center justify-between p-4 border-b">
+            <h2 className="text-xl font-semibold capitalize">{chartType} Chart - Full Screen</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={closeFullscreen}
+              className="h-8 w-8 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="flex-1 p-4">
+            {children}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="p-4 space-y-6">
       <div>
@@ -730,6 +781,14 @@ export default function DataVisualizer() {
               <Button
                 size="sm"
                 variant="secondary"
+                onClick={() => openFullscreen("bar")}
+                aria-label="Open Bar Chart in full screen"
+              >
+                <Maximize2 className="h-4 w-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
                 onClick={() => copyChartSvg(barCardRef.current)}
                 aria-label="Copy Bar Chart as SVG"
               >
@@ -770,14 +829,24 @@ export default function DataVisualizer() {
             <h3 className="text-base font-medium">
               Pie Chart - Donut with Total
             </h3>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => copyChartSvg(pieCardRef.current)}
-              aria-label="Copy Pie Chart as SVG"
-            >
-              Copy SVG
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => openFullscreen("pie")}
+                aria-label="Open Pie Chart in full screen"
+              >
+                <Maximize2 className="h-4 w-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => copyChartSvg(pieCardRef.current)}
+                aria-label="Copy Pie Chart as SVG"
+              >
+                Copy SVG
+              </Button>
+            </div>
           </div>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -847,6 +916,14 @@ export default function DataVisualizer() {
             <Button
               size="sm"
               variant="secondary"
+              onClick={() => openFullscreen("stacked")}
+              aria-label="Open Stacked Chart in full screen"
+            >
+              <Maximize2 className="h-4 w-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
               onClick={() => copyChartSvg(stackedCardRef.current)}
               aria-label="Copy Stacked Chart as SVG"
             >
@@ -900,14 +977,24 @@ export default function DataVisualizer() {
       <div ref={lineCardRef} className="rounded-lg border p-4 h-[320px]">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-base font-medium">Line Chart - Linear</h3>
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => copyChartSvg(lineCardRef.current)}
-            aria-label="Copy Line Chart as SVG"
-          >
-            Copy SVG
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => openFullscreen("line")}
+              aria-label="Open Line Chart in full screen"
+            >
+              <Maximize2 className="h-4 w-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => copyChartSvg(lineCardRef.current)}
+              aria-label="Copy Line Chart as SVG"
+            >
+              Copy SVG
+            </Button>
+          </div>
         </div>
         <ResponsiveContainer width="100%" height="90%">
           <LineChart
@@ -928,6 +1015,155 @@ export default function DataVisualizer() {
           </LineChart>
         </ResponsiveContainer>
       </div>
+
+      {/* --- Full-screen Modals --- */}
+      <FullscreenModal chartType="bar">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={sortedData}
+            margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
+            layout={barHorizontal ? "horizontal" : "vertical"}
+          >
+            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+            {barHorizontal ? (
+              <>
+                <XAxis dataKey="label" tickLine={false} axisLine={false} />
+                <YAxis tickLine={false} axisLine={false} />
+              </>
+            ) : (
+              <>
+                <XAxis type="number" tickLine={false} axisLine={false} />
+                <YAxis dataKey="label" type="category" tickLine={false} axisLine={false} />
+              </>
+            )}
+            <Tooltip />
+            <Bar dataKey="value" radius={barHorizontal ? [6, 6, 0, 0] : [0, 6, 6, 0]}>
+              {sortedData.map((entry) => (
+                <Cell key={entry.id} fill={entry.color} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </FullscreenModal>
+
+      <FullscreenModal chartType="pie">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Tooltip />
+            <Pie
+              data={sortedData}
+              dataKey="value"
+              nameKey="label"
+              cx="50%"
+              cy="50%"
+              innerRadius={60}
+              outerRadius={100}
+              paddingAngle={2}
+              cornerRadius={6}
+              strokeWidth={5}
+            >
+              {sortedData.map((entry) => (
+                <Cell key={entry.id} fill={entry.color} />
+              ))}
+
+              <Label
+                content={({ viewBox }) => {
+                  if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                    return (
+                      <text
+                        x={viewBox.cx}
+                        y={viewBox.cy}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                      >
+                        <tspan
+                          x={viewBox.cx}
+                          y={viewBox.cy}
+                          className="fill-foreground text-2xl font-bold"
+                        >
+                          {total.toLocaleString()}
+                        </tspan>
+                        <tspan
+                          x={viewBox.cx}
+                          y={(viewBox.cy || 0) + 24}
+                          className="fill-muted-foreground text-sm"
+                        >
+                          Total
+                        </tspan>
+                      </text>
+                    );
+                  }
+                }}
+              />
+            </Pie>
+          </PieChart>
+        </ResponsiveContainer>
+      </FullscreenModal>
+
+      <FullscreenModal chartType="stacked">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={stackedData}
+            stackOffset="expand"
+            margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
+            layout={stackedHorizontal ? "vertical" : "horizontal"}
+          >
+            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+            {stackedHorizontal ? (
+              <>
+                <YAxis
+                  dataKey="name"
+                  type="category"
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <XAxis
+                  type="number"
+                  tickFormatter={(v) => `${Math.round((v as number) * 100)}%`}
+                  tickLine={false}
+                  axisLine={false}
+                />
+              </>
+            ) : (
+              <>
+                <XAxis dataKey="name" tickLine={false} axisLine={false} />
+                <YAxis
+                  tickFormatter={(v) => `${Math.round((v as number) * 100)}%`}
+                  tickLine={false}
+                  axisLine={false}
+                />
+              </>
+            )}
+            <Tooltip content={<StackedTooltip />} />
+            {sortedData.map((d) => (
+              <Bar key={d.id} dataKey={d.id} stackId="one" name={d.label}>
+                <Cell fill={d.color} />
+              </Bar>
+            ))}
+          </BarChart>
+        </ResponsiveContainer>
+      </FullscreenModal>
+
+      <FullscreenModal chartType="line">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart
+            data={sortedData}
+            margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+            <XAxis dataKey="label" tickLine={false} axisLine={false} />
+            <YAxis tickLine={false} axisLine={false} />
+            <Tooltip />
+            <Line
+              type="linear"
+              dataKey="value"
+              stroke="oklch(0.488 0.243 264.376)"
+              strokeWidth={2}
+              dot={false}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </FullscreenModal>
 
       {/* --- Toaster Component: Centralized Configuration --- */}
       <Toaster
