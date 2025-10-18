@@ -1,3 +1,11 @@
+<img width="3122" height="1852" alt="image" src="https://github.com/user-attachments/assets/0a1921a8-80d5-4770-818b-99a0f7f6ed15" />
+# Version 0.1
+- Copy SVG for visual to figma or some app design
+- Noti Copy
+- Fast to make a graph
+- By Paste Data with the Markdown form
+
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
