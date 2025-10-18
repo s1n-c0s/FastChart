@@ -781,18 +781,18 @@ export default function DataVisualizer() {
               <Button
                 size="sm"
                 variant="secondary"
-                onClick={() => openFullscreen("bar")}
-                aria-label="Open Bar Chart in full screen"
-              >
-                <Maximize2 className="h-4 w-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
                 onClick={() => copyChartSvg(barCardRef.current)}
                 aria-label="Copy Bar Chart as SVG"
               >
                 Copy SVG
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => openFullscreen("bar")}
+                aria-label="Open Bar Chart in full screen"
+              >
+                <Maximize2 className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -833,18 +833,18 @@ export default function DataVisualizer() {
               <Button
                 size="sm"
                 variant="secondary"
-                onClick={() => openFullscreen("pie")}
-                aria-label="Open Pie Chart in full screen"
-              >
-                <Maximize2 className="h-4 w-4" />
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
                 onClick={() => copyChartSvg(pieCardRef.current)}
                 aria-label="Copy Pie Chart as SVG"
               >
                 Copy SVG
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => openFullscreen("pie")}
+                aria-label="Open Pie Chart in full screen"
+              >
+                <Maximize2 className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -916,18 +916,18 @@ export default function DataVisualizer() {
             <Button
               size="sm"
               variant="secondary"
-              onClick={() => openFullscreen("stacked")}
-              aria-label="Open Stacked Chart in full screen"
-            >
-              <Maximize2 className="h-4 w-4" />
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
               onClick={() => copyChartSvg(stackedCardRef.current)}
               aria-label="Copy Stacked Chart as SVG"
             >
               Copy SVG
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => openFullscreen("stacked")}
+              aria-label="Open Stacked Chart in full screen"
+            >
+              <Maximize2 className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -981,18 +981,18 @@ export default function DataVisualizer() {
             <Button
               size="sm"
               variant="secondary"
-              onClick={() => openFullscreen("line")}
-              aria-label="Open Line Chart in full screen"
-            >
-              <Maximize2 className="h-4 w-4" />
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
               onClick={() => copyChartSvg(lineCardRef.current)}
               aria-label="Copy Line Chart as SVG"
             >
               Copy SVG
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => openFullscreen("line")}
+              aria-label="Open Line Chart in full screen"
+            >
+              <Maximize2 className="h-4 w-4" />
             </Button>
           </div>
         </div>
