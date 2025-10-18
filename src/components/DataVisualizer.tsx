@@ -601,14 +601,55 @@ export default function DataVisualizer() {
         <div className="bg-background rounded-lg border w-full h-full max-w-7xl max-h-[90vh] flex flex-col">
           <div className="flex items-center justify-between p-4 border-b">
             <h2 className="text-xl font-semibold capitalize">{chartType} Chart - Full Screen</h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={closeFullscreen}
-              className="h-8 w-8 p-0"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              {/* Vertical/Horizontal toggle for bar and stacked charts */}
+              {(chartType === "bar" || chartType === "stacked") && (
+                <Button
+                  variant="secondary"
+                  aria-label={`Toggle ${chartType} chart orientation`}
+                  onClick={() => {
+                    if (chartType === "bar") {
+                      setBarHorizontal((v) => !v);
+                    } else if (chartType === "stacked") {
+                      setStackedHorizontal((v) => !v);
+                    }
+                  }}
+                >
+                  {chartType === "bar" 
+                    ? (barHorizontal ? "Vertical" : "Horizontal")
+                    : (stackedHorizontal ? "Vertical" : "Horizontal")
+                  }
+                </Button>
+              )}
+              {/* Copy SVG button */}
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  const refs = {
+                    bar: barCardRef,
+                    pie: pieCardRef,
+                    stacked: stackedCardRef,
+                    line: lineCardRef
+                  };
+                  const ref = refs[chartType as keyof typeof refs];
+                  if (ref?.current) {
+                    copyChartSvg(ref.current);
+                  }
+                }}
+                aria-label={`Copy ${chartType} chart as SVG`}
+              >
+                Copy SVG
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={closeFullscreen}
+                className="h-8 w-8 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
           <div className="flex-1 p-4">
             {children}
