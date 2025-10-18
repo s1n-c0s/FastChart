@@ -576,6 +576,13 @@ export default function DataVisualizer() {
   const FullscreenModal = ({ chartType, children }: { chartType: string; children: React.ReactNode }) => {
     if (fullscreenChart !== chartType) return null;
 
+    const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+      // Only close if clicking on the backdrop, not the modal content
+      if (e.target === e.currentTarget) {
+        closeFullscreen();
+      }
+    };
+
     return (
       <div 
         className="fixed z-50 bg-black/80 flex items-center justify-center" 
@@ -589,6 +596,7 @@ export default function DataVisualizer() {
           margin: 0,
           padding: '1rem'
         }}
+        onClick={handleBackdropClick}
       >
         <div className="bg-background rounded-lg border w-full h-full max-w-7xl max-h-[90vh] flex flex-col">
           <div className="flex items-center justify-between p-4 border-b">
