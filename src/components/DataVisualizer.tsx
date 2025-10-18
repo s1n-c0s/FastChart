@@ -737,7 +737,7 @@ export default function DataVisualizer() {
               </Button>
             </div>
           </div>
-          <ResponsiveContainer width="100%" height="95%">
+          <ResponsiveContainer width="100%" height="90%">
             <BarChart
               data={sortedData}
               margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
