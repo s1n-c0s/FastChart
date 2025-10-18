@@ -873,7 +873,7 @@ export default function DataVisualizer() {
               </Button>
             </div>
           </div>
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="90%">
             <PieChart>
               <Tooltip />
               <Pie
