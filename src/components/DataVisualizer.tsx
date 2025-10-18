@@ -553,7 +553,7 @@ export default function DataVisualizer() {
     setFullscreenChart(null);
   };
 
-  // Handle escape key to close fullscreen
+  // Handle escape key to close fullscreen and body scroll lock
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape" && fullscreenChart) {
@@ -562,8 +562,13 @@ export default function DataVisualizer() {
     };
 
     if (fullscreenChart) {
+      // Prevent body scroll when modal is open
+      document.body.style.overflow = 'hidden';
       document.addEventListener("keydown", handleEscape);
-      return () => document.removeEventListener("keydown", handleEscape);
+      return () => {
+        document.body.style.overflow = 'unset';
+        document.removeEventListener("keydown", handleEscape);
+      };
     }
   }, [fullscreenChart]);
 
@@ -572,7 +577,19 @@ export default function DataVisualizer() {
     if (fullscreenChart !== chartType) return null;
 
     return (
-      <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+      <div 
+        className="fixed z-50 bg-black/80 flex items-center justify-center" 
+        style={{ 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0, 
+          width: '100vw', 
+          height: '100vh',
+          margin: 0,
+          padding: '1rem'
+        }}
+      >
         <div className="bg-background rounded-lg border w-full h-full max-w-7xl max-h-[90vh] flex flex-col">
           <div className="flex items-center justify-between p-4 border-b">
             <h2 className="text-xl font-semibold capitalize">{chartType} Chart - Full Screen</h2>
