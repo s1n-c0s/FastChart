@@ -202,6 +202,7 @@ export default function DataVisualizer() {
     { id: generateId(), label: "C", value: 18, color: presetColors[2] },
   ]);
   const [stackedHorizontal, setStackedHorizontal] = useState(true);
+  const [barHorizontal, setBarHorizontal] = useState(true);
   const [markdownInput, setMarkdownInput] = useState<string>(
     `Label,Value,Color\nitem1,"5",#F032E6\nitem2,"4",#46F0F0\nitem3,"5",#06b6d4`
   );
@@ -718,25 +719,44 @@ export default function DataVisualizer() {
         <div ref={barCardRef} className="rounded-lg border p-4 h-[380px]">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-base font-medium">Bar Chart</h3>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => copyChartSvg(barCardRef.current)}
-              aria-label="Copy Bar Chart as SVG"
-            >
-              Copy SVG
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                aria-label="Toggle bar chart orientation"
+                onClick={() => setBarHorizontal((v) => !v)}
+              >
+                {barHorizontal ? "Vertical" : "Horizontal"}
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => copyChartSvg(barCardRef.current)}
+                aria-label="Copy Bar Chart as SVG"
+              >
+                Copy SVG
+              </Button>
+            </div>
           </div>
           <ResponsiveContainer width="100%" height="95%">
             <BarChart
               data={sortedData}
               margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
+              layout={barHorizontal ? "horizontal" : "vertical"}
             >
               <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              <XAxis dataKey="label" tickLine={false} axisLine={false} />
-              <YAxis tickLine={false} axisLine={false} />
+              {barHorizontal ? (
+                <>
+                  <XAxis dataKey="label" tickLine={false} axisLine={false} />
+                  <YAxis tickLine={false} axisLine={false} />
+                </>
+              ) : (
+                <>
+                  <XAxis type="number" tickLine={false} axisLine={false} />
+                  <YAxis dataKey="label" type="category" tickLine={false} axisLine={false} />
+                </>
+              )}
               <Tooltip />
-              <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+              <Bar dataKey="value" radius={barHorizontal ? [6, 6, 0, 0] : [0, 6, 6, 0]}>
                 {sortedData.map((entry) => (
                   <Cell key={entry.id} fill={entry.color} />
                 ))}
