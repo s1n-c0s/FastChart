@@ -42,7 +42,12 @@ import {
   Tooltip,
   XAxis,
   YAxis,
-  BarChart as RechartsBarChart
+  BarChart as RechartsBarChart,
+  PieChart as RechartsParChart,
+  Pie,
+  Line,
+  Label,
+  LineChart as RechartsLineChart
 } from "recharts";
 import { X, Maximize2 } from "lucide-react";
 
@@ -1051,77 +1056,93 @@ export default function DataVisualizer() {
 
       {/* --- Full-screen Modals --- */}
       {fullscreenChart === "bar" && (
-        <div className={styles.fullscreenModal} onClick={(e) => e.target === e.currentTarget && closeFullscreen()}>
-          <div className={styles.fullscreenContent}>
-            <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="text-xl font-semibold">Bar Chart</h2>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="secondary"
-                  onClick={() => setBarHorizontal(v => !v)}
-                >
-                  {barHorizontal ? "Vertical" : "Horizontal"}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => copyChartSvg(barCardRef.current)}
-                >
-                  Copy SVG
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={closeFullscreen}
-                  className="h-8 w-8 p-0"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            <div className="p-4 h-[calc(100%-73px)]">
-              <BarChart
-                data={sortedData}
-                containerRef={barCardRef}
-                isHorizontal={barHorizontal}
-              />
-            </div>
-          </div>
-        </div>
+        <FullscreenModal chartType="bar">
+          <ResponsiveContainer width="100%" height="100%">
+            <RechartsBarChart
+              data={sortedData}
+              margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
+              layout={barHorizontal ? "horizontal" : "vertical"}
+            >
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+              {barHorizontal ? (
+                <>
+                  <XAxis dataKey="label" tickLine={false} axisLine={false} />
+                  <YAxis tickLine={false} axisLine={false} />
+                </>
+              ) : (
+                <>
+                  <XAxis type="number" tickLine={false} axisLine={false} />
+                  <YAxis dataKey="label" type="category" tickLine={false} axisLine={false} />
+                </>
+              )}
+              <Tooltip />
+              <Bar 
+                dataKey="value" 
+                radius={barHorizontal ? [6, 6, 0, 0] : [0, 6, 6, 0]}
+              >
+                {sortedData.map((entry) => (
+                  <Cell key={entry.id} fill={entry.color} />
+                ))}
+              </Bar>
+            </RechartsBarChart>
+          </ResponsiveContainer>
+        </FullscreenModal>
       )}
 
       {fullscreenChart === "pie" && (
-        <div className={styles.fullscreenModal} onClick={(e) => e.target === e.currentTarget && closeFullscreen()}>
-          <div className={styles.fullscreenContent}>
-            <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="text-xl font-semibold">Pie Chart</h2>
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => copyChartSvg(pieCardRef.current)}
-                >
-                  Copy SVG
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={closeFullscreen}
-                  className="h-8 w-8 p-0"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            <div className="p-4 h-[calc(100%-73px)]">
-              <PieChart
+        <FullscreenModal chartType="pie">
+          <ResponsiveContainer width="100%" height="100%">
+            <RechartsParChart>
+              <Tooltip />
+              <Pie
                 data={sortedData}
-                total={total}
-                containerRef={pieCardRef}
-              />
-            </div>
-          </div>
-        </div>
+                dataKey="value"
+                nameKey="label"
+                cx="50%"
+                cy="50%"
+                innerRadius={60}
+                outerRadius={100}
+                paddingAngle={2}
+                cornerRadius={6}
+                strokeWidth={5}
+              >
+                {sortedData.map((entry) => (
+                  <Cell key={entry.id} fill={entry.color} />
+                ))}
+                <Label
+                  content={({ viewBox }) => {
+                    if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                      return (
+                        <text
+                          x={viewBox.cx}
+                          y={viewBox.cy}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                        >
+                          <tspan
+                            x={viewBox.cx}
+                            y={viewBox.cy}
+                            className="fill-foreground text-2xl font-bold"
+                          >
+                            {total.toLocaleString()}
+                          </tspan>
+                          <tspan
+                            x={viewBox.cx}
+                            y={(viewBox.cy || 0) + 24}
+                            className="fill-muted-foreground text-sm"
+                          >
+                            Total
+                          </tspan>
+                        </text>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+              </Pie>
+            </RechartsParChart>
+          </ResponsiveContainer>
+        </FullscreenModal>
       )}
 
       {fullscreenChart === "stacked" && (
@@ -1170,37 +1191,31 @@ export default function DataVisualizer() {
         </FullscreenModal>
       )}
 
-      {fullscreenChart === "line" && (
-        <div className={styles.fullscreenModal} onClick={(e) => e.target === e.currentTarget && closeFullscreen()}>
-          <div className={styles.fullscreenContent}>
-            <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="text-xl font-semibold">Line Chart</h2>
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => copyChartSvg(lineCardRef.current)}
-                >
-                  Copy SVG
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={closeFullscreen}
-                  className="h-8 w-8 p-0"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            <div className="p-4 h-[calc(100%-73px)]">
-              <LineChart
-                data={sortedData}
-                containerRef={lineCardRef}
+            {fullscreenChart === "line" && (
+        <FullscreenModal chartType="line">
+          <ResponsiveContainer width="100%" height="100%">
+            <RechartsLineChart margin={{ top: 20, right: 20, left: 20, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                dataKey="label"
+                interval={0}
+                angle={-45}
+                textAnchor="end"
+                height={60}
               />
-            </div>
-          </div>
-        </div>
+              <YAxis width={80} />
+              <Tooltip />
+              <Line
+                type="monotone"
+                dataKey="value"
+                stroke="#8884d8"
+                strokeWidth={2}
+                data={sortedData}
+                dot={{ fill: "#8884d8", strokeWidth: 2 }}
+              />
+            </RechartsLineChart>
+          </ResponsiveContainer>
+        </FullscreenModal>
       )}
     </>
   );
