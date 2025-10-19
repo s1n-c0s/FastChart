@@ -212,7 +212,7 @@ export default function DataVisualizer() {
   const stackedCardRef = useRef<HTMLDivElement>(null!);
   const lineCardRef = useRef<HTMLDivElement>(null!);
 
-  async function copyChartSvg(containerEl: HTMLElement | null) {
+  const copyChartSvg = useCallback(async (containerEl: HTMLElement | null) => {
     if (!containerEl) {
       console.error("Container element is null");
       toast.error("Cannot copy chart: Container not found");
@@ -220,42 +220,50 @@ export default function DataVisualizer() {
     }
 
     try {
-      // Wait for chart to render
-      await new Promise(resolve => setTimeout(resolve, 200));
-
-      // Find the chart SVG directly using the recharts-wrapper class
-      const wrapper = containerEl.querySelector('.recharts-wrapper');
-      if (!wrapper) {
-        console.error("No .recharts-wrapper found");
-        toast.error("Cannot find chart to copy");
-        return;
+      // Maximum retry attempts
+      const maxRetries = 3;
+      let chartSvg: SVGSVGElement | null = null;
+      
+      // Try to find the chart SVG with retries
+      for (let i = 0; i < maxRetries; i++) {
+        // Wait between attempts
+        await new Promise(resolve => setTimeout(resolve, 100 * (i + 1)));
+        
+        // Find the recharts wrapper and SVG
+        const wrapper = containerEl.querySelector('.recharts-wrapper');
+        if (wrapper) {
+          chartSvg = wrapper.querySelector('svg');
+          if (chartSvg) break;
+        }
       }
 
-      const chartSvg = wrapper.querySelector('svg');
       if (!chartSvg) {
-        console.error("No SVG found in recharts-wrapper");
+        console.error("No chart SVG found after retries");
         toast.error("Cannot find chart to copy");
         return;
       }
 
-      // Get the computed dimensions
+      // Get accurate dimensions
       const box = chartSvg.getBoundingClientRect();
       const width = Math.round(box.width);
       const height = Math.round(box.height);
-
-      // Create a new SVG with exact dimensions
+      
+      // Create new SVG element with namespace
       const newSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       newSvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
       newSvg.setAttribute("width", width.toString());
       newSvg.setAttribute("height", height.toString());
+      newSvg.setAttribute("viewBox", `0 0 ${width} ${height}`);
       
-      // Copy the inner content
-      newSvg.innerHTML = chartSvg.innerHTML;
+      // Copy all child nodes
+      Array.from(chartSvg.childNodes).forEach(node => {
+        newSvg.appendChild(node.cloneNode(true));
+      });
       
-      // Convert to string with proper namespace
+      // Convert to string
       const svgString = newSvg.outerHTML;
       
-      // Try to copy
+      // Copy to clipboard
       await navigator.clipboard.writeText(svgString);
       
       toast.success("Chart copied!", {
@@ -273,7 +281,7 @@ export default function DataVisualizer() {
       }
       toast.error("Failed to copy chart");
     }
-  }
+  }, []);
 
   function parseMarkdownTable(md: string): Datum[] {
     const lines = md
@@ -842,7 +850,9 @@ export default function DataVisualizer() {
                 <Button
                   size="sm"
                   variant="secondary"
-                  onClick={() => copyChartSvg(barCardRef.current)}
+                  onClick={async () => {
+                    await copyChartSvg(barCardRef.current);
+                  }}
                   aria-label="Copy Bar Chart as SVG"
                 >
                   Copy SVG
