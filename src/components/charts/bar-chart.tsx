@@ -46,7 +46,7 @@ export function BarChart({
         <RechartsBarChart
           data={data}
           layout={isHorizontal ? "horizontal" : "vertical"}
-          margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
+          margin={{ top: 8, right: 16, bottom: isHorizontal ? 8 : 24, left: isHorizontal ? 16 : 8 }}
         >
           <CartesianGrid strokeDasharray="3 3" />
           {isHorizontal ? (
@@ -62,6 +62,7 @@ export function BarChart({
                 type="category"
                 tickLine={false}
                 axisLine={false}
+                width={60}
               />
             </>
           )}
@@ -78,7 +79,7 @@ export function BarChart({
           />
           <Bar
             dataKey="value"
-            radius={isHorizontal ? [0, 6, 6, 0] : [6, 6, 0, 0]}
+            radius={isHorizontal ? [6, 6, 0, 0] : [0, 6, 6, 0]}
           >
             {data.map((item) => (
               <Cell key={item.id} fill={item.color} />

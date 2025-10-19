@@ -460,7 +460,7 @@ export default function DataVisualizer() {
         name: "All",
         ...sortedData.reduce((acc, d) => ({
           ...acc,
-          [d.id]: Math.max(0, isFinite(d.value) ? d.value : 0) / (total || 1)
+          [d.label]: Math.max(0, isFinite(d.value) ? d.value : 0) / (total || 1)
         }), {})
       }
     ];
@@ -974,7 +974,7 @@ export default function DataVisualizer() {
                   )}
                   <Tooltip content={<StackedTooltip />} />
                   {sortedData.map((d) => (
-                    <Bar key={d.id} dataKey={d.id} stackId="stacked" fill={d.color} name={d.label} />
+                    <Bar key={d.id} dataKey={d.label} stackId="stacked" fill={d.color} name={d.label} />
                   ))}
                 </RechartsBarChart>
               </ResponsiveContainer>
@@ -1168,7 +1168,7 @@ export default function DataVisualizer() {
               )}
               <Tooltip content={<StackedTooltip />} />
               {sortedData.map((d) => (
-                <Bar key={d.id} dataKey={d.id} stackId="stacked" name={d.label}>
+                <Bar key={d.id} dataKey={d.label} stackId="stacked" name={d.label}>
                   <Cell fill={d.color} />
                 </Bar>
               ))}
