@@ -991,13 +991,34 @@ export default function DataVisualizer() {
         </ResponsiveContainer>
       </div>
 
-        <div ref={lineCardRef}>
-          <LineChart
-            data={sortedData}
-            onCopySvg={() => copyChartSvg(lineCardRef.current)}
-            onFullscreen={() => openFullscreen("line")}
-            containerRef={lineCardRef}
-          />
+        <div ref={lineCardRef} className="rounded-lg border p-4 min-h-[320px]">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-base font-medium">Line Chart - Linear</h3>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => copyChartSvg(lineCardRef.current)}
+                aria-label="Copy Line Chart as SVG"
+              >
+                Copy SVG
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => openFullscreen("line")}
+                aria-label="Open Line Chart in full screen"
+              >
+                <Maximize2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <div className="h-[calc(100%-3rem)]">
+            <LineChart
+              data={sortedData}
+              containerRef={lineCardRef}
+            />
+          </div>
         </div>
       </div>
 
@@ -1030,27 +1051,77 @@ export default function DataVisualizer() {
 
       {/* --- Full-screen Modals --- */}
       {fullscreenChart === "bar" && (
-        <FullscreenModal chartType="bar">
-          <ResponsiveContainer width="100%" height="100%">
-                          <BarChart
-              data={sortedData}
-              containerRef={barCardRef}
-              isHorizontal={barHorizontal}
-            />
-          </ResponsiveContainer>
-        </FullscreenModal>
+        <div className={styles.fullscreenModal} onClick={(e) => e.target === e.currentTarget && closeFullscreen()}>
+          <div className={styles.fullscreenContent}>
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-xl font-semibold">Bar Chart</h2>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => setBarHorizontal(v => !v)}
+                >
+                  {barHorizontal ? "Vertical" : "Horizontal"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => copyChartSvg(barCardRef.current)}
+                >
+                  Copy SVG
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={closeFullscreen}
+                  className="h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="p-4 h-[calc(100%-73px)]">
+              <BarChart
+                data={sortedData}
+                containerRef={barCardRef}
+                isHorizontal={barHorizontal}
+              />
+            </div>
+          </div>
+        </div>
       )}
 
       {fullscreenChart === "pie" && (
-        <FullscreenModal chartType="pie">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart
-              data={sortedData}
-              total={total} 
-              containerRef={pieCardRef}
-            />
-          </ResponsiveContainer>
-        </FullscreenModal>
+        <div className={styles.fullscreenModal} onClick={(e) => e.target === e.currentTarget && closeFullscreen()}>
+          <div className={styles.fullscreenContent}>
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-xl font-semibold">Pie Chart</h2>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => copyChartSvg(pieCardRef.current)}
+                >
+                  Copy SVG
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={closeFullscreen}
+                  className="h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="p-4 h-[calc(100%-73px)]">
+              <PieChart
+                data={sortedData}
+                total={total}
+                containerRef={pieCardRef}
+              />
+            </div>
+          </div>
+        </div>
       )}
 
       {fullscreenChart === "stacked" && (
@@ -1100,16 +1171,36 @@ export default function DataVisualizer() {
       )}
 
       {fullscreenChart === "line" && (
-        <FullscreenModal chartType="line">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart
-              data={sortedData}
-              onCopySvg={() => copyChartSvg(lineCardRef.current)}
-              onFullscreen={() => openFullscreen("line")}
-              containerRef={lineCardRef}
-            />
-          </ResponsiveContainer>
-        </FullscreenModal>
+        <div className={styles.fullscreenModal} onClick={(e) => e.target === e.currentTarget && closeFullscreen()}>
+          <div className={styles.fullscreenContent}>
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-xl font-semibold">Line Chart</h2>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => copyChartSvg(lineCardRef.current)}
+                >
+                  Copy SVG
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={closeFullscreen}
+                  className="h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="p-4 h-[calc(100%-73px)]">
+              <LineChart
+                data={sortedData}
+                containerRef={lineCardRef}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
