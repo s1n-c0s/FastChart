@@ -38,16 +38,16 @@ import {
   Bar,
   CartesianGrid,
   Cell,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
   BarChart as RechartsBarChart,
-  PieChart as RechartsParChart,
+  PieChart as RechartsPieChart,
   Pie,
   Line,
   Label,
-  LineChart as RechartsLineChart
+  LineChart as RechartsLineChart,
+  ResponsiveContainer
 } from "recharts";
 import { X, Maximize2 } from "lucide-react";
 
@@ -86,10 +86,6 @@ function SortableRow({
   useEffect(() => {
     setLocalValue(row.value);
   }, [row.value]);
-
-
-
-
 
   return (
     <tr
@@ -478,9 +474,7 @@ export default function DataVisualizer() {
     payload?: Array<{ name?: string; value: number; fill?: string } & Record<string, unknown>>;
   }) {
     if (!active || !payload || payload.length === 0) return null;
-    
 
-    
     return (
       <div className={styles.stackedTooltipWrapper}>
         <div className={styles.stackedTooltipTitle}>Details</div>
@@ -529,7 +523,6 @@ export default function DataVisualizer() {
         color: presetColors[nextIndex % presetColors.length],
       },
     ]);
-    // ✅ Add Row: ใช้ toast ธรรมดา + ไอคอน ✅ (Black Version)
     toast.success("Row added!", { duration: 900 });
   }
 
@@ -602,7 +595,7 @@ export default function DataVisualizer() {
         className={styles.fullscreenModal}
         onClick={(e) => e.target === e.currentTarget && closeFullscreen()}
       >
-        <div         className={styles.fullscreenContent}>
+        <div className={styles.fullscreenContent}>
           <div className="flex items-center justify-between p-4 border-b">
             <h2 className="text-xl font-semibold capitalize">{chartType} Chart - Full Screen</h2>
             <div className="flex items-center gap-2">
@@ -653,7 +646,7 @@ export default function DataVisualizer() {
               </Button>
             </div>
           </div>
-          <div           className={styles.chartContent}>
+          <div className={styles.chartContent}>
             {children}
           </div>
         </div>
@@ -671,353 +664,351 @@ export default function DataVisualizer() {
             Label/Value headers to sort.
           </p>
         </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Data Tables */}
-        <div className="rounded-lg border p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-medium">
-              Data Table{" "}
-              {sortConfig && (
-                <span className="text-sm text-primary">(Sorted)</span>
-              )}
-            </h2>
-            <div className="flex items-center gap-2">
-              <div className="text-sm text-muted-foreground">
-                Total: {total.toLocaleString()}
-              </div>
-              <Button variant="secondary" onClick={addRow}>
-                Add Row
-              </Button>
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2 pr-2 min-w-[160px]">
-                    <button
-                      className="inline-flex items-center gap-1 font-semibold hover:text-foreground/80 transition-colors"
-                      onClick={() => requestSort("label")}
-                      aria-label="Sort by Label"
-                    >
-                      Label
-                      {sortConfig?.key === "label" && (
-                        <span aria-hidden="true">
-                          {sortConfig.direction === "asc" ? "↑" : "↓"}
-                        </span>
-                      )}
-                      {isDndEnabled && (
-                        <span className="text-xs text-muted-foreground ml-1">
-                          (Drag)
-                        </span>
-                      )}
-                    </button>
-                  </th>
-                  <th className="text-left py-2 pr-2 min-w-[120px]">
-                    <button
-                      className="inline-flex items-center gap-1 font-semibold hover:text-foreground/80 transition-colors"
-                      onClick={() => requestSort("value")}
-                      aria-label="Sort by Value"
-                    >
-                      Value
-                      {sortConfig?.key === "value" && (
-                        <span aria-hidden="true">
-                          {sortConfig.direction === "asc" ? "↑" : "↓"}
-                        </span>
-                      )}
-                    </button>
-                  </th>
-                  <th className="text-left py-2 pr-2 min-w-[120px]">Color</th>
-                  <th className="text-left py-2 pr-2">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={handleDragEnd}
-                >
-                  <SortableContext
-                    items={sortedData.map((d) => d.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {sortedData.map((row) => (
-                      <SortableRow
-                        key={row.id}
-                        row={row}
-                        onUpdateLabel={updateLabel}
-                        onUpdateValue={updateValue}
-                        onUpdateColor={updateColor}
-                        onRemove={removeRow}
-                        presetColors={presetColors}
-                      />
-                    ))}
-                  </SortableContext>
-                </DndContext>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* --- Right Panel: Markdown Input --- */}
-        <div className="rounded-lg border p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-medium">Paste Data</h2>
-          </div>
-          <div className="grid grid-cols-1 gap-3">
-            <textarea
-              className="min-h-[160px] w-full rounded-md border bg-background px-3 py-2 font-mono text-xs"
-              aria-label="Markdown table input"
-              value={markdownInput}
-              onChange={(e) => setMarkdownInput(e.target.value)}
-            />
-            <div className="flex items-center justify-between gap-2">
-              <Button
-                onClick={() => {
-                  const rows = parseMarkdownTable(markdownInput);
-                  if (rows.length) {
-                    setData(rows);
-                    // ✅ Transform: ใช้ toast ธรรมดา + ไอคอน ✅ (Black Version)
-                    toast.success("Data transformed successfully!", {
-                      duration: 900,
-                    });
-                  } else {
-                    // ✅ Error: ใช้ toast.error ดึงสไตล์สีดำ/ไอคอนแดง
-                    toast.error("Error: Invalid data format or no data found.");
-                  }
-                  setSortConfig(null);
-                }}
-              >
-                Transform to Table
-              </Button>
-
-              {/* Grouped Buttons (ButtonGroup Style) */}
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setMarkdownInput(
-                      `Label,Value,Color\nA, 12, #3b82f6\nB, 30, #22c55e\nC, 18, #ef4444`
-                    );
-                    setSortConfig(null);
-                    // ✅ Load CSV: ใช้ toast ธรรมดา + ไอคอน ✅ (Black Version)
-                    toast.success("CSV Example loaded!", { duration: 900 });
-                  }}
-                  aria-label="Load CSV Example"
-                >
-                  CSV Example
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setMarkdownInput(
-                      "| Label | Value | Color |\n|------:|------:|:-----:|\n| A     | 12    | #3b82f6 |\n| B     | 30    | #22c55e |\n| C     | 18    | #ef4444 |"
-                    );
-                    setSortConfig(null);
-                    // ✅ Load Markdown: ใช้ toast ธรรมดา + ไอคอน ✅ (Black Version)
-                    toast.success("Markdown Example loaded!", {
-                      duration: 900,
-                    });
-                  }}
-                  aria-label="Load Markdown Example"
-                >
-                  Markdown Example
-                </Button>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Accepts Markdown Table (Label | Value | Color) or **Structured CSV
-              (Label,Value,Color)**.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* --- Charts Section --- */}
-      <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div ref={barCardRef} className="rounded-lg border p-4 min-h-[380px]">
+          {/* Data Tables */}
+          <div className="rounded-lg border p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-base font-medium">Bar Chart</h3>
+              <h2 className="text-lg font-medium">
+                Data Table{" "}
+                {sortConfig && (
+                  <span className="text-sm text-primary">(Sorted)</span>
+                )}
+              </h2>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="secondary"
-                  aria-label="Toggle bar chart orientation"
-                  onClick={() => setBarHorizontal((v) => !v)}
-                >
-                  {barHorizontal ? "Vertical" : "Horizontal"}
+                <div className="text-sm text-muted-foreground">
+                  Total: {total.toLocaleString()}
+                </div>
+                <Button variant="secondary" onClick={addRow}>
+                  Add Row
                 </Button>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 pr-2 min-w-[160px]">
+                      <button
+                        className="inline-flex items-center gap-1 font-semibold hover:text-foreground/80 transition-colors"
+                        onClick={() => requestSort("label")}
+                        aria-label="Sort by Label"
+                      >
+                        Label
+                        {sortConfig?.key === "label" && (
+                          <span aria-hidden="true">
+                            {sortConfig.direction === "asc" ? "↑" : "↓"}
+                          </span>
+                        )}
+                        {isDndEnabled && (
+                          <span className="text-xs text-muted-foreground ml-1">
+                            (Drag)
+                          </span>
+                        )}
+                      </button>
+                    </th>
+                    <th className="text-left py-2 pr-2 min-w-[120px]">
+                      <button
+                        className="inline-flex items-center gap-1 font-semibold hover:text-foreground/80 transition-colors"
+                        onClick={() => requestSort("value")}
+                        aria-label="Sort by Value"
+                      >
+                        Value
+                        {sortConfig?.key === "value" && (
+                          <span aria-hidden="true">
+                            {sortConfig.direction === "asc" ? "↑" : "↓"}
+                          </span>
+                        )}
+                      </button>
+                    </th>
+                    <th className="text-left py-2 pr-2 min-w-[120px]">Color</th>
+                    <th className="text-left py-2 pr-2">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <SortableContext
+                      items={sortedData.map((d) => d.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {sortedData.map((row) => (
+                        <SortableRow
+                          key={row.id}
+                          row={row}
+                          onUpdateLabel={updateLabel}
+                          onUpdateValue={updateValue}
+                          onUpdateColor={updateColor}
+                          onRemove={removeRow}
+                          presetColors={presetColors}
+                        />
+                      ))}
+                    </SortableContext>
+                  </DndContext>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* --- Right Panel: Markdown Input --- */}
+          <div className="rounded-lg border p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-medium">Paste Data</h2>
+            </div>
+            <div className="grid grid-cols-1 gap-3">
+              <textarea
+                className="min-h-[160px] w-full rounded-md border bg-background px-3 py-2 font-mono text-xs"
+                aria-label="Markdown table input"
+                value={markdownInput}
+                onChange={(e) => setMarkdownInput(e.target.value)}
+              />
+              <div className="flex items-center justify-between gap-2">
                 <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={async () => {
-                    await copyChartSvg(barCardRef.current);
+                  onClick={() => {
+                    const rows = parseMarkdownTable(markdownInput);
+                    if (rows.length) {
+                      setData(rows);
+                      toast.success("Data transformed successfully!", {
+                        duration: 900,
+                      });
+                    } else {
+                      toast.error("Error: Invalid data format or no data found.");
+                    }
+                    setSortConfig(null);
                   }}
-                  aria-label="Copy Bar Chart as SVG"
                 >
-                  Copy SVG
+                  Transform to Table
                 </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => openFullscreen("bar")}
-                  aria-label="Open Bar Chart in full screen"
-                >
-                  <Maximize2 className="h-4 w-4" />
-                </Button>
+
+                {/* Grouped Buttons (ButtonGroup Style) */}
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setMarkdownInput(
+                        `Label,Value,Color\nA, 12, #3b82f6\nB, 30, #22c55e\nC, 18, #ef4444`
+                      );
+                      setSortConfig(null);
+                      toast.success("CSV Example loaded!", { duration: 900 });
+                    }}
+                    aria-label="Load CSV Example"
+                  >
+                    CSV Example
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setMarkdownInput(
+                        "| Label | Value | Color |\n|------:|------:|:-----:|\n| A     | 12    | #3b82f6 |\n| B     | 30    | #22c55e |\n| C     | 18    | #ef4444 |"
+                      );
+                      setSortConfig(null);
+                      toast.success("Markdown Example loaded!", {
+                        duration: 900,
+                      });
+                    }}
+                    aria-label="Load Markdown Example"
+                  >
+                    Markdown Example
+                  </Button>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Accepts Markdown Table (Label | Value | Color) or **Structured CSV
+                (Label,Value,Color)**.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* --- Charts Section --- */}
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div ref={barCardRef} className="rounded-lg border p-4 min-h-[380px]">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-base font-medium">Bar Chart</h3>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    aria-label="Toggle bar chart orientation"
+                    onClick={() => setBarHorizontal((v) => !v)}
+                  >
+                    {barHorizontal ? "Vertical" : "Horizontal"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={async () => {
+                      await copyChartSvg(barCardRef.current);
+                    }}
+                    aria-label="Copy Bar Chart as SVG"
+                  >
+                    Copy SVG
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => openFullscreen("bar")}
+                    aria-label="Open Bar Chart in full screen"
+                  >
+                    <Maximize2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="h-[calc(100%-3rem)]">
+                <BarChart
+                  data={sortedData}
+                  containerRef={barCardRef}
+                  isHorizontal={barHorizontal}
+                />
               </div>
             </div>
-            <div className="h-[calc(100%-3rem)]">
-              <BarChart
-                data={sortedData}
-                containerRef={barCardRef}
-                isHorizontal={barHorizontal}
-              />
-            </div>
-          </div>
 
-          <div ref={pieCardRef} className="rounded-lg border p-4 min-h-[380px]">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-base font-medium">
-                Pie Chart - Donut with Total
-              </h3>
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => copyChartSvg(pieCardRef.current)}
-                  aria-label="Copy Pie Chart as SVG"
-                >
-                  Copy SVG
-                </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => openFullscreen("pie")}
-                  aria-label="Open Pie Chart in full screen"
-                >
-                  <Maximize2 className="h-4 w-4" />
-                </Button>
+            <div ref={pieCardRef} className="rounded-lg border p-4 min-h-[380px]">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-base font-medium">
+                  Pie Chart - Donut with Total
+                </h3>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => copyChartSvg(pieCardRef.current)}
+                    aria-label="Copy Pie Chart as SVG"
+                  >
+                    Copy SVG
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => openFullscreen("pie")}
+                    aria-label="Open Pie Chart in full screen"
+                  >
+                    <Maximize2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="h-[calc(100%-3rem)]">
+                <PieChart
+                  data={sortedData}
+                  total={total}
+                  containerRef={pieCardRef}
+                />
               </div>
             </div>
-            <div className="h-[calc(100%-3rem)]">
-              <PieChart
-                data={sortedData}
-                total={total}
-                containerRef={pieCardRef}
-              />
-            </div>
           </div>
-        </div>
-        </div>
 
-        <div ref={stackedCardRef} className="rounded-lg border p-4 h-[320px]">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-base font-medium">100% Stacked Chart</h3>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              aria-label="Toggle stacked chart orientation"
-              onClick={() => setStackedHorizontal((v) => !v)}
-            >
-              {stackedHorizontal ? "Vertical" : "Horizontal"}
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => copyChartSvg(stackedCardRef.current)}
-              aria-label="Copy Stacked Chart as SVG"
-            >
-              Copy SVG
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => openFullscreen("stacked")}
-              aria-label="Open Stacked Chart in full screen"
-            >
-              <Maximize2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-        <ResponsiveContainer width="100%" height="90%">
-          <RechartsBarChart
-            data={stackedData}
-            stackOffset="expand"
-            margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
-            layout={stackedHorizontal ? "vertical" : "horizontal"}
-          >
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-            {stackedHorizontal ? (
-              <>
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  tickLine={false}
-                  axisLine={false}
-                  width={60}
-                />
-                <XAxis
-                  type="number"
-                  domain={[0, 1]}
-                  tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
-                  tickLine={false}
-                  axisLine={false}
-                />
-              </>
-            ) : (
-              <>
-                <XAxis
-                  type="category"
-                  dataKey="name"
-                  tickLine={false}
-                  axisLine={false}
-                  height={60}
-                />
-                <YAxis
-                  type="number"
-                  domain={[0, 1]}
-                  tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
-                  tickLine={false}
-                  axisLine={false}
-                />
-              </>
-            )}
-            <Tooltip content={<StackedTooltip />} />
-            {sortedData.map((d) => (
-              <Bar key={d.id} dataKey={d.id} stackId="stacked" fill={d.color} name={d.label} />
-            ))}
-          </RechartsBarChart>
-        </ResponsiveContainer>
-      </div>
-
-        <div ref={lineCardRef} className="rounded-lg border p-4 min-h-[320px]">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-base font-medium">Line Chart - Linear</h3>
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => copyChartSvg(lineCardRef.current)}
-                aria-label="Copy Line Chart as SVG"
-              >
-                Copy SVG
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => openFullscreen("line")}
-                aria-label="Open Line Chart in full screen"
-              >
-                <Maximize2 className="h-4 w-4" />
-              </Button>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div ref={stackedCardRef} className="rounded-lg border p-4 h-[320px]">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-base font-medium">100% Stacked Chart</h3>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    aria-label="Toggle stacked chart orientation"
+                    onClick={() => setStackedHorizontal((v) => !v)}
+                  >
+                    {stackedHorizontal ? "Vertical" : "Horizontal"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => copyChartSvg(stackedCardRef.current)}
+                    aria-label="Copy Stacked Chart as SVG"
+                  >
+                    Copy SVG
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => openFullscreen("stacked")}
+                    aria-label="Open Stacked Chart in full screen"
+                  >
+                    <Maximize2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <ResponsiveContainer width="100%" height="90%">
+                <RechartsBarChart
+                  data={stackedData}
+                  stackOffset="expand"
+                  margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
+                  layout={stackedHorizontal ? "vertical" : "horizontal"}
+                >
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  {stackedHorizontal ? (
+                    <>
+                      <YAxis
+                        type="category"
+                        dataKey="name"
+                        tickLine={false}
+                        axisLine={false}
+                        width={60}
+                      />
+                      <XAxis
+                        type="number"
+                        domain={[0, 1]}
+                        tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <XAxis
+                        type="category"
+                        dataKey="name"
+                        tickLine={false}
+                        axisLine={false}
+                        height={60}
+                      />
+                      <YAxis
+                        type="number"
+                        domain={[0, 1]}
+                        tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                    </>
+                  )}
+                  <Tooltip content={<StackedTooltip />} />
+                  {sortedData.map((d) => (
+                    <Bar key={d.id} dataKey={d.id} stackId="stacked" fill={d.color} name={d.label} />
+                  ))}
+                </RechartsBarChart>
+              </ResponsiveContainer>
             </div>
-          </div>
-          <div className="h-[calc(100%-3rem)]">
-            <LineChart
-              data={sortedData}
-              containerRef={lineCardRef}
-            />
+
+            <div ref={lineCardRef} className="rounded-lg border p-4 min-h-[320px]">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-base font-medium">Line Chart - Linear</h3>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => copyChartSvg(lineCardRef.current)}
+                    aria-label="Copy Line Chart as SVG"
+                  >
+                    Copy SVG
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => openFullscreen("line")}
+                    aria-label="Open Line Chart in full screen"
+                  >
+                    <Maximize2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="h-[calc(100%-3rem)]">
+                <LineChart
+                  data={sortedData}
+                  containerRef={lineCardRef}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1066,14 +1057,14 @@ export default function DataVisualizer() {
                 </>
               ) : (
                 <>
-                  <XAxis type="number" tickLine={false} axisLine={false} />
-                  <YAxis dataKey="label" type="category" tickLine={false} axisLine={false} />
+                  <XAxis dataKey="label" tickLine={false} axisLine={false} />
+                  <YAxis type="number" tickLine={false} axisLine={false} />
                 </>
               )}
               <Tooltip />
               <Bar 
                 dataKey="value" 
-                radius={barHorizontal ? [0, 6, 6, 0] : [0, 6, 6, 0]}
+                radius={barHorizontal ? [0, 6, 6, 0] : [6, 6, 0, 0]}
               >
                 {sortedData.map((entry) => (
                   <Cell key={entry.id} fill={entry.color} />
@@ -1087,7 +1078,7 @@ export default function DataVisualizer() {
       {fullscreenChart === "pie" && (
         <FullscreenModal chartType="pie">
           <ResponsiveContainer width="100%" height="100%">
-            <RechartsParChart>
+            <RechartsPieChart>
               <Tooltip />
               <Pie
                 data={sortedData}
@@ -1135,7 +1126,7 @@ export default function DataVisualizer() {
                   }}
                 />
               </Pie>
-            </RechartsParChart>
+            </RechartsPieChart>
           </ResponsiveContainer>
         </FullscreenModal>
       )}
@@ -1186,7 +1177,7 @@ export default function DataVisualizer() {
         </FullscreenModal>
       )}
 
-            {fullscreenChart === "line" && (
+      {fullscreenChart === "line" && (
         <FullscreenModal chartType="line">
           <ResponsiveContainer width="100%" height="100%">
             <RechartsLineChart margin={{ top: 20, right: 20, left: 20, bottom: 20 }}>

@@ -2,6 +2,7 @@ import * as React from "react"
 import {
   Pie,
   PieChart as RechartsPieChart,
+  Cell,
 } from "recharts"
 import type { Datum } from "@/types"
 import {
@@ -30,8 +31,8 @@ export function PieChart({ data, total, containerRef }: PieChartProps) {
   }, [data])
 
   return (
-    <div ref={containerRef} className="h-[380px]">
-      <ChartContainer config={chartConfig}>
+    <div ref={containerRef} className="h-full w-full">
+      <ChartContainer config={chartConfig} className="h-full w-full">
         <RechartsPieChart>
           <ChartTooltip
             content={({ active, payload }) => (
@@ -82,7 +83,11 @@ export function PieChart({ data, total, containerRef }: PieChartProps) {
               }
               return null
             }}
-          />
+          >
+            {data.map((item) => (
+              <Cell key={item.id} fill={item.color} />
+            ))}
+          </Pie>
           <ChartLegend
             content={({ payload }) => (
               <ChartLegendContent payload={payload} />

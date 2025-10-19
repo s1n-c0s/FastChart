@@ -5,6 +5,7 @@ import {
   CartesianGrid,
   XAxis,
   YAxis,
+  Cell,
 } from "recharts"
 import type { Datum } from "@/types"
 import {
@@ -37,14 +38,15 @@ export function BarChart({
   }, [data])
 
   return (
-    <div ref={containerRef} className="h-[380px]">
+    <div ref={containerRef} className="h-full w-full">
       <ChartContainer
         config={chartConfig}
-        className="w-full [&_.recharts-cartesian-grid-horizontal]:stroke-border [&_.recharts-cartesian-grid-vertical]:stroke-border"
+        className="h-full w-full"
       >
         <RechartsBarChart
           data={data}
           layout={isHorizontal ? "horizontal" : "vertical"}
+          margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
         >
           <CartesianGrid strokeDasharray="3 3" />
           {isHorizontal ? (
@@ -76,9 +78,12 @@ export function BarChart({
           />
           <Bar
             dataKey="value"
-            radius={isHorizontal ? [6, 6, 0, 0] : [0, 6, 6, 0]}
-            fill="var(--color-primary)"
-          />
+            radius={isHorizontal ? [0, 6, 6, 0] : [6, 6, 0, 0]}
+          >
+            {data.map((item) => (
+              <Cell key={item.id} fill={item.color} />
+            ))}
+          </Bar>
           {children}
         </RechartsBarChart>
       </ChartContainer>

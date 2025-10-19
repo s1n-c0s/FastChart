@@ -30,12 +30,12 @@ export function LineChart({ data, containerRef }: LineChartProps) {
   }, [data])
 
   return (
-    <div ref={containerRef} className="h-[320px]">
+    <div ref={containerRef} className="h-full w-full">
       <ChartContainer
         config={chartConfig}
-        className="w-full [&_.recharts-cartesian-grid-horizontal]:stroke-border [&_.recharts-cartesian-grid-vertical]:stroke-border"
+        className="h-full w-full"
       >
-        <RechartsLineChart data={data}>
+        <RechartsLineChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="label" tickLine={false} axisLine={false} />
           <YAxis tickLine={false} axisLine={false} />
@@ -51,11 +51,11 @@ export function LineChart({ data, containerRef }: LineChartProps) {
             )}
           />
           <Line
-            type="linear"
+            type="monotone"
             dataKey="value"
-            stroke="var(--color-primary)"
+            stroke="#8884d8"
             strokeWidth={2}
-            dot={false}
+            dot={{ fill: "#8884d8", strokeWidth: 2 }}
           />
         </RechartsLineChart>
       </ChartContainer>
