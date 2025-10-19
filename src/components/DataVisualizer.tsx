@@ -51,11 +51,11 @@ import {
 } from "recharts";
 import { X, Maximize2 } from "lucide-react";
 
-import { 
+import {
   BarChart,
   PieChart,
-  LineChart,
-} from "@/components/ui/datavisual";
+  LineChart
+} from "../components/charts";
 
 // 💡 SortableRow is already a good component separation.
 function SortableRow({
@@ -89,18 +89,16 @@ function SortableRow({
 
 
 
-  const cssVars = transform || transition 
-    ? {
-      '--transform': transform ? CSS.Transform.toString(transform) : '',
-      '--transition': transition || '',
-    } as React.CSSProperties
-    : undefined;
+
 
   return (
     <tr
       ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+      }}
       className={styles.sortableRow}
-      style={cssVars}
       {...attributes}
     >
       <td className="py-2 pr-2">
@@ -154,7 +152,7 @@ function SortableRow({
                 <div className="flex items-center gap-2 w-full text-left">
                   <div
                     className={styles.colorCircle}
-                    style={{ '--dot-color': row.color } as React.CSSProperties}
+                    data-color={row.color}
                   />
                   <span className="truncate text-sm">{row.color}</span>
                 </div>
@@ -167,7 +165,7 @@ function SortableRow({
                   <div className="flex items-center gap-2">
                     <div
                       className={styles.colorPreview}
-                      style={{ '--preview-color': c } as React.CSSProperties}
+                      data-color={c}
                     />
                     <span className="font-mono text-xs">{c}</span>
                   </div>
@@ -484,18 +482,15 @@ export default function DataVisualizer() {
 
     
     return (
-      <div className="rounded-md border bg-background p-2 text-xs shadow-sm">
-        <div className="font-medium mb-1">Details</div>
-        <div className="space-y-0.5">
+      <div className={styles.stackedTooltipWrapper}>
+        <div className={styles.stackedTooltipTitle}>Details</div>
+        <div className={styles.stackedTooltipContent}>
           {payload.map((entry, idx) => (
-            <div
-              key={idx}
-              className="flex items-center justify-between gap-4"
-            >
-              <div className="flex items-center gap-2">
+            <div key={idx} className={styles.stackedTooltipRow}>
+              <div className={styles.stackedTooltipLabel}>
                 <div
-                  className={`w-2 h-2 rounded-full ${styles.colorCircle}`}
-                  style={{"--dot-color": entry.fill} as React.CSSProperties}
+                  className={styles.colorCircle}
+                  data-color={entry.fill}
                 />
                 <span>{entry.name}</span>
               </div>
@@ -1066,8 +1061,8 @@ export default function DataVisualizer() {
               <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
               {barHorizontal ? (
                 <>
-                  <XAxis dataKey="label" tickLine={false} axisLine={false} />
-                  <YAxis tickLine={false} axisLine={false} />
+                  <XAxis type="number" tickLine={false} axisLine={false} />
+                  <YAxis dataKey="label" type="category" tickLine={false} axisLine={false} />
                 </>
               ) : (
                 <>
@@ -1078,7 +1073,7 @@ export default function DataVisualizer() {
               <Tooltip />
               <Bar 
                 dataKey="value" 
-                radius={barHorizontal ? [6, 6, 0, 0] : [0, 6, 6, 0]}
+                radius={barHorizontal ? [0, 6, 6, 0] : [0, 6, 6, 0]}
               >
                 {sortedData.map((entry) => (
                   <Cell key={entry.id} fill={entry.color} />
@@ -1182,7 +1177,7 @@ export default function DataVisualizer() {
               )}
               <Tooltip content={<StackedTooltip />} />
               {sortedData.map((d) => (
-                <Bar key={d.id} dataKey={d.id} stackId="one" name={d.label}>
+                <Bar key={d.id} dataKey={d.id} stackId="stacked" name={d.label}>
                   <Cell fill={d.color} />
                 </Bar>
               ))}

@@ -2,7 +2,19 @@
   width: 1rem;
   height: 1rem;
   border-radius: 9999px;
-  background-color: var(--dot-color);
+}
+
+.colorCircle[data-color] {
+  background-color: var(--color);
+}
+
+/* Set the CSS variable using custom property */
+.colorCircle {
+  --color: var(--dot-color, currentColor);
+}
+
+.colorCircle[data-color] {
+  --color: var(--dot-color);
 }
 
 .colorPreview {
@@ -12,11 +24,26 @@
   background-color: var(--preview-color);
 }
 
+.colorPreview[data-color] {
+  --preview-color: attr(data-color);
+}
+
 .sortableRow {
-  --transform: '';
-  --transition: '';
+  transform: none;
+  transition: none;
+}
+
+.sortableRow[data-transform] {
   transform: var(--transform);
+}
+
+.sortableRow[data-transition] {
   transition: var(--transition);
+}
+
+.sortableRow {
+  --transform: none;
+  --transition: none;
 }
 
 .fullscreenModal {
@@ -51,4 +78,37 @@
 .fullscreenChart {
   width: 100%;
   height: 100%;
+}
+
+.stackedTooltipWrapper {
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  font-size: 0.75rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.stackedTooltipTitle {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.stackedTooltipContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.stackedTooltipRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.stackedTooltipLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
