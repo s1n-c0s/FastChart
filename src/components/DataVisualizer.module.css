@@ -1,0 +1,54 @@
+.colorCircle {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 9999px;
+  background-color: var(--dot-color);
+}
+
+.colorPreview {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 9999px;
+  background-color: var(--preview-color);
+}
+
+.sortableRow {
+  --transform: '';
+  --transition: '';
+  transform: var(--transform);
+  transition: var(--transition);
+}
+
+.fullscreenModal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+.fullscreenContent {
+  background: var(--background);
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  width: 90vw;
+  height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.chartContent {
+  flex: 1;
+  padding: 1rem;
+  overflow: hidden;
+  height: calc(100% - 73px);
+}
+
+.fullscreenChart {
+  width: 100%;
+  height: 100%;
+}
