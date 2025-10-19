@@ -213,27 +213,65 @@ export default function DataVisualizer() {
   const lineCardRef = useRef<HTMLDivElement>(null!);
 
   async function copyChartSvg(containerEl: HTMLElement | null) {
+    if (!containerEl) {
+      console.error("Container element is null");
+      toast.error("Cannot copy chart: Container not found");
+      return;
+    }
+
     try {
-      const svg = containerEl?.querySelector("svg") as SVGSVGElement | null;
-      if (!svg) return;
-      const clone = svg.cloneNode(true) as SVGSVGElement;
-      if (!clone.getAttribute("xmlns")) {
-        clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      // Wait for chart to render
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      // Find the chart SVG directly using the recharts-wrapper class
+      const wrapper = containerEl.querySelector('.recharts-wrapper');
+      if (!wrapper) {
+        console.error("No .recharts-wrapper found");
+        toast.error("Cannot find chart to copy");
+        return;
       }
 
-      const xml = new XMLSerializer().serializeToString(clone);
-      await navigator.clipboard.writeText(xml);
-      // ✅ Copy SVG: ใช้ toast ธรรมดา + สไตล์สีเขียวโดยตรง + ไอคอน
-      toast.success("SVG Copied to Clipboard!", {
+      const chartSvg = wrapper.querySelector('svg');
+      if (!chartSvg) {
+        console.error("No SVG found in recharts-wrapper");
+        toast.error("Cannot find chart to copy");
+        return;
+      }
+
+      // Get the computed dimensions
+      const box = chartSvg.getBoundingClientRect();
+      const width = Math.round(box.width);
+      const height = Math.round(box.height);
+
+      // Create a new SVG with exact dimensions
+      const newSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      newSvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      newSvg.setAttribute("width", width.toString());
+      newSvg.setAttribute("height", height.toString());
+      
+      // Copy the inner content
+      newSvg.innerHTML = chartSvg.innerHTML;
+      
+      // Convert to string with proper namespace
+      const svgString = newSvg.outerHTML;
+      
+      // Try to copy
+      await navigator.clipboard.writeText(svgString);
+      
+      toast.success("Chart copied!", {
         duration: 850,
         style: {
-          background: "#0EC04F", // สีเขียวเข้ม
+          background: "#0EC04F",
           color: "#ffffff",
         },
       });
-    } catch {
-      // ✅ Error: ใช้ toast.error ดึงสไตล์สีดำ/ไอคอนแดงจาก Default Toaster
-      toast.error("Failed to copy SVG.");
+
+    } catch (error) {
+      console.error("SVG Copy Error:", error);
+      if (error instanceof Error) {
+        console.error(error.message);
+      }
+      toast.error("Failed to copy chart");
     }
   }
 
@@ -822,11 +860,8 @@ export default function DataVisualizer() {
             <div className="h-[calc(100%-3rem)]">
               <BarChart
                 data={sortedData}
-                onCopySvg={() => copyChartSvg(barCardRef.current)}
-                onFullscreen={() => openFullscreen("bar")}
                 containerRef={barCardRef}
                 isHorizontal={barHorizontal}
-                onOrientationChange={() => setBarHorizontal((v) => !v)}
               />
             </div>
           </div>
@@ -859,8 +894,6 @@ export default function DataVisualizer() {
               <PieChart
                 data={sortedData}
                 total={total}
-                onCopySvg={() => copyChartSvg(pieCardRef.current)}
-                onFullscreen={() => openFullscreen("pie")}
                 containerRef={pieCardRef}
               />
             </div>
@@ -989,13 +1022,10 @@ export default function DataVisualizer() {
       {fullscreenChart === "bar" && (
         <FullscreenModal chartType="bar">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart
+                          <BarChart
               data={sortedData}
-              onCopySvg={() => copyChartSvg(barCardRef.current)}
-              onFullscreen={() => openFullscreen("bar")}
               containerRef={barCardRef}
               isHorizontal={barHorizontal}
-              onOrientationChange={() => setBarHorizontal((v) => !v)}
             />
           </ResponsiveContainer>
         </FullscreenModal>
@@ -1007,8 +1037,6 @@ export default function DataVisualizer() {
             <PieChart
               data={sortedData}
               total={total} 
-              onCopySvg={() => copyChartSvg(pieCardRef.current)}
-              onFullscreen={() => openFullscreen("pie")}
               containerRef={pieCardRef}
             />
           </ResponsiveContainer>
