@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useRef, useState, useCallback, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { RemoveButton } from "@/components/ui/RemoveButton";
 import toast, { Toaster } from "react-hot-toast";
-import { X, Maximize2 } from "lucide-react";
+import { generateId } from "@/lib/utils/data-parser";
+import type { Datum } from "@/types";
+import styles from "./DataVisualizer.module.css";
 
-// Components ใหม่สำหรับ Shadcn Select
 import {
   Select,
   SelectContent,
@@ -29,35 +30,27 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
+  useSortable,
 } from "@dnd-kit/sortable";
-import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+
 import {
   Bar,
-  BarChart,
   CartesianGrid,
-  Line,
-  LineChart,
-  Pie,
   Cell,
-  Label,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
+  BarChart as RechartsBarChart
 } from "recharts";
+import { X, Maximize2 } from "lucide-react";
 
-type Datum = {
-  id: string;
-  label: string;
-  value: number;
-  color: string;
-};
-
-function generateId() {
-  return Math.random().toString(36).slice(2, 9);
-}
+import { 
+  BarChart,
+  PieChart,
+  LineChart,
+} from "@/components/ui/datavisual";
 
 // 💡 SortableRow is already a good component separation.
 function SortableRow({
@@ -89,16 +82,20 @@ function SortableRow({
     setLocalValue(row.value);
   }, [row.value]);
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
+
+
+  const cssVars = transform || transition 
+    ? {
+      '--transform': transform ? CSS.Transform.toString(transform) : '',
+      '--transition': transition || '',
+    } as React.CSSProperties
+    : undefined;
 
   return (
     <tr
       ref={setNodeRef}
-      style={style}
-      className="border-b last:border-0"
+      className={styles.sortableRow}
+      style={cssVars}
       {...attributes}
     >
       <td className="py-2 pr-2">
@@ -148,14 +145,11 @@ function SortableRow({
             onValueChange={(newColor) => onUpdateColor(row.id, newColor)}
           >
             <SelectTrigger className="w-full h-9">
-              {" "}
-              {/* ปรับความสูงให้เข้ากับ input */}
               <SelectValue asChild>
                 <div className="flex items-center gap-2 w-full text-left">
-                  {/* วงกลมสีเล็กๆ ที่แสดงใน Select Box ขณะที่ยังไม่ได้เปิด */}
                   <div
-                    className="size-3 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: row.color }}
+                    className={styles.colorCircle}
+                    style={{ '--dot-color': row.color } as React.CSSProperties}
                   />
                   <span className="truncate text-sm">{row.color}</span>
                 </div>
@@ -165,11 +159,10 @@ function SortableRow({
             <SelectContent>
               {presetColors.map((c) => (
                 <SelectItem key={c} value={c} className="pr-4">
-                  {/* เนื้อหาที่กำหนดเอง: วงกลมสีจริง */}
                   <div className="flex items-center gap-2">
                     <div
-                      className="size-4 rounded-full border border-gray-300 dark:border-gray-700 flex-shrink-0"
-                      style={{ backgroundColor: c }}
+                      className={styles.colorPreview}
+                      style={{ '--preview-color': c } as React.CSSProperties}
                     />
                     <span className="font-mono text-xs">{c}</span>
                   </div>
@@ -214,10 +207,10 @@ export default function DataVisualizer() {
     direction: "asc" | "desc";
   } | null>(null);
 
-  const barCardRef = useRef<HTMLDivElement>(null);
-  const pieCardRef = useRef<HTMLDivElement>(null);
-  const stackedCardRef = useRef<HTMLDivElement>(null);
-  const lineCardRef = useRef<HTMLDivElement>(null);
+  const barCardRef = useRef<HTMLDivElement>(null!);
+  const pieCardRef = useRef<HTMLDivElement>(null!);
+  const stackedCardRef = useRef<HTMLDivElement>(null!);
+  const lineCardRef = useRef<HTMLDivElement>(null!);
 
   async function copyChartSvg(containerEl: HTMLElement | null) {
     try {
@@ -416,33 +409,16 @@ export default function DataVisualizer() {
 
   // Memoized data for stacked chart
   const stackedData = useMemo(() => {
-    const obj: Record<string, number | string> = { name: "All" };
-    for (const d of sortedData) {
-      obj[d.id] = Math.max(0, isFinite(d.value) ? d.value : 0);
-    }
-    return [obj];
-  }, [sortedData]);
-  const idToLabel = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const d of sortedData) m.set(d.id, d.label);
-    return m;
-  }, [sortedData]);
-  const labelToId = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const d of sortedData) m.set(d.label, d.id);
-    return m;
-  }, [sortedData]);
-  const idToValue = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const d of sortedData)
-      m.set(d.id, Math.max(0, isFinite(d.value) ? d.value : 0));
-    return m;
-  }, [sortedData]);
-  const stackedSum = useMemo(() => {
-    return sortedData.reduce(
-      (s, d) => s + Math.max(0, isFinite(d.value) ? d.value : 0),
-      0
-    );
+    const total = sortedData.reduce((sum, d) => sum + Math.max(0, isFinite(d.value) ? d.value : 0), 0);
+    return [
+      {
+        name: "All",
+        ...sortedData.reduce((acc, d) => ({
+          ...acc,
+          [d.id]: Math.max(0, isFinite(d.value) ? d.value : 0) / (total || 1)
+        }), {})
+      }
+    ];
   }, [sortedData]);
 
   function StackedTooltip({
@@ -450,32 +426,31 @@ export default function DataVisualizer() {
     payload,
   }: {
     active?: boolean;
-    payload?: Array<{ name?: string; value: number } & Record<string, unknown>>;
+    payload?: Array<{ name?: string; value: number; fill?: string } & Record<string, unknown>>;
   }) {
     if (!active || !payload || payload.length === 0) return null;
+    
+
+    
     return (
       <div className="rounded-md border bg-background p-2 text-xs shadow-sm">
-        <div className="font-medium mb-1">All</div>
+        <div className="font-medium mb-1">Details</div>
         <div className="space-y-0.5">
-          {payload.map((p, idx) => {
-            const maybeDataKey = (p as unknown as { dataKey?: string }).dataKey;
-            const name = p.name ?? "";
-            const id = maybeDataKey ?? labelToId.get(name) ?? name;
-            const label = idToLabel.get(id) ?? id;
-            const raw = idToValue.get(id) ?? 0;
-            const percent = stackedSum > 0 ? (raw / stackedSum) * 100 : 0;
-            return (
-              <div
-                key={idx}
-                className="flex items-center justify-between gap-4"
-              >
-                <span>{label}</span>
-                <span>
-                  {raw} ({percent.toFixed(1)}%)
-                </span>
+          {payload.map((entry, idx) => (
+            <div
+              key={idx}
+              className="flex items-center justify-between gap-4"
+            >
+              <div className="flex items-center gap-2">
+                <div
+                  className={`w-2 h-2 rounded-full ${styles.colorCircle}`}
+                  style={{"--dot-color": entry.fill} as React.CSSProperties}
+                />
+                <span>{entry.name}</span>
               </div>
-            );
-          })}
+              <span>{Math.round(entry.value * 100)}%</span>
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -576,33 +551,15 @@ export default function DataVisualizer() {
   const FullscreenModal = ({ chartType, children }: { chartType: string; children: React.ReactNode }) => {
     if (fullscreenChart !== chartType) return null;
 
-    const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-      // Only close if clicking on the backdrop, not the modal content
-      if (e.target === e.currentTarget) {
-        closeFullscreen();
-      }
-    };
-
     return (
       <div 
-        className="fixed z-50 bg-black/80 flex items-center justify-center" 
-        style={{ 
-          top: 0, 
-          left: 0, 
-          right: 0, 
-          bottom: 0, 
-          width: '100vw', 
-          height: '100vh',
-          margin: 0,
-          padding: '1rem'
-        }}
-        onClick={handleBackdropClick}
+        className={styles.fullscreenModal}
+        onClick={(e) => e.target === e.currentTarget && closeFullscreen()}
       >
-        <div className="bg-background rounded-lg border w-full h-full max-w-7xl max-h-[90vh] flex flex-col">
+        <div         className={styles.fullscreenContent}>
           <div className="flex items-center justify-between p-4 border-b">
             <h2 className="text-xl font-semibold capitalize">{chartType} Chart - Full Screen</h2>
             <div className="flex items-center gap-2">
-              {/* Vertical/Horizontal toggle for bar and stacked charts */}
               {(chartType === "bar" || chartType === "stacked") && (
                 <Button
                   variant="secondary"
@@ -621,7 +578,6 @@ export default function DataVisualizer() {
                   }
                 </Button>
               )}
-              {/* Copy SVG button */}
               <Button
                 size="sm"
                 variant="secondary"
@@ -651,7 +607,7 @@ export default function DataVisualizer() {
               </Button>
             </div>
           </div>
-          <div className="flex-1 p-4">
+          <div           className={styles.chartContent}>
             {children}
           </div>
         </div>
@@ -660,17 +616,17 @@ export default function DataVisualizer() {
   };
 
   return (
-    <div className="p-4 space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Data Visualizer</h1>
-        <p className="text-sm text-muted-foreground">
-          Edit values in either panel to update the charts live. Click
-          Label/Value headers to sort.
-        </p>
-      </div>
-
+    <>
+      <div className="p-4 space-y-6" data-testid="data-visualizer">
+        <div>
+          <h1 className="text-2xl font-semibold">Data Visualizer</h1>
+          <p className="text-sm text-muted-foreground">
+            Edit values in either panel to update the charts live. Click
+            Label/Value headers to sort.
+          </p>
+        </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* --- Left Panel: Data Table --- */}
+        {/* Data Tables */}
         <div className="rounded-lg border p-4">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-medium">
@@ -832,143 +788,87 @@ export default function DataVisualizer() {
       </div>
 
       {/* --- Charts Section --- */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div ref={barCardRef} className="rounded-lg border p-4 h-[380px]">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-base font-medium">Bar Chart</h3>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="secondary"
-                aria-label="Toggle bar chart orientation"
-                onClick={() => setBarHorizontal((v) => !v)}
-              >
-                {barHorizontal ? "Vertical" : "Horizontal"}
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => copyChartSvg(barCardRef.current)}
-                aria-label="Copy Bar Chart as SVG"
-              >
-                Copy SVG
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => openFullscreen("bar")}
-                aria-label="Open Bar Chart in full screen"
-              >
-                <Maximize2 className="h-4 w-4" />
-              </Button>
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div ref={barCardRef} className="rounded-lg border p-4 min-h-[380px]">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-base font-medium">Bar Chart</h3>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  aria-label="Toggle bar chart orientation"
+                  onClick={() => setBarHorizontal((v) => !v)}
+                >
+                  {barHorizontal ? "Vertical" : "Horizontal"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => copyChartSvg(barCardRef.current)}
+                  aria-label="Copy Bar Chart as SVG"
+                >
+                  Copy SVG
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => openFullscreen("bar")}
+                  aria-label="Open Bar Chart in full screen"
+                >
+                  <Maximize2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-          </div>
-          <ResponsiveContainer width="100%" height="90%">
-            <BarChart
-              data={sortedData}
-              margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
-              layout={barHorizontal ? "horizontal" : "vertical"}
-            >
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              {barHorizontal ? (
-                <>
-                  <XAxis dataKey="label" tickLine={false} axisLine={false} />
-                  <YAxis tickLine={false} axisLine={false} />
-                </>
-              ) : (
-                <>
-                  <XAxis type="number" tickLine={false} axisLine={false} />
-                  <YAxis dataKey="label" type="category" tickLine={false} axisLine={false} />
-                </>
-              )}
-              <Tooltip />
-              <Bar dataKey="value" radius={barHorizontal ? [6, 6, 0, 0] : [0, 6, 6, 0]}>
-                {sortedData.map((entry) => (
-                  <Cell key={entry.id} fill={entry.color} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div ref={pieCardRef} className="rounded-lg border p-4 h-[380px]">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-base font-medium">
-              Pie Chart - Donut with Total
-            </h3>
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => copyChartSvg(pieCardRef.current)}
-                aria-label="Copy Pie Chart as SVG"
-              >
-                Copy SVG
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => openFullscreen("pie")}
-                aria-label="Open Pie Chart in full screen"
-              >
-                <Maximize2 className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          <ResponsiveContainer width="100%" height="90%">
-            <PieChart>
-              <Tooltip />
-              <Pie
+            <div className="h-[calc(100%-3rem)]">
+              <BarChart
                 data={sortedData}
-                dataKey="value"
-                nameKey="label"
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={100}
-                paddingAngle={2}
-                cornerRadius={6}
-                strokeWidth={5}
-              >
-                {sortedData.map((entry) => (
-                  <Cell key={entry.id} fill={entry.color} />
-                ))}
+                onCopySvg={() => copyChartSvg(barCardRef.current)}
+                onFullscreen={() => openFullscreen("bar")}
+                containerRef={barCardRef}
+                isHorizontal={barHorizontal}
+                onOrientationChange={() => setBarHorizontal((v) => !v)}
+              />
+            </div>
+          </div>
 
-                <Label
-                  content={({ viewBox }) => {
-                    if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                      return (
-                        <text
-                          x={viewBox.cx}
-                          y={viewBox.cy}
-                          textAnchor="middle"
-                          dominantBaseline="middle"
-                        >
-                          <tspan
-                            x={viewBox.cx}
-                            y={viewBox.cy}
-                            className="fill-foreground text-2xl font-bold"
-                          >
-                            {total.toLocaleString()}
-                          </tspan>
-                          <tspan
-                            x={viewBox.cx}
-                            y={(viewBox.cy || 0) + 24}
-                            className="fill-muted-foreground text-sm"
-                          >
-                            Total
-                          </tspan>
-                        </text>
-                      );
-                    }
-                  }}
-                />
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
+          <div ref={pieCardRef} className="rounded-lg border p-4 min-h-[380px]">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-base font-medium">
+                Pie Chart - Donut with Total
+              </h3>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => copyChartSvg(pieCardRef.current)}
+                  aria-label="Copy Pie Chart as SVG"
+                >
+                  Copy SVG
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => openFullscreen("pie")}
+                  aria-label="Open Pie Chart in full screen"
+                >
+                  <Maximize2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="h-[calc(100%-3rem)]">
+              <PieChart
+                data={sortedData}
+                total={total}
+                onCopySvg={() => copyChartSvg(pieCardRef.current)}
+                onFullscreen={() => openFullscreen("pie")}
+                containerRef={pieCardRef}
+              />
+            </div>
+          </div>
         </div>
-      </div>
+        </div>
 
-      <div ref={stackedCardRef} className="rounded-lg border p-4 h-[320px]">
+        <div ref={stackedCardRef} className="rounded-lg border p-4 h-[320px]">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-base font-medium">100% Stacked Chart</h3>
           <div className="flex items-center gap-2">
@@ -998,7 +898,7 @@ export default function DataVisualizer() {
           </div>
         </div>
         <ResponsiveContainer width="100%" height="90%">
-          <BarChart
+          <RechartsBarChart
             data={stackedData}
             stackOffset="expand"
             margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
@@ -1008,23 +908,33 @@ export default function DataVisualizer() {
             {stackedHorizontal ? (
               <>
                 <YAxis
-                  dataKey="name"
                   type="category"
+                  dataKey="name"
                   tickLine={false}
                   axisLine={false}
+                  width={60}
                 />
                 <XAxis
                   type="number"
-                  tickFormatter={(v) => `${Math.round((v as number) * 100)}%`}
+                  domain={[0, 1]}
+                  tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
                   tickLine={false}
                   axisLine={false}
                 />
               </>
             ) : (
               <>
-                <XAxis dataKey="name" tickLine={false} axisLine={false} />
+                <XAxis
+                  type="category"
+                  dataKey="name"
+                  tickLine={false}
+                  axisLine={false}
+                  height={60}
+                />
                 <YAxis
-                  tickFormatter={(v) => `${Math.round((v as number) * 100)}%`}
+                  type="number"
+                  domain={[0, 1]}
+                  tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
                   tickLine={false}
                   axisLine={false}
                 />
@@ -1032,206 +942,22 @@ export default function DataVisualizer() {
             )}
             <Tooltip content={<StackedTooltip />} />
             {sortedData.map((d) => (
-              <Bar key={d.id} dataKey={d.id} stackId="one" name={d.label}>
-                <Cell fill={d.color} />
-              </Bar>
+              <Bar key={d.id} dataKey={d.id} stackId="stacked" fill={d.color} name={d.label} />
             ))}
-          </BarChart>
+          </RechartsBarChart>
         </ResponsiveContainer>
       </div>
 
-      <div ref={lineCardRef} className="rounded-lg border p-4 h-[320px]">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-base font-medium">Line Chart - Linear</h3>
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => copyChartSvg(lineCardRef.current)}
-              aria-label="Copy Line Chart as SVG"
-            >
-              Copy SVG
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => openFullscreen("line")}
-              aria-label="Open Line Chart in full screen"
-            >
-              <Maximize2 className="h-4 w-4" />
-            </Button>
-          </div>
+        <div ref={lineCardRef}>
+          <LineChart
+            data={sortedData}
+            onCopySvg={() => copyChartSvg(lineCardRef.current)}
+            onFullscreen={() => openFullscreen("line")}
+            containerRef={lineCardRef}
+          />
         </div>
-        <ResponsiveContainer width="100%" height="90%">
-          <LineChart
-            data={sortedData}
-            margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-            <XAxis dataKey="label" tickLine={false} axisLine={false} />
-            <YAxis tickLine={false} axisLine={false} />
-            <Tooltip />
-            <Line
-              type="linear"
-              dataKey="value"
-              stroke="oklch(0.488 0.243 264.376)"
-              strokeWidth={2}
-              dot={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
       </div>
 
-      {/* --- Full-screen Modals --- */}
-      <FullscreenModal chartType="bar">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={sortedData}
-            margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
-            layout={barHorizontal ? "horizontal" : "vertical"}
-          >
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-            {barHorizontal ? (
-              <>
-                <XAxis dataKey="label" tickLine={false} axisLine={false} />
-                <YAxis tickLine={false} axisLine={false} />
-              </>
-            ) : (
-              <>
-                <XAxis type="number" tickLine={false} axisLine={false} />
-                <YAxis dataKey="label" type="category" tickLine={false} axisLine={false} />
-              </>
-            )}
-            <Tooltip />
-            <Bar dataKey="value" radius={barHorizontal ? [6, 6, 0, 0] : [0, 6, 6, 0]}>
-              {sortedData.map((entry) => (
-                <Cell key={entry.id} fill={entry.color} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </FullscreenModal>
-
-      <FullscreenModal chartType="pie">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Tooltip />
-            <Pie
-              data={sortedData}
-              dataKey="value"
-              nameKey="label"
-              cx="50%"
-              cy="50%"
-              innerRadius={60}
-              outerRadius={100}
-              paddingAngle={2}
-              cornerRadius={6}
-              strokeWidth={5}
-            >
-              {sortedData.map((entry) => (
-                <Cell key={entry.id} fill={entry.color} />
-              ))}
-
-              <Label
-                content={({ viewBox }) => {
-                  if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                    return (
-                      <text
-                        x={viewBox.cx}
-                        y={viewBox.cy}
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                      >
-                        <tspan
-                          x={viewBox.cx}
-                          y={viewBox.cy}
-                          className="fill-foreground text-2xl font-bold"
-                        >
-                          {total.toLocaleString()}
-                        </tspan>
-                        <tspan
-                          x={viewBox.cx}
-                          y={(viewBox.cy || 0) + 24}
-                          className="fill-muted-foreground text-sm"
-                        >
-                          Total
-                        </tspan>
-                      </text>
-                    );
-                  }
-                }}
-              />
-            </Pie>
-          </PieChart>
-        </ResponsiveContainer>
-      </FullscreenModal>
-
-      <FullscreenModal chartType="stacked">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={stackedData}
-            stackOffset="expand"
-            margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
-            layout={stackedHorizontal ? "vertical" : "horizontal"}
-          >
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-            {stackedHorizontal ? (
-              <>
-                <YAxis
-                  dataKey="name"
-                  type="category"
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <XAxis
-                  type="number"
-                  tickFormatter={(v) => `${Math.round((v as number) * 100)}%`}
-                  tickLine={false}
-                  axisLine={false}
-                />
-              </>
-            ) : (
-              <>
-                <XAxis dataKey="name" tickLine={false} axisLine={false} />
-                <YAxis
-                  tickFormatter={(v) => `${Math.round((v as number) * 100)}%`}
-                  tickLine={false}
-                  axisLine={false}
-                />
-              </>
-            )}
-            <Tooltip content={<StackedTooltip />} />
-            {sortedData.map((d) => (
-              <Bar key={d.id} dataKey={d.id} stackId="one" name={d.label}>
-                <Cell fill={d.color} />
-              </Bar>
-            ))}
-          </BarChart>
-        </ResponsiveContainer>
-      </FullscreenModal>
-
-      <FullscreenModal chartType="line">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            data={sortedData}
-            margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-            <XAxis dataKey="label" tickLine={false} axisLine={false} />
-            <YAxis tickLine={false} axisLine={false} />
-            <Tooltip />
-            <Line
-              type="linear"
-              dataKey="value"
-              stroke="oklch(0.488 0.243 264.376)"
-              strokeWidth={2}
-              dot={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </FullscreenModal>
-
-      {/* --- Toaster Component: Centralized Configuration --- */}
       <Toaster
         position="bottom-center"
         reverseOrder={false}
@@ -1239,31 +965,114 @@ export default function DataVisualizer() {
         containerClassName=""
         containerStyle={{}}
         toastOptions={{
-          // 1. Default Style: เป็นพื้นฐานสำหรับ toast() และใช้เป็นพื้นหลังสำหรับ toast.error()
           className: "",
           duration: 900,
           style: {
             background: "black",
             color: "#ffff",
           },
-          // 💡 Icon Theme สำหรับ Black Toast (ใช้กับ toast() และ toast.error)
           iconTheme: {
             primary: "white",
             secondary: "black",
           },
-
-          // ❌ ลบ Success Style ออก เพราะ Copy SVG กำหนดสไตล์โดยตรงแล้ว
-
-          // 3. Error Style: ใช้ Default background (black) แต่ Override ไอคอนเป็นสีแดง
           error: {
             duration: 900,
             iconTheme: {
-              primary: "#ef4444", // red-500
+              primary: "#ef4444",
               secondary: "black",
             },
           },
         }}
       />
-    </div>
+
+      {/* --- Full-screen Modals --- */}
+      {fullscreenChart === "bar" && (
+        <FullscreenModal chartType="bar">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={sortedData}
+              onCopySvg={() => copyChartSvg(barCardRef.current)}
+              onFullscreen={() => openFullscreen("bar")}
+              containerRef={barCardRef}
+              isHorizontal={barHorizontal}
+              onOrientationChange={() => setBarHorizontal((v) => !v)}
+            />
+          </ResponsiveContainer>
+        </FullscreenModal>
+      )}
+
+      {fullscreenChart === "pie" && (
+        <FullscreenModal chartType="pie">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart
+              data={sortedData}
+              total={total} 
+              onCopySvg={() => copyChartSvg(pieCardRef.current)}
+              onFullscreen={() => openFullscreen("pie")}
+              containerRef={pieCardRef}
+            />
+          </ResponsiveContainer>
+        </FullscreenModal>
+      )}
+
+      {fullscreenChart === "stacked" && (
+        <FullscreenModal chartType="stacked">
+          <ResponsiveContainer width="100%" height="100%">
+            <RechartsBarChart
+              data={stackedData}
+              stackOffset="expand"
+              margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
+              layout={stackedHorizontal ? "vertical" : "horizontal"}
+            >
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+              {stackedHorizontal ? (
+                <>
+                  <YAxis
+                    dataKey="name"
+                    type="category"
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <XAxis
+                    type="number"
+                    tickFormatter={(v) => `${Math.round((v as number) * 100)}%`}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                </>
+              ) : (
+                <>
+                  <XAxis dataKey="name" tickLine={false} axisLine={false} />
+                  <YAxis
+                    tickFormatter={(v) => `${Math.round((v as number) * 100)}%`}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                </>
+              )}
+              <Tooltip content={<StackedTooltip />} />
+              {sortedData.map((d) => (
+                <Bar key={d.id} dataKey={d.id} stackId="one" name={d.label}>
+                  <Cell fill={d.color} />
+                </Bar>
+              ))}
+            </RechartsBarChart>
+          </ResponsiveContainer>
+        </FullscreenModal>
+      )}
+
+      {fullscreenChart === "line" && (
+        <FullscreenModal chartType="line">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart
+              data={sortedData}
+              onCopySvg={() => copyChartSvg(lineCardRef.current)}
+              onFullscreen={() => openFullscreen("line")}
+              containerRef={lineCardRef}
+            />
+          </ResponsiveContainer>
+        </FullscreenModal>
+      )}
+    </>
   );
 }
