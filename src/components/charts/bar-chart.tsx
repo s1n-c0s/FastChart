@@ -37,25 +37,38 @@ export function BarChart({
     }, {} as Record<string, { label: string; color: string }>)
   }, [data])
 
+  // Calculate dynamic margins based on label lengths
+  const maxLabelLength = React.useMemo(() => {
+    return Math.max(...data.map(d => d.label.length))
+  }, [data])
+
   // Horizontal mode: bars grow to the right
   if (isHorizontal) {
+    const yAxisWidth = Math.min(Math.max(maxLabelLength * 6, 40), 100)
+    
     return (
       <div ref={containerRef} className="h-full w-full">
         <ChartContainer config={chartConfig} className="h-full w-full">
           <RechartsBarChart
             data={data}
             layout="vertical"
-            margin={{ top: 0, right: 20, bottom: -5, left: -30 }}
+            margin={{ top: 5, right: 15, bottom: 5, left: 5 }}
             barCategoryGap="15%"
           >
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis type="number" tickLine={false} axisLine={false} />
+            <XAxis 
+              type="number" 
+              tickLine={false} 
+              axisLine={false}
+              style={{ fontSize: '12px' }}
+            />
             <YAxis
               dataKey="label"
               type="category"
               tickLine={false}
               axisLine={false}
-              width={60}
+              width={yAxisWidth}
+              style={{ fontSize: '12px' }}
             />
             <ChartTooltip
               content={({ active, payload }) => (
@@ -68,7 +81,7 @@ export function BarChart({
                 />
               )}
             />
-            <Bar dataKey="value" radius={[0, 6, 6, 0]} maxBarSize={60}>
+            <Bar dataKey="value" radius={[0, 6, 6, 0]} maxBarSize={50}>
               {data.map((item) => (
                 <Cell key={item.id} fill={item.color} />
               ))}
@@ -81,13 +94,15 @@ export function BarChart({
   }
 
   // Vertical mode: bars grow upward
+  const xAxisHeight = Math.min(Math.max(maxLabelLength * 4, 30), 60)
+  
   return (
     <div ref={containerRef} className="h-full w-full">
       <ChartContainer config={chartConfig} className="h-full w-full">
         <RechartsBarChart
           data={data}
           layout="horizontal"
-          margin={{ top: 10, right: 20, bottom: -10, left: -20 }}
+          margin={{ top: 5, right: 15, bottom: 5, left: 5 }}
           barCategoryGap="15%"
         >
           <CartesianGrid strokeDasharray="3 3" />
@@ -95,13 +110,15 @@ export function BarChart({
             dataKey="label"
             tickLine={false}
             axisLine={false}
-            height={40}
+            height={xAxisHeight}
+            style={{ fontSize: '12px' }}
           />
           <YAxis
             type="number"
             tickLine={false}
             axisLine={false}
-            width={50}
+            width={45}
+            style={{ fontSize: '12px' }}
           />
           <ChartTooltip
             content={({ active, payload }) => (

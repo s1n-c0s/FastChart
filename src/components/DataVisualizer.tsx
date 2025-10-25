@@ -653,7 +653,12 @@ export default function DataVisualizer() {
       </div>
     );
   };
+const maxLabelLength = React.useMemo(() => {
+  return Math.max(...sortedData.map(d => d.label.length))
+}, [sortedData])
 
+const fullscreenYAxisWidth = Math.min(Math.max(maxLabelLength * 8, 60), 150)
+const fullscreenXAxisHeight = Math.min(Math.max(maxLabelLength * 5, 40), 100)
   return (
     <>
       <div className="p-4 space-y-6" data-testid="data-visualizer">
@@ -1049,22 +1054,33 @@ export default function DataVisualizer() {
           <RechartsBarChart
             data={sortedData}
             layout="vertical"
-            margin={{ top: 20, right: 40, bottom: 20, left: 120 }}
+            margin={{ 
+              top: 20, 
+              right: 40, 
+              bottom: 20, 
+              left: 20
+            }}
             barCategoryGap="15%"
           >
             <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-            <XAxis type="number" tickLine={false} axisLine={false} />
+            <XAxis 
+              type="number" 
+              tickLine={false} 
+              axisLine={false}
+              style={{ fontSize: '14px' }}
+            />
             <YAxis 
               dataKey="label" 
               type="category" 
               tickLine={false} 
               axisLine={false}
-              width={100}
+              width={fullscreenYAxisWidth}
+              style={{ fontSize: '14px' }}
             />
             <Tooltip />
             <Bar 
               dataKey="value" 
-              radius={[0, 6, 6, 0]}
+              radius={[0, 8, 8, 0]}
               maxBarSize={80}
             >
               {sortedData.map((entry) => (
@@ -1078,7 +1094,12 @@ export default function DataVisualizer() {
           <RechartsBarChart
             data={sortedData}
             layout="horizontal"
-            margin={{ top: 40, right: 40, bottom: 80, left: 60 }}
+            margin={{ 
+              top: 40, 
+              right: 40, 
+              bottom: 20, 
+              left: 60
+            }}
             barCategoryGap="15%"
           >
             <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
@@ -1086,17 +1107,19 @@ export default function DataVisualizer() {
               dataKey="label" 
               tickLine={false} 
               axisLine={false}
-              height={80}
+              height={fullscreenXAxisHeight}
+              style={{ fontSize: '14px' }}
             />
             <YAxis 
               type="number" 
               tickLine={false} 
               axisLine={false}
+              style={{ fontSize: '14px' }}
             />
             <Tooltip />
             <Bar 
               dataKey="value" 
-              radius={[6, 6, 0, 0]}
+              radius={[8, 8, 0, 0]}
               maxBarSize={120}
             >
               {sortedData.map((entry) => (
