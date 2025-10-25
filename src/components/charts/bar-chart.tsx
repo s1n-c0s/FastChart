@@ -87,7 +87,7 @@ export function BarChart({
         <RechartsBarChart
           data={data}
           layout="horizontal"
-          margin={{ top: 10, right: 10, bottom: 30, left: 10 }}
+          margin={{ top: 10, right: 20, bottom: -10, left: -20 }}
           barCategoryGap="15%"
         >
           <CartesianGrid strokeDasharray="3 3" />
