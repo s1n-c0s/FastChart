@@ -1042,38 +1042,73 @@ export default function DataVisualizer() {
 
       {/* --- Full-screen Modals --- */}
       {fullscreenChart === "bar" && (
-        <FullscreenModal chartType="bar">
-          <ResponsiveContainer width="100%" height="100%">
-            <RechartsBarChart
-              data={sortedData}
-              margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
-              layout={barHorizontal ? "horizontal" : "vertical"}
+  <FullscreenModal chartType="bar">
+    <div className="h-full w-full">
+      {barHorizontal ? (
+        <ResponsiveContainer width="100%" height="100%">
+          <RechartsBarChart
+            data={sortedData}
+            layout="vertical"
+            margin={{ top: 20, right: 40, bottom: 20, left: 120 }}
+            barCategoryGap="15%"
+          >
+            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+            <XAxis type="number" tickLine={false} axisLine={false} />
+            <YAxis 
+              dataKey="label" 
+              type="category" 
+              tickLine={false} 
+              axisLine={false}
+              width={100}
+            />
+            <Tooltip />
+            <Bar 
+              dataKey="value" 
+              radius={[0, 6, 6, 0]}
+              maxBarSize={80}
             >
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              {barHorizontal ? (
-                <>
-                  <XAxis type="number" tickLine={false} axisLine={false} />
-                  <YAxis dataKey="label" type="category" tickLine={false} axisLine={false} />
-                </>
-              ) : (
-                <>
-                  <XAxis dataKey="label" tickLine={false} axisLine={false} />
-                  <YAxis type="number" tickLine={false} axisLine={false} />
-                </>
-              )}
-              <Tooltip />
-              <Bar 
-                dataKey="value" 
-                radius={barHorizontal ? [0, 6, 6, 0] : [6, 6, 0, 0]}
-              >
-                {sortedData.map((entry) => (
-                  <Cell key={entry.id} fill={entry.color} />
-                ))}
-              </Bar>
-            </RechartsBarChart>
-          </ResponsiveContainer>
-        </FullscreenModal>
+              {sortedData.map((entry) => (
+                <Cell key={entry.id} fill={entry.color} />
+              ))}
+            </Bar>
+          </RechartsBarChart>
+        </ResponsiveContainer>
+      ) : (
+        <ResponsiveContainer width="100%" height="100%">
+          <RechartsBarChart
+            data={sortedData}
+            layout="horizontal"
+            margin={{ top: 40, right: 40, bottom: 80, left: 60 }}
+            barCategoryGap="15%"
+          >
+            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+            <XAxis 
+              dataKey="label" 
+              tickLine={false} 
+              axisLine={false}
+              height={80}
+            />
+            <YAxis 
+              type="number" 
+              tickLine={false} 
+              axisLine={false}
+            />
+            <Tooltip />
+            <Bar 
+              dataKey="value" 
+              radius={[6, 6, 0, 0]}
+              maxBarSize={120}
+            >
+              {sortedData.map((entry) => (
+                <Cell key={entry.id} fill={entry.color} />
+              ))}
+            </Bar>
+          </RechartsBarChart>
+        </ResponsiveContainer>
       )}
+    </div>
+  </FullscreenModal>
+)}
 
       {fullscreenChart === "pie" && (
         <FullscreenModal chartType="pie">
