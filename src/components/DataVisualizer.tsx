@@ -86,9 +86,43 @@ const SortableRow = React.memo(({
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: row.id });
   const [localLabel, setLocalLabel] = useState(row.label);
   const [localValue, setLocalValue] = useState<number | "">(row.value);
+  
+  // Debounce timers
+  // แก้ไข: กำหนดค่าเริ่มต้นเป็น undefined สำหรับ useRef เพื่อให้สอดคล้องกับการใช้งาน setTimeout ID
+  const labelTimerRef = useRef<number | undefined>(undefined); 
+  const valueTimerRef = useRef<number | undefined>(undefined);
 
   useEffect(() => setLocalLabel(row.label), [row.label]);
   useEffect(() => setLocalValue(row.value), [row.value]);
+  
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      // ใช้ window.clearTimeout เพื่อให้สอดคล้องกับ window.setTimeout ใน handleLabelChange/handleValueChange
+      if (labelTimerRef.current) window.clearTimeout(labelTimerRef.current);
+      if (valueTimerRef.current) window.clearTimeout(valueTimerRef.current);
+    };
+  }, []);
+
+  const handleLabelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newLabel = e.target.value;
+    setLocalLabel(newLabel);
+    
+    if (labelTimerRef.current) window.clearTimeout(labelTimerRef.current);
+    labelTimerRef.current = window.setTimeout(() => {
+      onUpdateLabel(row.id, newLabel);
+    }, 300);
+  };
+
+  const handleValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value === "" ? "" : Number(e.target.value);
+    setLocalValue(newValue);
+    
+    if (valueTimerRef.current) window.clearTimeout(valueTimerRef.current);
+    valueTimerRef.current = window.setTimeout(() => {
+      onUpdateValue(row.id, String(newValue === "" ? 0 : newValue));
+    }, 300);
+  };
 
   return (
     <tr
@@ -114,8 +148,7 @@ const SortableRow = React.memo(({
             aria-label={`Label for row ${row.label}`}
             placeholder="Label"
             value={localLabel}
-            onChange={(e) => setLocalLabel(e.target.value)}
-            onBlur={() => onUpdateLabel(row.id, localLabel)}
+            onChange={handleLabelChange}
             onMouseDown={(e) => e.stopPropagation()}
             onTouchStart={(e) => e.stopPropagation()}
           />
@@ -128,8 +161,7 @@ const SortableRow = React.memo(({
           aria-label={`Value for ${row.label}`}
           placeholder="0"
           value={localValue}
-          onChange={(e) => setLocalValue(e.target.value === "" ? "" : Number(e.target.value))}
-          onBlur={() => onUpdateValue(row.id, String(localValue === "" ? 0 : localValue))}
+          onChange={handleValueChange}
           onMouseDown={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
         />
@@ -272,6 +304,9 @@ export default function DataVisualizer() {
   const [barHorizontal, setBarHorizontal] = useState(true);
   const [stackedHorizontal, setStackedHorizontal] = useState(true);
   const [fullscreenChart, setFullscreenChart] = useState<ChartType | null>(null);
+  
+  // Use transition for smoother orientation changes
+  const [, startTransition] = React.useTransition();
 
   const barCardRef = useRef<HTMLDivElement>(null!);
   const pieCardRef = useRef<HTMLDivElement>(null!);
@@ -293,6 +328,22 @@ export default function DataVisualizer() {
       return 0;
     });
   }, [data, sortConfig]);
+
+  // Memoize chart data to prevent recalculations
+  const chartData = useMemo(() => sortedData, [sortedData]);
+  
+  // Toggle functions with transition for smoother orientation changes
+  const toggleBarOrientation = useCallback(() => {
+    startTransition(() => {
+      setBarHorizontal((v) => !v);
+    });
+  }, []);
+
+  const toggleStackedOrientation = useCallback(() => {
+    startTransition(() => {
+      setStackedHorizontal((v) => !v);
+    });
+  }, []);
 
   // Handlers
   const updateLabel = useCallback((id: string, label: string) => {
@@ -632,9 +683,9 @@ export default function DataVisualizer() {
               onFullscreen={() => setFullscreenChart("bar")}
               showOrientation
               isHorizontal={barHorizontal}
-              onToggleOrientation={() => setBarHorizontal((v) => !v)}
+              onToggleOrientation={toggleBarOrientation}
             >
-              <BarChart data={sortedData} containerRef={barCardRef} isHorizontal={barHorizontal} />
+              <BarChart data={chartData} containerRef={barCardRef} isHorizontal={barHorizontal} />
             </ChartCard>
 
             <ChartCard
@@ -643,7 +694,7 @@ export default function DataVisualizer() {
               onCopySvg={() => copyChartSvg(pieCardRef.current)}
               onFullscreen={() => setFullscreenChart("pie")}
             >
-              <PieChart data={sortedData} total={total} containerRef={pieCardRef} />
+              <PieChart data={chartData} total={total} containerRef={pieCardRef} />
             </ChartCard>
           </div>
 
@@ -652,7 +703,7 @@ export default function DataVisualizer() {
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-base font-medium">100% Stacked Chart</h3>
                 <div className="flex items-center gap-2">
-                  <Button variant="secondary" onClick={() => setStackedHorizontal((v) => !v)}>
+                  <Button variant="secondary" onClick={toggleStackedOrientation}>
                     {stackedHorizontal ? "Vertical" : "Horizontal"}
                   </Button>
                   <Button size="sm" variant="secondary" onClick={() => copyChartSvg(stackedCardRef.current)}>
@@ -664,7 +715,7 @@ export default function DataVisualizer() {
                 </div>
               </div>
               <div className="h-[calc(100%-3rem)]">
-                <StackedChart data={sortedData} containerRef={stackedCardRef} isHorizontal={stackedHorizontal} />
+                <StackedChart data={chartData} containerRef={stackedCardRef} isHorizontal={stackedHorizontal} />
               </div>
             </div>
 
@@ -674,7 +725,7 @@ export default function DataVisualizer() {
               onCopySvg={() => copyChartSvg(lineCardRef.current)}
               onFullscreen={() => setFullscreenChart("line")}
             >
-              <LineChart data={sortedData} containerRef={lineCardRef} />
+              <LineChart data={chartData} containerRef={lineCardRef} />
             </ChartCard>
           </div>
         </div>
@@ -698,9 +749,9 @@ export default function DataVisualizer() {
         onCopySvg={() => copyChartSvg(chartRefs.bar.current)}
         showOrientation
         isHorizontal={barHorizontal}
-        onToggleOrientation={() => setBarHorizontal((v) => !v)}
+        onToggleOrientation={toggleBarOrientation}
       >
-        <BarChart data={sortedData} isHorizontal={barHorizontal} />
+        <BarChart data={chartData} isHorizontal={barHorizontal} />
       </FullscreenModal>
 
       <FullscreenModal
@@ -709,7 +760,7 @@ export default function DataVisualizer() {
         onClose={() => setFullscreenChart(null)}
         onCopySvg={() => copyChartSvg(chartRefs.pie.current)}
       >
-        <PieChart data={sortedData} total={total} />
+        <PieChart data={chartData} total={total} />
       </FullscreenModal>
 
       <FullscreenModal
@@ -719,9 +770,9 @@ export default function DataVisualizer() {
         onCopySvg={() => copyChartSvg(chartRefs.stacked.current)}
         showOrientation
         isHorizontal={stackedHorizontal}
-        onToggleOrientation={() => setStackedHorizontal((v) => !v)}
+        onToggleOrientation={toggleStackedOrientation}
       >
-        <StackedChart data={sortedData} isHorizontal={stackedHorizontal} />
+        <StackedChart data={chartData} isHorizontal={stackedHorizontal} />
       </FullscreenModal>
 
       <FullscreenModal
@@ -730,7 +781,7 @@ export default function DataVisualizer() {
         onClose={() => setFullscreenChart(null)}
         onCopySvg={() => copyChartSvg(chartRefs.line.current)}
       >
-        <LineChart data={sortedData} />
+        <LineChart data={chartData} />
       </FullscreenModal>
     </>
   );

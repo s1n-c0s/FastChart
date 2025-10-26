@@ -21,7 +21,7 @@ export interface BarChartProps {
   children?: React.ReactNode
 }
 
-export function BarChart({
+export const BarChart = React.memo(function BarChart({
   data,
   isHorizontal = true,
   containerRef,
@@ -145,4 +145,14 @@ export function BarChart({
       </ChartContainer>
     </div>
   )
-}
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.isHorizontal === nextProps.isHorizontal &&
+    prevProps.data.length === nextProps.data.length &&
+    prevProps.data.every((item, idx) => 
+      item.id === nextProps.data[idx]?.id &&
+      item.value === nextProps.data[idx]?.value &&
+      item.color === nextProps.data[idx]?.color
+    )
+  )
+})

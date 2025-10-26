@@ -9,8 +9,7 @@ export interface PieChartProps {
   containerRef?: React.RefObject<HTMLDivElement>;
 }
 
-// ... (CustomTooltip component เหมือนเดิม) ...
-const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
+const CustomTooltip = React.memo(({ active, payload }: TooltipProps<number, string>) => {
   if (active && payload && payload.length) {
     const item = payload[0].payload as Datum;
     
@@ -33,10 +32,11 @@ const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
   }
 
   return null;
-};
-// ...
+});
 
-export function PieChart({ data, total, containerRef }: PieChartProps) {
+CustomTooltip.displayName = "CustomTooltip";
+
+export const PieChart = React.memo(function PieChart({ data, total, containerRef }: PieChartProps) {
   return (
     <div
       ref={containerRef}
@@ -93,9 +93,7 @@ export function PieChart({ data, total, containerRef }: PieChartProps) {
         {/* Legend: No Wrap, Center Alignment, Allow Overflow */}
         <div 
           className="absolute top-full left-1/2 -translate-x-1/2 mt-4 
-                     // ✅ No Wrap (ใช้ flex ไม่มี flex-wrap)
                      flex 
-                     // ✅ Center Alignment
                      justify-center 
                      gap-x-4 p-0.5" 
         >
@@ -117,4 +115,14 @@ export function PieChart({ data, total, containerRef }: PieChartProps) {
       </div>
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.total === nextProps.total &&
+    prevProps.data.length === nextProps.data.length &&
+    prevProps.data.every((item, idx) => 
+      item.id === nextProps.data[idx]?.id &&
+      item.value === nextProps.data[idx]?.value &&
+      item.color === nextProps.data[idx]?.color
+    )
+  )
+})

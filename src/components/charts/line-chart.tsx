@@ -1,5 +1,3 @@
-"use client"
-
 import * as React from "react"
 import {
   Line,
@@ -20,7 +18,7 @@ export interface LineChartProps {
   containerRef?: React.RefObject<HTMLDivElement>
 }
 
-export function LineChart({ data, containerRef }: LineChartProps) {
+export const LineChart = React.memo(function LineChart({ data, containerRef }: LineChartProps) {
   // Derive series config from unique IDs (supports multi-series, but we use one)
   const chartConfig = React.useMemo(() => {
     const uniqueIds = Array.from(new Set(data.map(d => d.id)))
@@ -73,4 +71,12 @@ export function LineChart({ data, containerRef }: LineChartProps) {
       </ChartContainer>
     </div>
   )
-}
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.data.length === nextProps.data.length &&
+    prevProps.data.every((item, idx) => 
+      item.id === nextProps.data[idx]?.id &&
+      item.value === nextProps.data[idx]?.value
+    )
+  )
+})

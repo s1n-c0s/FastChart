@@ -6,7 +6,6 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  // Cell,
   ResponsiveContainer,
 } from "recharts"
 import type { Datum } from "@/types"
@@ -26,7 +25,7 @@ interface StackedTooltipProps {
   } & Record<string, unknown>>
 }
 
-function StackedTooltip({ active, payload }: StackedTooltipProps) {
+const StackedTooltip = React.memo(function StackedTooltip({ active, payload }: StackedTooltipProps) {
   if (!active || !payload || payload.length === 0) return null
 
   return (
@@ -48,9 +47,11 @@ function StackedTooltip({ active, payload }: StackedTooltipProps) {
       </div>
     </div>
   )
-}
+});
 
-export function StackedChart({
+StackedTooltip.displayName = "StackedTooltip";
+
+export const StackedChart = React.memo(function StackedChart({
   data,
   isHorizontal = true,
   containerRef,
@@ -155,4 +156,14 @@ export function StackedChart({
       </ResponsiveContainer>
     </div>
   )
-}
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.isHorizontal === nextProps.isHorizontal &&
+    prevProps.data.length === nextProps.data.length &&
+    prevProps.data.every((item, idx) => 
+      item.id === nextProps.data[idx]?.id &&
+      item.value === nextProps.data[idx]?.value &&
+      item.color === nextProps.data[idx]?.color
+    )
+  )
+})
