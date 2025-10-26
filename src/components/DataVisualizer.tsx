@@ -40,7 +40,8 @@ import {
   BarChart,
   PieChart,
   LineChart,
-  StackedChart
+  StackedChart,
+  AreaGradientChart
 } from "../components/charts";
 
 // Constants
@@ -63,10 +64,10 @@ type SortConfig = {
   direction: "asc" | "desc";
 } | null;
 
-type ChartType = "bar" | "pie" | "stacked" | "line";
+type ChartType = "bar" | "pie" | "stacked" | "line" | "area";
 
 // -----------------------------------------------------------------------------
-// SortableRow Component
+// SortableRow Component (รวมการแก้ไข CSS)
 // -----------------------------------------------------------------------------
 
 interface SortableRowProps {
@@ -200,7 +201,7 @@ const SortableRow = React.memo(({
             <SelectValue asChild>
               <div className="flex items-center gap-2 w-full text-left">
                 <div 
-                  className={styles.colorCircle} 
+                  className={styles.sortableColorCircle} 
                   style={{ backgroundColor: row.color }} 
                 />
                 <span className="truncate text-sm">{row.color}</span>
@@ -212,7 +213,7 @@ const SortableRow = React.memo(({
               <SelectItem key={c} value={c} className="pr-4">
                 <div className="flex items-center gap-2">
                   <div 
-                    className={styles.colorPreview}
+                    className={styles.sortableColorPreview}
                     style={{ ['--preview-color' as string]: c }}
                   />
                   <span className="font-mono text-xs">{c}</span>
@@ -232,7 +233,7 @@ const SortableRow = React.memo(({
 SortableRow.displayName = "SortableRow";
 
 // -----------------------------------------------------------------------------
-// Chart Card Component
+// Chart Card Component (แก้ไขเพื่อรองรับปุ่ม Swap)
 // -----------------------------------------------------------------------------
 
 interface ChartCardProps {
@@ -244,6 +245,8 @@ interface ChartCardProps {
   showOrientation?: boolean;
   isHorizontal?: boolean;
   onToggleOrientation?: () => void;
+  // ⭐️ NEW PROP: รับ JSX สำหรับปุ่มสลับ
+  swapButton?: React.ReactNode; 
 }
 
 const ChartCard = React.memo(({
@@ -255,11 +258,14 @@ const ChartCard = React.memo(({
   showOrientation,
   isHorizontal,
   onToggleOrientation,
+  swapButton, // ⭐️ รับ Prop ใหม่
 }: ChartCardProps) => (
   <div ref={chartRef} className="rounded-lg border p-4 min-h-[380px]">
     <div className="flex items-center justify-between mb-3">
       <h3 className="text-base font-medium">{title}</h3>
       <div className="flex items-center gap-2">
+        {/* ⭐️ Render ปุ่ม Swap ก่อนปุ่มควบคุมอื่นๆ */}
+        {swapButton} 
         {showOrientation && onToggleOrientation && (
           <Button variant="secondary" onClick={onToggleOrientation}>
             {isHorizontal ? "Vertical" : "Horizontal"}
@@ -273,14 +279,15 @@ const ChartCard = React.memo(({
         </Button>
       </div>
     </div>
-    <div className="h-[calc(100%-3rem)]">{children}</div>
+    {/* ⭐️ ปรับความสูงเป็น h-full เพื่อใช้พื้นที่ที่เหลือทั้งหมด */}
+    <div className="h-[calc(100%-3rem)]">{children}</div> 
   </div>
 ));
 
 ChartCard.displayName = "ChartCard";
 
 // -----------------------------------------------------------------------------
-// Fullscreen Modal Component
+// Fullscreen Modal Component (ไม่เปลี่ยนแปลง)
 // -----------------------------------------------------------------------------
 
 interface FullscreenModalProps {
@@ -345,7 +352,8 @@ export default function DataVisualizer() {
   const [stackedHorizontal, setStackedHorizontal] = useState(true);
   const [fullscreenChart, setFullscreenChart] = useState<ChartType | null>(null);
   
-  // State to manually trigger chart re-render for non-structural changes (label/color)
+  const [showAreaChart, setShowAreaChart] = useState(false); 
+  
   const [chartUpdateKey, setChartUpdateKey] = useState(0); 
 
   const [, startTransition] = React.useTransition();
@@ -355,7 +363,6 @@ export default function DataVisualizer() {
   const stackedCardRef = useRef<HTMLDivElement>(null!);
   const lineCardRef = useRef<HTMLDivElement>(null!);
 
-  // Chart key now depends on the manual counter
   const chartKey = useMemo(() => chartUpdateKey, [chartUpdateKey]); 
 
   // Memoized calculations
@@ -377,11 +384,11 @@ export default function DataVisualizer() {
   const chartData = useMemo(() => sortedData, [sortedData]);
   
   // -----------------------------------------------------------------------------
-  // Handlers (Order adjusted to fix Code 2304, 2448, 2454)
+  // Handlers (ไม่เปลี่ยนแปลง)
   // -----------------------------------------------------------------------------
 
-  // 1. copyChartSvg: ต้องประกาศก่อนถูกเรียกใช้ใน JSX (ChartCard/FullscreenModal)
   const copyChartSvg = useCallback(async (containerEl: HTMLElement | null) => {
+    // ... (logic copyChartSvg)
     if (!containerEl) {
       toast.error("Cannot copy chart: Container not found");
       return;
@@ -427,8 +434,8 @@ export default function DataVisualizer() {
     }
   }, []);
 
-  // 2. parseMarkdownTable: ต้องประกาศก่อนถูกเรียกใช้ใน transformData
   const parseMarkdownTable = useCallback((md: string): Datum[] => {
+      // ... (logic parseMarkdownTable)
       const lines = md.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
       if (!lines.length) return [];
 
@@ -491,7 +498,6 @@ export default function DataVisualizer() {
       return result;
   }, []);
 
-  // 3. setDataAndForceUpdate: ฟังก์ชันช่วยเหลือที่ใช้ในการอัปเดต State
   const setDataAndForceUpdate = useCallback((
     updater: (prev: Datum[]) => Datum[], 
     shouldForceChartUpdate: boolean = true
@@ -505,7 +511,7 @@ export default function DataVisualizer() {
     });
   }, []);
 
-  // Toggle functions (ไม่เปลี่ยนแปลง)
+  // Toggle functions
   const toggleBarOrientation = useCallback(() => {
     startTransition(() => {
       setBarHorizontal((v) => !v);
@@ -517,8 +523,15 @@ export default function DataVisualizer() {
       setStackedHorizontal((v) => !v);
     });
   }, []);
+  
+  const toggleLineAreaChart = useCallback(() => {
+    startTransition(() => {
+      setShowAreaChart((v) => !v);
+      setChartUpdateKey(k => k + 1);
+    });
+  }, []);
 
-  // Data Update Handlers (ใช้ setDataAndForceUpdate)
+  // Data Update Handlers 
   const updateLabel = useCallback((id: string, label: string) => {
     setDataAndForceUpdate(prev => prev.map(d => (d.id === id ? { ...d, label } : d)));
   }, [setDataAndForceUpdate]);
@@ -556,11 +569,10 @@ export default function DataVisualizer() {
     toast.success("Row added!", { duration: 900 });
   }, [data.length, setDataAndForceUpdate]);
 
- const removeRow = useCallback((id: string) => {
+  const removeRow = useCallback((id: string) => {
     let removed = false;
     
     setDataAndForceUpdate((prev) => {
-      // ตรวจสอบว่ามีข้อมูลเหลืออย่างน้อย 1 แถว 
       if (prev.length > 1) {
         const newData = prev.filter((d) => d.id !== id);
         if (newData.length < prev.length) {
@@ -568,14 +580,15 @@ export default function DataVisualizer() {
         }
         return newData;
       }
-      return prev; // ไม่ลบ ถ้าเหลือแค่ 1 แถว
+      return prev;
     });
 
-    // เพิ่มการแจ้งเตือน (Toast Notification) 
     if (removed) {
-        toast.error("Row removed!", { duration: 900 });
-    } 
-}, [setDataAndForceUpdate]);
+        toast.success("Row removed!", { duration: 900 });
+    } else {
+        toast.error("Cannot remove the last row.", { duration: 900 });
+    }
+  }, [setDataAndForceUpdate]);
 
   // Sort Handler
   const requestSort = useCallback((key: "label" | "value") => {
@@ -605,7 +618,7 @@ export default function DataVisualizer() {
     }
   }, [sortConfig, setDataAndForceUpdate]);
 
-  // Transform Data Handler (ใช้ parseMarkdownTable)
+  // Transform Data Handler 
   const transformData = useCallback(() => {
     const rows = parseMarkdownTable(markdownInput);
     if (rows.length) {
@@ -669,7 +682,13 @@ export default function DataVisualizer() {
     }
   }, [fullscreenChart]);
 
-  const chartRefs = { bar: barCardRef, pie: pieCardRef, stacked: stackedCardRef, line: lineCardRef };
+  const chartRefs = { 
+    bar: barCardRef, 
+    pie: pieCardRef, 
+    stacked: stackedCardRef, 
+    line: lineCardRef,
+    area: lineCardRef
+  };
 
   return (
     <>
@@ -808,7 +827,8 @@ export default function DataVisualizer() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div ref={stackedCardRef} className="rounded-lg border p-4 h-[400px]">
+            {/* Stacked Chart (ใช้ div ธรรมดาเนื่องจากมีปุ่ม Orientation อยู่แล้ว) */}
+            <div ref={stackedCardRef} className="rounded-lg border p-4 h-[380px]">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-base font-medium">100% Stacked Chart</h3>
                 <div className="flex items-center gap-2">
@@ -833,17 +853,40 @@ export default function DataVisualizer() {
               </div>
             </div>
 
+            {/* ⭐️ Line/Area Chart Box (ใช้ ChartCard และส่งปุ่ม Swap เป็น Prop) */}
             <ChartCard
-              title="Line Chart - Linear"
+              title={showAreaChart ? "Area Gradient Chart" : "Line Chart - Linear"}
               chartRef={lineCardRef}
               onCopySvg={() => copyChartSvg(lineCardRef.current)}
-              onFullscreen={() => setFullscreenChart("line")}
+              onFullscreen={() => setFullscreenChart(showAreaChart ? "area" : "line")}
+              
+              // ⭐️ ส่งปุ่ม Swap เข้าไปใน Header เพื่อให้มันอยู่บรรทัดเดียวกับปุ่มอื่นๆ
+              swapButton={
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  onClick={toggleLineAreaChart}
+                >
+                  Swap to {showAreaChart ? "Line" : "Area Gradient"}
+                </Button>
+              }
             >
-              <LineChart 
-                key={`line-${chartKey}`}
-                data={chartData} 
-                containerRef={lineCardRef} 
-              />
+              {/* ⭐️ Render ชาร์ตใช้พื้นที่ทั้งหมดที่เหลือ */}
+              <div className="h-full"> 
+                {showAreaChart ? (
+                  <AreaGradientChart 
+                    key={`area-${chartKey}`}
+                    data={chartData} 
+                    containerRef={lineCardRef} 
+                  />
+                ) : (
+                  <LineChart 
+                    key={`line-${chartKey}`}
+                    data={chartData} 
+                    containerRef={lineCardRef} 
+                  />
+                )}
+              </div>
             </ChartCard>
           </div>
         </div>
@@ -855,11 +898,12 @@ export default function DataVisualizer() {
           duration: 900,
           style: { background: "black", color: "#ffff" },
           iconTheme: { primary: "white", secondary: "black" },
-          error: { iconTheme: { primary: "#ef4444", secondary: "black" } },
+          error: { iconTheme: { primary: "#ef4444", secondary: "black" }, style: { background: "#ef4444", color: "white" } }, 
+          success: { iconTheme: { primary: "#0EC04F", secondary: "white" } } 
         }}
       />
 
-      {/* Fullscreen Modals */}
+      {/* Fullscreen Modals (ไม่เปลี่ยนแปลง) */}
       <FullscreenModal
         chartType="bar"
         isOpen={fullscreenChart === "bar"}
@@ -894,12 +938,19 @@ export default function DataVisualizer() {
       </FullscreenModal>
 
       <FullscreenModal
-        chartType="line"
-        isOpen={fullscreenChart === "line"}
+        chartType={fullscreenChart === "area" ? "area" : "line"}
+        isOpen={fullscreenChart === "line" || fullscreenChart === "area"}
         onClose={() => setFullscreenChart(null)}
         onCopySvg={() => copyChartSvg(chartRefs.line.current)}
+        showOrientation={true}
+        isHorizontal={showAreaChart}
+        onToggleOrientation={toggleLineAreaChart}
       >
-        <LineChart key={`full-line-${chartKey}`} data={chartData} />
+        {showAreaChart ? (
+          <AreaGradientChart key={`full-area-${chartKey}`} data={chartData} />
+        ) : (
+          <LineChart key={`full-line-${chartKey}`} data={chartData} />
+        )}
       </FullscreenModal>
     </>
   );
