@@ -1,12 +1,41 @@
 import * as React from "react";
-import { Pie, PieChart as RechartsPieChart, Cell } from "recharts";
+// ✅ แก้ไข: นำเข้า Component (Value)
+import { Pie, PieChart as RechartsPieChart, Cell, Tooltip } from "recharts";
+// ✅ แก้ไข: นำเข้า Type ด้วย type-only import
+import type { TooltipProps } from "recharts";
 import type { Datum } from "@/types";
 
 export interface PieChartProps {
-  data: Datum[]; // ✅ ถูกต้อง: กำหนดชื่อ property เป็น `data`
+  data: Datum[];
   total: number;
   containerRef?: React.RefObject<HTMLDivElement>;
 }
+
+// 🧱 Custom Tooltip
+const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
+  if (active && payload && payload.length) {
+    const item = payload[0].payload as Datum;
+    
+    return (
+      <div className="rounded-lg border bg-popover p-2 text-sm shadow-md">
+        <div className="flex items-center gap-2">
+          <div
+            className="h-3 w-3 rounded-sm"
+            style={{ backgroundColor: item.color }}
+          />
+          <span className="font-medium text-popover-foreground">
+            {item.label}:
+          </span>
+          <span className="text-right font-bold text-popover-foreground">
+            {item.value.toLocaleString()}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+};
 
 export function PieChart({ data, total, containerRef }: PieChartProps) {
   return (
@@ -16,6 +45,7 @@ export function PieChart({ data, total, containerRef }: PieChartProps) {
     >
       <div className="relative h-[250px] w-[250px]">
         <RechartsPieChart width={250} height={250}>
+          <Tooltip content={<CustomTooltip />} />
           <Pie
             data={data}
             dataKey="value"
