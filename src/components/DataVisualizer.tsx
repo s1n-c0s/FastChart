@@ -796,7 +796,7 @@ export default function DataVisualizer() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div ref={stackedCardRef} className="rounded-lg border p-4 h-[320px]">
+            <div ref={stackedCardRef} className="rounded-lg border p-4 h-[400px]">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-base font-medium">100% Stacked Chart</h3>
                 <div className="flex items-center gap-2">
