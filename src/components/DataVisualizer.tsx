@@ -65,7 +65,10 @@ type SortConfig = {
 
 type ChartType = "bar" | "pie" | "stacked" | "line";
 
+// -----------------------------------------------------------------------------
 // SortableRow Component
+// -----------------------------------------------------------------------------
+
 interface SortableRowProps {
   row: Datum;
   onUpdateLabel: (id: string, label: string) => void;
@@ -88,7 +91,6 @@ const SortableRow = React.memo(({
   const [localValue, setLocalValue] = useState<number | "">(row.value);
   
   // Debounce timers
-  // แก้ไข: กำหนดค่าเริ่มต้นเป็น undefined สำหรับ useRef เพื่อให้สอดคล้องกับการใช้งาน setTimeout ID
   const labelTimerRef = useRef<number | undefined>(undefined); 
   const valueTimerRef = useRef<number | undefined>(undefined);
 
@@ -98,11 +100,25 @@ const SortableRow = React.memo(({
   // Cleanup timers on unmount
   useEffect(() => {
     return () => {
-      // ใช้ window.clearTimeout เพื่อให้สอดคล้องกับ window.setTimeout ใน handleLabelChange/handleValueChange
       if (labelTimerRef.current) window.clearTimeout(labelTimerRef.current);
       if (valueTimerRef.current) window.clearTimeout(valueTimerRef.current);
     };
   }, []);
+  
+  const commitLabelUpdate = useCallback((newLabel: string) => {
+    if (newLabel !== row.label) {
+      onUpdateLabel(row.id, newLabel);
+    }
+  }, [row.id, row.label, onUpdateLabel]);
+
+  const commitValueUpdate = useCallback((newValue: number | "") => {
+    const finalValue = newValue === "" ? 0 : newValue;
+    const currentStoredValue = row.value;
+    
+    if (finalValue !== currentStoredValue) {
+      onUpdateValue(row.id, String(finalValue));
+    }
+  }, [row.id, row.value, onUpdateValue]);
 
   const handleLabelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newLabel = e.target.value;
@@ -110,8 +126,13 @@ const SortableRow = React.memo(({
     
     if (labelTimerRef.current) window.clearTimeout(labelTimerRef.current);
     labelTimerRef.current = window.setTimeout(() => {
-      onUpdateLabel(row.id, newLabel);
+      commitLabelUpdate(newLabel);
     }, 300);
+  };
+
+  const handleLabelBlur = () => {
+    if (labelTimerRef.current) window.clearTimeout(labelTimerRef.current);
+    commitLabelUpdate(localLabel);
   };
 
   const handleValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -120,8 +141,13 @@ const SortableRow = React.memo(({
     
     if (valueTimerRef.current) window.clearTimeout(valueTimerRef.current);
     valueTimerRef.current = window.setTimeout(() => {
-      onUpdateValue(row.id, String(newValue === "" ? 0 : newValue));
+      commitValueUpdate(newValue);
     }, 300);
+  };
+  
+  const handleValueBlur = () => {
+    if (valueTimerRef.current) window.clearTimeout(valueTimerRef.current);
+    commitValueUpdate(localValue);
   };
 
   return (
@@ -149,6 +175,7 @@ const SortableRow = React.memo(({
             placeholder="Label"
             value={localLabel}
             onChange={handleLabelChange}
+            onBlur={handleLabelBlur}
             onMouseDown={(e) => e.stopPropagation()}
             onTouchStart={(e) => e.stopPropagation()}
           />
@@ -162,6 +189,7 @@ const SortableRow = React.memo(({
           placeholder="0"
           value={localValue}
           onChange={handleValueChange}
+          onBlur={handleValueBlur}
           onMouseDown={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
         />
@@ -171,7 +199,10 @@ const SortableRow = React.memo(({
           <SelectTrigger className="w-full h-9">
             <SelectValue asChild>
               <div className="flex items-center gap-2 w-full text-left">
-                <div className={styles.colorCircle} style={{ backgroundColor: row.color }} />
+                <div 
+                  className={styles.colorCircle} 
+                  style={{ backgroundColor: row.color }} 
+                />
                 <span className="truncate text-sm">{row.color}</span>
               </div>
             </SelectValue>
@@ -200,7 +231,10 @@ const SortableRow = React.memo(({
 
 SortableRow.displayName = "SortableRow";
 
+// -----------------------------------------------------------------------------
 // Chart Card Component
+// -----------------------------------------------------------------------------
+
 interface ChartCardProps {
   title: string;
   chartRef: React.RefObject<HTMLDivElement>;
@@ -245,7 +279,10 @@ const ChartCard = React.memo(({
 
 ChartCard.displayName = "ChartCard";
 
+// -----------------------------------------------------------------------------
 // Fullscreen Modal Component
+// -----------------------------------------------------------------------------
+
 interface FullscreenModalProps {
   chartType: string;
   isOpen: boolean;
@@ -296,7 +333,10 @@ const FullscreenModal = React.memo(({
 
 FullscreenModal.displayName = "FullscreenModal";
 
-// Main Component
+// -----------------------------------------------------------------------------
+// Main Component: DataVisualizer
+// -----------------------------------------------------------------------------
+
 export default function DataVisualizer() {
   const [data, setData] = useState<Datum[]>(INITIAL_DATA);
   const [sortConfig, setSortConfig] = useState<SortConfig>(null);
@@ -305,13 +345,18 @@ export default function DataVisualizer() {
   const [stackedHorizontal, setStackedHorizontal] = useState(true);
   const [fullscreenChart, setFullscreenChart] = useState<ChartType | null>(null);
   
-  // Use transition for smoother orientation changes
+  // State to manually trigger chart re-render for non-structural changes (label/color)
+  const [chartUpdateKey, setChartUpdateKey] = useState(0); 
+
   const [, startTransition] = React.useTransition();
 
   const barCardRef = useRef<HTMLDivElement>(null!);
   const pieCardRef = useRef<HTMLDivElement>(null!);
   const stackedCardRef = useRef<HTMLDivElement>(null!);
   const lineCardRef = useRef<HTMLDivElement>(null!);
+
+  // Chart key now depends on the manual counter
+  const chartKey = useMemo(() => chartUpdateKey, [chartUpdateKey]); 
 
   // Memoized calculations
   const total = useMemo(
@@ -329,77 +374,13 @@ export default function DataVisualizer() {
     });
   }, [data, sortConfig]);
 
-  // Memoize chart data to prevent recalculations
   const chartData = useMemo(() => sortedData, [sortedData]);
   
-  // Toggle functions with transition for smoother orientation changes
-  const toggleBarOrientation = useCallback(() => {
-    startTransition(() => {
-      setBarHorizontal((v) => !v);
-    });
-  }, []);
+  // -----------------------------------------------------------------------------
+  // Handlers (Order adjusted to fix Code 2304, 2448, 2454)
+  // -----------------------------------------------------------------------------
 
-  const toggleStackedOrientation = useCallback(() => {
-    startTransition(() => {
-      setStackedHorizontal((v) => !v);
-    });
-  }, []);
-
-  // Handlers
-  const updateLabel = useCallback((id: string, label: string) => {
-    setData((prev) => prev.map((d) => (d.id === id ? { ...d, label } : d)));
-  }, []);
-
-  const updateValue = useCallback((id: string, next: string) => {
-    const parsed = Number(next);
-    setData((prev) => prev.map((d) => 
-      d.id === id ? { ...d, value: isFinite(parsed) ? parsed : 0 } : d
-    ));
-  }, []);
-
-  const updateColor = useCallback((id: string, color: string) => {
-    setData((prev) => prev.map((d) => (d.id === id ? { ...d, color } : d)));
-  }, []);
-
-  const addRow = useCallback(() => {
-    const nextIndex = data.length;
-    setData((prev) => [
-      ...prev,
-      {
-        id: generateId(),
-        label: `Item ${nextIndex + 1}`,
-        value: 0,
-        color: PRESET_COLORS[nextIndex % PRESET_COLORS.length],
-      },
-    ]);
-    toast.success("Row added!", { duration: 900 });
-  }, [data.length]);
-
-  const removeRow = useCallback((id: string) => {
-    setData((prev) => prev.length > 1 ? prev.filter((d) => d.id !== id) : prev);
-  }, []);
-
-  const requestSort = useCallback((key: "label" | "value") => {
-    setSortConfig((prev) => {
-      if (!prev || prev.key !== key) return { key, direction: "asc" };
-      if (prev.direction === "asc") return { key, direction: "desc" };
-      return null;
-    });
-  }, []);
-
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    if (sortConfig) return;
-
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      setData((prev) => {
-        const oldIndex = prev.findIndex((d) => d.id === active.id);
-        const newIndex = prev.findIndex((d) => d.id === over.id);
-        return arrayMove(prev, oldIndex, newIndex);
-      });
-    }
-  }, [sortConfig]);
-
+  // 1. copyChartSvg: ต้องประกาศก่อนถูกเรียกใช้ใน JSX (ChartCard/FullscreenModal)
   const copyChartSvg = useCallback(async (containerEl: HTMLElement | null) => {
     if (!containerEl) {
       toast.error("Cannot copy chart: Container not found");
@@ -446,81 +427,185 @@ export default function DataVisualizer() {
     }
   }, []);
 
+  // 2. parseMarkdownTable: ต้องประกาศก่อนถูกเรียกใช้ใน transformData
   const parseMarkdownTable = useCallback((md: string): Datum[] => {
-    const lines = md.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-    if (!lines.length) return [];
+      const lines = md.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+      if (!lines.length) return [];
 
-    const result: Datum[] = [];
-    let itemCount = 0;
-    const isMarkdownTable = lines.some((l) => l.includes("|"));
+      const result: Datum[] = [];
+      let itemCount = 0;
+      const isMarkdownTable = lines.some((l) => l.includes("|"));
 
-    if (!isMarkdownTable) {
-      const headerLine = lines[0]?.toLowerCase().replace(/\s/g, "") || "";
-      const hasHeader = headerLine.includes("label") && headerLine.includes("value");
-      const dataLines = hasHeader ? lines.slice(1) : lines;
+      if (!isMarkdownTable) {
+          const headerLine = lines[0]?.toLowerCase().replace(/\s/g, "") || "";
+          const hasHeader = headerLine.includes("label") && headerLine.includes("value");
+          const dataLines = hasHeader ? lines.slice(1) : lines;
 
-      let labelIndex = 0, valueIndex = 1, colorIndex = 2;
-      if (hasHeader) {
-        const parts = headerLine.split(",").map((s) => s.trim());
-        labelIndex = parts.indexOf("label");
-        valueIndex = parts.indexOf("value");
-        colorIndex = parts.indexOf("color");
-      }
-
-      dataLines.forEach((line) => {
-        const parts = line.split(",").map((s) => s.trim());
-        if (parts.length >= 2) {
-          const label = parts[labelIndex] || `Item ${itemCount + 1}`;
-          const value = Number(parts[valueIndex]?.replace(/["\s,]/g, ""));
-          const color = parts[colorIndex] || PRESET_COLORS[itemCount % PRESET_COLORS.length];
-
-          if (isFinite(value)) {
-            result.push({ id: generateId(), label, value: Math.max(0, value), color });
-            itemCount++;
+          let labelIndex = 0, valueIndex = 1, colorIndex = 2;
+          if (hasHeader) {
+            const parts = headerLine.split(",").map((s) => s.trim());
+            labelIndex = parts.indexOf("label");
+            valueIndex = parts.indexOf("value");
+            colorIndex = parts.indexOf("color");
           }
-        }
-      });
 
-      if (result.length) return result;
-    }
+          dataLines.forEach((line) => {
+            const parts = line.split(",").map((s) => s.trim());
+            if (parts.length >= 2) {
+              const label = parts[labelIndex] || `Item ${itemCount + 1}`;
+              const value = Number(parts[valueIndex]?.replace(/["\s,]/g, ""));
+              const color = parts[colorIndex] || PRESET_COLORS[itemCount % PRESET_COLORS.length];
 
-    // Parse Markdown table
-    const startIdx = lines.length > 1 && /-\s*-/.test(lines[1]) ? 2 : 1;
-    for (let i = startIdx; i < lines.length; i++) {
-      const row = lines[i];
-      if (!row.includes("|")) continue;
+              if (isFinite(value)) {
+                result.push({ id: generateId(), label, value: Math.max(0, value), color });
+                itemCount++;
+              }
+            }
+          });
 
-      const parts = row.split("|").map((s) => s.trim()).filter((s, idx, arr) => 
-        !(idx === 0 && s === "") && !(idx === arr.length - 1 && s === "")
-      );
-      if (parts.length < 2) continue;
-
-      const value = Number(parts[1]?.replace(/["\s,]/g, ""));
-      if (isFinite(value)) {
-        result.push({
-          id: generateId(),
-          label: parts[0] || `Item ${itemCount + 1}`,
-          value: Math.max(0, value),
-          color: parts[2] || PRESET_COLORS[itemCount % PRESET_COLORS.length],
-        });
-        itemCount++;
+          if (result.length) return result;
       }
-    }
 
-    return result;
+      const startIdx = lines.length > 1 && /-\s*-/.test(lines[1]) ? 2 : 1;
+      for (let i = startIdx; i < lines.length; i++) {
+        const row = lines[i];
+        if (!row.includes("|")) continue;
+
+        const parts = row.split("|").map((s) => s.trim()).filter((s, idx, arr) => 
+          !(idx === 0 && s === "") && !(idx === arr.length - 1 && s === "")
+        );
+        if (parts.length < 2) continue;
+
+        const value = Number(parts[1]?.replace(/["\s,]/g, ""));
+        if (isFinite(value)) {
+          result.push({
+            id: generateId(),
+            label: parts[0] || `Item ${itemCount + 1}`,
+            value: Math.max(0, value),
+            color: parts[2] || PRESET_COLORS[itemCount % PRESET_COLORS.length],
+          });
+          itemCount++;
+        }
+      }
+
+      return result;
   }, []);
 
+  // 3. setDataAndForceUpdate: ฟังก์ชันช่วยเหลือที่ใช้ในการอัปเดต State
+  const setDataAndForceUpdate = useCallback((
+    updater: (prev: Datum[]) => Datum[], 
+    shouldForceChartUpdate: boolean = true
+  ) => {
+    setData((prev) => {
+      const newData = updater(prev);
+      if (shouldForceChartUpdate) {
+        setChartUpdateKey(k => k + 1);
+      }
+      return newData;
+    });
+  }, []);
+
+  // Toggle functions (ไม่เปลี่ยนแปลง)
+  const toggleBarOrientation = useCallback(() => {
+    startTransition(() => {
+      setBarHorizontal((v) => !v);
+    });
+  }, []);
+
+  const toggleStackedOrientation = useCallback(() => {
+    startTransition(() => {
+      setStackedHorizontal((v) => !v);
+    });
+  }, []);
+
+  // Data Update Handlers (ใช้ setDataAndForceUpdate)
+  const updateLabel = useCallback((id: string, label: string) => {
+    setDataAndForceUpdate(prev => prev.map(d => (d.id === id ? { ...d, label } : d)));
+  }, [setDataAndForceUpdate]);
+
+  const updateColor = useCallback((id: string, color: string) => {
+    setDataAndForceUpdate(prev => prev.map(d => (d.id === id ? { ...d, color } : d)));
+  }, [setDataAndForceUpdate]);
+
+  const updateValue = useCallback((id: string, next: string) => {
+    const parsed = Number(next);
+    const finalValue = isFinite(parsed) ? parsed : 0;
+
+    setData((prev) => {
+      const originalValue = prev.find(d => d.id === id)?.value;
+      const newData = prev.map(d => (d.id === id ? { ...d, value: finalValue } : d));
+      
+      if (originalValue !== finalValue) {
+          setChartUpdateKey(prevKey => prevKey + 1); 
+      }
+      return newData;
+    });
+  }, []); 
+
+  const addRow = useCallback(() => {
+    const nextIndex = data.length;
+    setDataAndForceUpdate((prev) => [
+      ...prev,
+      {
+        id: generateId(),
+        label: `Item ${nextIndex + 1}`,
+        value: 0,
+        color: PRESET_COLORS[nextIndex % PRESET_COLORS.length],
+      },
+    ]);
+    toast.success("Row added!", { duration: 900 });
+  }, [data.length, setDataAndForceUpdate]);
+
+  const removeRow = useCallback((id: string) => {
+    setDataAndForceUpdate((prev) => {
+      if (prev.length > 1) {
+        return prev.filter((d) => d.id !== id);
+      }
+      return prev;
+    });
+  }, [setDataAndForceUpdate]);
+
+  // Sort Handler
+  const requestSort = useCallback((key: "label" | "value") => {
+    setSortConfig((prev) => {
+      const newConfig = (() => {
+        if (!prev || prev.key !== key) return { key, direction: "asc" as "asc" | "desc" };
+        if (prev.direction === "asc") return { key, direction: "desc" as "asc" | "desc" };
+        return null;
+      })();
+      
+      setChartUpdateKey(k => k + 1); 
+      return newConfig;
+    });
+  }, []);
+
+  // Drag End Handler
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    if (sortConfig) return;
+
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setDataAndForceUpdate((prev) => {
+        const oldIndex = prev.findIndex((d) => d.id === active.id);
+        const newIndex = prev.findIndex((d) => d.id === over.id);
+        return arrayMove(prev, oldIndex, newIndex);
+      });
+    }
+  }, [sortConfig, setDataAndForceUpdate]);
+
+  // Transform Data Handler (ใช้ parseMarkdownTable)
   const transformData = useCallback(() => {
     const rows = parseMarkdownTable(markdownInput);
     if (rows.length) {
-      setData(rows);
+      setDataAndForceUpdate(() => rows);
       setSortConfig(null);
       toast.success("Data transformed successfully!", { duration: 900 });
     } else {
       toast.error("Error: Invalid data format or no data found.");
     }
-  }, [markdownInput, parseMarkdownTable]);
+  }, [markdownInput, parseMarkdownTable, setDataAndForceUpdate]);
 
+  // Load Example Handler
   const loadExample = useCallback((type: "csv" | "markdown") => {
     const examples = {
       csv: `Label,Value,Color\nA, 12, #3b82f6\nB, 30, #22c55e\nC, 18, #ef4444`,
@@ -528,9 +613,11 @@ export default function DataVisualizer() {
     };
     setMarkdownInput(examples[type]);
     setSortConfig(null);
+    setChartUpdateKey(prev => prev + 1); 
     toast.success(`${type.toUpperCase()} Example loaded!`, { duration: 900 });
   }, []);
 
+  // Export Handlers
   const exportToMarkdown = useCallback(() => {
     const header = "| Label | Value | Color |";
     const separator = "|------:|------:|:-----:|";
@@ -685,7 +772,12 @@ export default function DataVisualizer() {
               isHorizontal={barHorizontal}
               onToggleOrientation={toggleBarOrientation}
             >
-              <BarChart data={chartData} containerRef={barCardRef} isHorizontal={barHorizontal} />
+              <BarChart 
+                key={`bar-${chartKey}`}
+                data={chartData} 
+                containerRef={barCardRef} 
+                isHorizontal={barHorizontal} 
+              />
             </ChartCard>
 
             <ChartCard
@@ -694,7 +786,12 @@ export default function DataVisualizer() {
               onCopySvg={() => copyChartSvg(pieCardRef.current)}
               onFullscreen={() => setFullscreenChart("pie")}
             >
-              <PieChart data={chartData} total={total} containerRef={pieCardRef} />
+              <PieChart 
+                key={`pie-${chartKey}`}
+                data={chartData} 
+                total={total} 
+                containerRef={pieCardRef} 
+              />
             </ChartCard>
           </div>
 
@@ -715,7 +812,12 @@ export default function DataVisualizer() {
                 </div>
               </div>
               <div className="h-[calc(100%-3rem)]">
-                <StackedChart data={chartData} containerRef={stackedCardRef} isHorizontal={stackedHorizontal} />
+                <StackedChart 
+                  key={`stacked-${chartKey}`}
+                  data={chartData} 
+                  containerRef={stackedCardRef} 
+                  isHorizontal={stackedHorizontal} 
+                />
               </div>
             </div>
 
@@ -725,7 +827,11 @@ export default function DataVisualizer() {
               onCopySvg={() => copyChartSvg(lineCardRef.current)}
               onFullscreen={() => setFullscreenChart("line")}
             >
-              <LineChart data={chartData} containerRef={lineCardRef} />
+              <LineChart 
+                key={`line-${chartKey}`}
+                data={chartData} 
+                containerRef={lineCardRef} 
+              />
             </ChartCard>
           </div>
         </div>
@@ -751,7 +857,7 @@ export default function DataVisualizer() {
         isHorizontal={barHorizontal}
         onToggleOrientation={toggleBarOrientation}
       >
-        <BarChart data={chartData} isHorizontal={barHorizontal} />
+        <BarChart key={`full-bar-${chartKey}`} data={chartData} isHorizontal={barHorizontal} />
       </FullscreenModal>
 
       <FullscreenModal
@@ -760,7 +866,7 @@ export default function DataVisualizer() {
         onClose={() => setFullscreenChart(null)}
         onCopySvg={() => copyChartSvg(chartRefs.pie.current)}
       >
-        <PieChart data={chartData} total={total} />
+        <PieChart key={`full-pie-${chartKey}`} data={chartData} total={total} />
       </FullscreenModal>
 
       <FullscreenModal
@@ -772,7 +878,7 @@ export default function DataVisualizer() {
         isHorizontal={stackedHorizontal}
         onToggleOrientation={toggleStackedOrientation}
       >
-        <StackedChart data={chartData} isHorizontal={stackedHorizontal} />
+        <StackedChart key={`full-stacked-${chartKey}`} data={chartData} isHorizontal={stackedHorizontal} />
       </FullscreenModal>
 
       <FullscreenModal
@@ -781,7 +887,7 @@ export default function DataVisualizer() {
         onClose={() => setFullscreenChart(null)}
         onCopySvg={() => copyChartSvg(chartRefs.line.current)}
       >
-        <LineChart data={chartData} />
+        <LineChart key={`full-line-${chartKey}`} data={chartData} />
       </FullscreenModal>
     </>
   );
