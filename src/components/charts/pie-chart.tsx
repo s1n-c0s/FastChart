@@ -1,7 +1,5 @@
 import * as React from "react";
-// ✅ แก้ไข: นำเข้า Component (Value)
 import { Pie, PieChart as RechartsPieChart, Cell, Tooltip } from "recharts";
-// ✅ แก้ไข: นำเข้า Type ด้วย type-only import
 import type { TooltipProps } from "recharts";
 import type { Datum } from "@/types";
 
@@ -11,7 +9,7 @@ export interface PieChartProps {
   containerRef?: React.RefObject<HTMLDivElement>;
 }
 
-// 🧱 Custom Tooltip
+// ... (CustomTooltip component เหมือนเดิม) ...
 const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
   if (active && payload && payload.length) {
     const item = payload[0].payload as Datum;
@@ -36,6 +34,7 @@ const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
 
   return null;
 };
+// ...
 
 export function PieChart({ data, total, containerRef }: PieChartProps) {
   return (
@@ -91,15 +90,25 @@ export function PieChart({ data, total, containerRef }: PieChartProps) {
           </Pie>
         </RechartsPieChart>
 
-        {/* Legend below */}
-        <div className="absolute bottom-0 left-1/2 flex -translate-x-1/2 translate-y-4 flex-wrap justify-center gap-4">
+        {/* Legend: No Wrap, Center Alignment, Allow Overflow */}
+        <div 
+          className="absolute top-full left-1/2 -translate-x-1/2 mt-4 
+                     // ✅ No Wrap (ใช้ flex ไม่มี flex-wrap)
+                     flex 
+                     // ✅ Center Alignment
+                     justify-center 
+                     gap-x-4 p-0.5" 
+        >
           {data.map((item: Datum) => (
-            <div key={item.id} className="flex items-center gap-2">
+            <div 
+              key={item.id} 
+              className="flex items-center gap-2 flex-shrink-0"
+            >
               <div
-                className="h-3 w-3 rounded-sm"
+                className="h-3 w-3 rounded-sm flex-shrink-0" 
                 style={{ backgroundColor: item.color }}
               />
-              <span className="text-xs font-medium text-foreground">
+              <span className="text-xs font-medium text-foreground whitespace-nowrap">
                 {item.label}
               </span>
             </div>
