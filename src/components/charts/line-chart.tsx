@@ -1,3 +1,5 @@
+"use client"
+
 import * as React from "react"
 import {
   Line,
@@ -19,43 +21,53 @@ export interface LineChartProps {
 }
 
 export function LineChart({ data, containerRef }: LineChartProps) {
+  // Derive series config from unique IDs (supports multi-series, but we use one)
   const chartConfig = React.useMemo(() => {
-    return data.reduce((acc, item) => {
-      acc[item.id] = {
-        label: item.label,
-        color: item.color,
+    const uniqueIds = Array.from(new Set(data.map(d => d.id)))
+    return uniqueIds.reduce((acc, id) => {
+      const firstItem = data.find(d => d.id === id)!
+      acc[id] = {
+        label: firstItem.id.charAt(0).toUpperCase() + firstItem.id.slice(1),
+        color: firstItem.color,
       }
       return acc
     }, {} as Record<string, { label: string; color: string }>)
   }, [data])
 
+  // Assume all data belongs to one series (e.g., "desktop")
+  const seriesId = data[0]?.id || "value"
+
   return (
     <div ref={containerRef} className="h-full w-full">
-      <ChartContainer
-        config={chartConfig}
-        className="h-full w-full"
-      >
-        <RechartsLineChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="label" tickLine={false} axisLine={false} />
-          <YAxis tickLine={false} axisLine={false} />
+      <ChartContainer config={chartConfig} className="h-full w-full">
+        <RechartsLineChart
+          data={data}
+          margin={{ top: 8, right: 12, bottom: 8, left: 12 }}
+          accessibilityLayer
+        >
+          <CartesianGrid vertical={false} strokeDasharray="3 3" />
+          <XAxis
+            dataKey="label"
+            tickLine={false}
+            axisLine={false}
+            tickMargin={8}
+            tickFormatter={(value) => value.slice(0, 3)}
+          />
+          <YAxis
+            tickLine={false}
+            axisLine={false}
+            width={40}
+          />
           <ChartTooltip
-            content={({ active, payload }) => (
-              <ChartTooltipContent
-                active={active}
-                payload={payload}
-                formatter={(value) => (
-                  <span>{Number(value).toLocaleString()}</span>
-                )}
-              />
-            )}
+            cursor={false}
+            content={<ChartTooltipContent hideLabel />}
           />
           <Line
-            type="monotone"
+            type="linear"
             dataKey="value"
-            stroke="#8884d8"
+            stroke={`var(--color-${seriesId})`}
             strokeWidth={2}
-            dot={{ fill: "#8884d8", strokeWidth: 2 }}
+            dot={false}
           />
         </RechartsLineChart>
       </ChartContainer>
