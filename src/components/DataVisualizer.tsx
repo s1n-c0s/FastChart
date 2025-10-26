@@ -480,6 +480,23 @@ export default function DataVisualizer() {
     toast.success(`${type.toUpperCase()} Example loaded!`, { duration: 900 });
   }, []);
 
+  const exportToMarkdown = useCallback(() => {
+    const header = "| Label | Value | Color |";
+    const separator = "|------:|------:|:-----:|";
+    const rows = sortedData.map(d => `| ${d.label} | ${d.value} | ${d.color} |`).join("\n");
+    const markdown = `${header}\n${separator}\n${rows}`;
+    setMarkdownInput(markdown);
+    toast.success("Data exported to Markdown!", { duration: 900 });
+  }, [sortedData]);
+
+  const exportToCSV = useCallback(() => {
+    const header = "Label,Value,Color";
+    const rows = sortedData.map(d => `${d.label},${d.value},${d.color}`).join("\n");
+    const csv = `${header}\n${rows}`;
+    setMarkdownInput(csv);
+    toast.success("Data exported to CSV!", { duration: 900 });
+  }, [sortedData]);
+
   // DnD sensors
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -523,6 +540,8 @@ export default function DataVisualizer() {
               </h2>
               <div className="flex items-center gap-2">
                 <div className="text-sm text-muted-foreground">Total: {total.toLocaleString()}</div>
+                <Button variant="outline" size="sm" onClick={exportToCSV}>Export CSV</Button>
+                <Button variant="outline" size="sm" onClick={exportToMarkdown}>Export MD</Button>
                 <Button variant="secondary" onClick={addRow}>Add Row</Button>
               </div>
             </div>
