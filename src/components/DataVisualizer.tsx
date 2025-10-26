@@ -34,64 +34,67 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-import {
-  Bar,
-  CartesianGrid,
-  Cell,
-  Tooltip,
-  XAxis,
-  YAxis,
-  BarChart as RechartsBarChart,
-  PieChart as RechartsPieChart,
-  Pie,
-  Line,
-  Label,
-  LineChart as RechartsLineChart,
-  ResponsiveContainer
-} from "recharts";
 import { X, Maximize2 } from "lucide-react";
 
 import {
   BarChart,
   PieChart,
-  LineChart
+  LineChart,
+  StackedChart
 } from "../components/charts";
 
-// 💡 SortableRow is already a good component separation.
-function SortableRow({
+// Constants
+const PRESET_COLORS = [
+  "#3b82f6", "#22c55e", "#ef4444", 
+  "#f59e0b", "#a855f7", "#06b6d4"
+] as const;
+
+const INITIAL_DATA: Datum[] = [
+  { id: generateId(), label: "A", value: 12, color: PRESET_COLORS[0] },
+  { id: generateId(), label: "B", value: 30, color: PRESET_COLORS[1] },
+  { id: generateId(), label: "C", value: 18, color: PRESET_COLORS[2] },
+];
+
+const INITIAL_MARKDOWN = `Label,Value,Color\nitem1,"5",#F032E6\nitem2,"4",#46F0F0\nitem3,"5",#06b6d4`;
+
+// Types
+type SortConfig = {
+  key: "label" | "value";
+  direction: "asc" | "desc";
+} | null;
+
+type ChartType = "bar" | "pie" | "stacked" | "line";
+
+// SortableRow Component
+interface SortableRowProps {
+  row: Datum;
+  onUpdateLabel: (id: string, label: string) => void;
+  onUpdateValue: (id: string, value: string) => void;
+  onUpdateColor: (id: string, color: string) => void;
+  onRemove: (id: string) => void;
+  presetColors: readonly string[];
+}
+
+const SortableRow = React.memo(({
   row,
   onUpdateLabel,
   onUpdateValue,
   onUpdateColor,
   onRemove,
   presetColors,
-}: {
-  row: Datum;
-  onUpdateLabel: (id: string, label: string) => void;
-  onUpdateValue: (id: string, value: string) => void;
-  onUpdateColor: (id: string, color: string) => void;
-  onRemove: (id: string) => void;
-  presetColors: string[];
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id: row.id });
-
+}: SortableRowProps) => {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: row.id });
   const [localLabel, setLocalLabel] = useState(row.label);
   const [localValue, setLocalValue] = useState<number | "">(row.value);
 
-  useEffect(() => {
-    setLocalLabel(row.label);
-  }, [row.label]);
-
-  useEffect(() => {
-    setLocalValue(row.value);
-  }, [row.value]);
+  useEffect(() => setLocalLabel(row.label), [row.label]);
+  useEffect(() => setLocalValue(row.value), [row.value]);
 
   return (
     <tr
       ref={setNodeRef}
-      style={{
-        transform: CSS.Transform.toString(transform),
+      style={{ 
+        transform: CSS.Transform.toString(transform), 
         transition,
       }}
       className={styles.sortableRow}
@@ -125,394 +128,189 @@ function SortableRow({
           aria-label={`Value for ${row.label}`}
           placeholder="0"
           value={localValue}
-          onChange={(e) =>
-            setLocalValue(e.target.value === "" ? "" : Number(e.target.value))
-          }
-          onBlur={() =>
-            onUpdateValue(row.id, String(localValue === "" ? 0 : localValue))
-          }
+          onChange={(e) => setLocalValue(e.target.value === "" ? "" : Number(e.target.value))}
+          onBlur={() => onUpdateValue(row.id, String(localValue === "" ? 0 : localValue))}
           onMouseDown={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
         />
       </td>
-
-      {/* TD Color: ใช้ Shadcn Select */}
       <td className="py-2 pr-2">
-        <div className="flex items-center gap-2">
-          <Select
-            value={row.color}
-            onValueChange={(newColor) => onUpdateColor(row.id, newColor)}
-          >
-            <SelectTrigger className="w-full h-9">
-              <SelectValue asChild>
-                <div className="flex items-center gap-2 w-full text-left">
-                  <div
-                    className={styles.colorCircle}
-                    data-color={row.color}
+        <Select value={row.color} onValueChange={(color) => onUpdateColor(row.id, color)}>
+          <SelectTrigger className="w-full h-9">
+            <SelectValue asChild>
+              <div className="flex items-center gap-2 w-full text-left">
+                <div className={styles.colorCircle} style={{ backgroundColor: row.color }} />
+                <span className="truncate text-sm">{row.color}</span>
+              </div>
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {presetColors.map((c) => (
+              <SelectItem key={c} value={c} className="pr-4">
+                <div className="flex items-center gap-2">
+                  <div 
+                    className={styles.colorPreview}
+                    style={{ ['--preview-color' as string]: c }}
                   />
-                  <span className="truncate text-sm">{row.color}</span>
+                  <span className="font-mono text-xs">{c}</span>
                 </div>
-              </SelectValue>
-            </SelectTrigger>
-
-            <SelectContent>
-              {presetColors.map((c) => (
-                <SelectItem key={c} value={c} className="pr-4">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className={styles.colorPreview}
-                      data-color={c}
-                    />
-                    <span className="font-mono text-xs">{c}</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </td>
-
       <td className="py-2 pr-2">
         <RemoveButton onClick={() => onRemove(row.id)} label={row.label} />
       </td>
     </tr>
   );
+});
+
+SortableRow.displayName = "SortableRow";
+
+// Chart Card Component
+interface ChartCardProps {
+  title: string;
+  chartRef: React.RefObject<HTMLDivElement>;
+  onCopySvg: () => void;
+  onFullscreen: () => void;
+  children: React.ReactNode;
+  showOrientation?: boolean;
+  isHorizontal?: boolean;
+  onToggleOrientation?: () => void;
 }
 
-export default function DataVisualizer() {
-  const presetColors = [
-    "#3b82f6", // blue-500
-    "#22c55e", // green-500
-    "#ef4444", // red-500
-    "#f59e0b", // amber-500
-    "#a855f7", // purple-500
-    "#06b6d4", // cyan-500
-  ];
+const ChartCard = React.memo(({
+  title,
+  chartRef,
+  onCopySvg,
+  onFullscreen,
+  children,
+  showOrientation,
+  isHorizontal,
+  onToggleOrientation,
+}: ChartCardProps) => (
+  <div ref={chartRef} className="rounded-lg border p-4 min-h-[380px]">
+    <div className="flex items-center justify-between mb-3">
+      <h3 className="text-base font-medium">{title}</h3>
+      <div className="flex items-center gap-2">
+        {showOrientation && onToggleOrientation && (
+          <Button variant="secondary" onClick={onToggleOrientation}>
+            {isHorizontal ? "Vertical" : "Horizontal"}
+          </Button>
+        )}
+        <Button size="sm" variant="secondary" onClick={onCopySvg}>
+          Copy SVG
+        </Button>
+        <Button size="sm" variant="secondary" onClick={onFullscreen}>
+          <Maximize2 className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+    <div className="h-[calc(100%-3rem)]">{children}</div>
+  </div>
+));
 
-  const [data, setData] = useState<Datum[]>([
-    { id: generateId(), label: "A", value: 12, color: presetColors[0] },
-    { id: generateId(), label: "B", value: 30, color: presetColors[1] },
-    { id: generateId(), label: "C", value: 18, color: presetColors[2] },
-  ]);
-  const [stackedHorizontal, setStackedHorizontal] = useState(true);
-  const [barHorizontal, setBarHorizontal] = useState(true);
-  const [fullscreenChart, setFullscreenChart] = useState<string | null>(null);
-  const [markdownInput, setMarkdownInput] = useState<string>(
-    `Label,Value,Color\nitem1,"5",#F032E6\nitem2,"4",#46F0F0\nitem3,"5",#06b6d4`
+ChartCard.displayName = "ChartCard";
+
+// Fullscreen Modal Component
+interface FullscreenModalProps {
+  chartType: string;
+  isOpen: boolean;
+  onClose: () => void;
+  onCopySvg: () => void;
+  children: React.ReactNode;
+  showOrientation?: boolean;
+  isHorizontal?: boolean;
+  onToggleOrientation?: () => void;
+}
+
+const FullscreenModal = React.memo(({
+  chartType,
+  isOpen,
+  onClose,
+  onCopySvg,
+  children,
+  showOrientation,
+  isHorizontal,
+  onToggleOrientation,
+}: FullscreenModalProps) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className={styles.fullscreenModal} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className={styles.fullscreenContent}>
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="text-xl font-semibold capitalize">{chartType} Chart - Full Screen</h2>
+          <div className="flex items-center gap-2">
+            {showOrientation && onToggleOrientation && (
+              <Button variant="secondary" onClick={onToggleOrientation}>
+                {isHorizontal ? "Vertical" : "Horizontal"}
+              </Button>
+            )}
+            <Button size="sm" variant="secondary" onClick={onCopySvg}>
+              Copy SVG
+            </Button>
+            <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <div className={styles.chartContent}>{children}</div>
+      </div>
+    </div>
   );
+});
 
-  const [sortConfig, setSortConfig] = useState<{
-    key: "label" | "value";
-    direction: "asc" | "desc";
-  } | null>(null);
+FullscreenModal.displayName = "FullscreenModal";
+
+// Main Component
+export default function DataVisualizer() {
+  const [data, setData] = useState<Datum[]>(INITIAL_DATA);
+  const [sortConfig, setSortConfig] = useState<SortConfig>(null);
+  const [markdownInput, setMarkdownInput] = useState(INITIAL_MARKDOWN);
+  const [barHorizontal, setBarHorizontal] = useState(true);
+  const [stackedHorizontal, setStackedHorizontal] = useState(true);
+  const [fullscreenChart, setFullscreenChart] = useState<ChartType | null>(null);
 
   const barCardRef = useRef<HTMLDivElement>(null!);
   const pieCardRef = useRef<HTMLDivElement>(null!);
   const stackedCardRef = useRef<HTMLDivElement>(null!);
   const lineCardRef = useRef<HTMLDivElement>(null!);
 
-  const copyChartSvg = useCallback(async (containerEl: HTMLElement | null) => {
-    if (!containerEl) {
-      console.error("Container element is null");
-      toast.error("Cannot copy chart: Container not found");
-      return;
-    }
-
-    try {
-      // Maximum retry attempts
-      const maxRetries = 3;
-      let chartSvg: SVGSVGElement | null = null;
-      
-      // Try to find the chart SVG with retries
-      for (let i = 0; i < maxRetries; i++) {
-        // Wait between attempts
-        await new Promise(resolve => setTimeout(resolve, 100 * (i + 1)));
-        
-        // Find the recharts wrapper and SVG
-        const wrapper = containerEl.querySelector('.recharts-wrapper');
-        if (wrapper) {
-          chartSvg = wrapper.querySelector('svg');
-          if (chartSvg) break;
-        }
-      }
-
-      if (!chartSvg) {
-        console.error("No chart SVG found after retries");
-        toast.error("Cannot find chart to copy");
-        return;
-      }
-
-      // Get accurate dimensions
-      const box = chartSvg.getBoundingClientRect();
-      const width = Math.round(box.width);
-      const height = Math.round(box.height);
-      
-      // Create new SVG element with namespace
-      const newSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      newSvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-      newSvg.setAttribute("width", width.toString());
-      newSvg.setAttribute("height", height.toString());
-      newSvg.setAttribute("viewBox", `0 0 ${width} ${height}`);
-      
-      // Copy all child nodes
-      Array.from(chartSvg.childNodes).forEach(node => {
-        newSvg.appendChild(node.cloneNode(true));
-      });
-      
-      // Convert to string
-      const svgString = newSvg.outerHTML;
-      
-      // Copy to clipboard
-      await navigator.clipboard.writeText(svgString);
-      
-      toast.success("Chart copied!", {
-        duration: 850,
-        style: {
-          background: "#0EC04F",
-          color: "#ffffff",
-        },
-      });
-
-    } catch (error) {
-      console.error("SVG Copy Error:", error);
-      if (error instanceof Error) {
-        console.error(error.message);
-      }
-      toast.error("Failed to copy chart");
-    }
-  }, []);
-
-  function parseMarkdownTable(md: string): Datum[] {
-    const lines = md
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter(Boolean);
-    if (lines.length === 0) return [];
-
-    const result: Datum[] = [];
-    let itemCount = 0;
-
-    const isMarkdownTable = lines.some((l) => l.includes("|"));
-
-    if (!isMarkdownTable) {
-      // LOGIC: ประมวลผลเป็น CSV
-
-      const headerLine = lines[0]?.toLowerCase().replace(/\s/g, "") || "";
-      const dataLines = lines.slice(1);
-
-      let labelIndex = 0;
-      let valueIndex = 1;
-      let colorIndexCSV = 2;
-      let hasHeader = false;
-
-      if (headerLine.includes("label") && headerLine.includes("value")) {
-        const headerParts = headerLine.split(",").map((s) => s.trim());
-        labelIndex = headerParts.indexOf("label");
-        valueIndex = headerParts.indexOf("value");
-        colorIndexCSV = headerParts.indexOf("color");
-        hasHeader = true;
-      }
-
-      const linesToProcess = hasHeader ? dataLines : lines;
-
-      linesToProcess.forEach((line) => {
-        const parts = line.split(",").map((s) => s.trim());
-
-        if (parts.length >= 2) {
-          const rawLabel = parts[labelIndex] || "";
-          const rawValue = parts[valueIndex] || "";
-          const rawColor = parts[colorIndexCSV] || "";
-
-          const label = hasHeader ? rawLabel : parts[0];
-          const valueStr = hasHeader ? rawValue : parts[1];
-          const colorStr =
-            hasHeader && parts.length > 2 ? rawColor : parts[2] || "";
-
-          const value = Number(valueStr.replace(/["\s,]/g, ""));
-
-          if (isFinite(value)) {
-            const color =
-              colorStr || presetColors[itemCount % presetColors.length];
-
-            result.push({
-              id: generateId(),
-              label: label || `Item ${itemCount + 1}`,
-              value: Math.max(0, value),
-              color,
-            });
-            itemCount++;
-          }
-        } else if (
-          parts.length === 1 &&
-          isFinite(Number(parts[0].replace(/["\s,]/g, "")))
-        ) {
-          // รองรับกรณีพิเศษ: หากมีแค่ค่าเดียว (value)
-          const value = Number(parts[0].replace(/["\s,]/g, ""));
-          if (isFinite(value)) {
-            const color = presetColors[itemCount % presetColors.length];
-            result.push({
-              id: generateId(),
-              label: `Item ${itemCount + 1}`,
-              value: Math.max(0, value),
-              color,
-            });
-            itemCount++;
-          }
-        }
-      });
-
-      if (result.length > 0) return result;
-    }
-
-    // LOGIC: ประมวลผล Markdown Table
-    let startIdx = 0;
-    if (lines.length > 1 && /-\s*-/.test(lines[1])) {
-      startIdx = 2;
-    } else if (lines.length > 0 && /\|/.test(lines[0])) {
-      startIdx = 1;
-    }
-
-    itemCount = 0;
-    const markdownResult: Datum[] = [];
-
-    for (let i = startIdx; i < lines.length; i++) {
-      const row = lines[i];
-      if (!row.includes("|")) continue;
-      const parts = row
-        .split("|")
-        .map((s) => s.trim())
-        .filter(
-          (s, idx, arr) =>
-            !(idx === 0 && s === "") && !(idx === arr.length - 1 && s === "")
-        );
-      if (parts.length < 2) continue;
-
-      const valueStr = parts[1] || "0";
-      const value = Number(valueStr.replace(/["\s,]/g, ""));
-
-      if (isFinite(value)) {
-        const label = parts[0] || `Item ${itemCount + 1}`;
-        const colorStr = parts[2] || "";
-        const color = colorStr || presetColors[itemCount % presetColors.length];
-
-        markdownResult.push({
-          id: generateId(),
-          label,
-          value: Math.max(0, value),
-          color,
-        });
-        itemCount++;
-      }
-    }
-
-    if (markdownResult.length > 0) return markdownResult;
-
-    return result;
-  }
-
-  // 💡 Optimization: useMemo hooks help prevent re-calculation unless dependencies change
+  // Memoized calculations
   const total = useMemo(
     () => data.reduce((sum, d) => sum + (isFinite(d.value) ? d.value : 0), 0),
     [data]
   );
 
   const sortedData = useMemo(() => {
-    const sortableData = [...data];
-
-    if (sortConfig !== null) {
-      sortableData.sort((a, b) => {
-        if (a[sortConfig.key] < b[sortConfig.key]) {
-          return sortConfig.direction === "asc" ? -1 : 1;
-        }
-        if (a[sortConfig.key] > b[sortConfig.key]) {
-          return sortConfig.direction === "asc" ? 1 : -1;
-        }
-        return 0;
-      });
-    }
-    return sortableData;
+    if (!sortConfig) return data;
+    
+    return [...data].sort((a, b) => {
+      if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === "asc" ? -1 : 1;
+      if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === "asc" ? 1 : -1;
+      return 0;
+    });
   }, [data, sortConfig]);
 
-  const requestSort = (key: "label" | "value") => {
-    let direction: "asc" | "desc" = "asc";
-    if (
-      sortConfig &&
-      sortConfig.key === key &&
-      sortConfig.direction === "asc"
-    ) {
-      direction = "desc";
-    } else if (
-      sortConfig &&
-      sortConfig.key === key &&
-      sortConfig.direction === "desc"
-    ) {
-      setSortConfig(null);
-      return;
-    }
-    setSortConfig({ key, direction });
-  };
-
-  // Memoized data for stacked chart
-  const stackedData = useMemo(() => {
-    const total = sortedData.reduce((sum, d) => sum + Math.max(0, isFinite(d.value) ? d.value : 0), 0);
-    return [
-      {
-        name: "All",
-        ...sortedData.reduce((acc, d) => ({
-          ...acc,
-          [d.label]: Math.max(0, isFinite(d.value) ? d.value : 0) / (total || 1)
-        }), {})
-      }
-    ];
-  }, [sortedData]);
-
-  function StackedTooltip({
-    active,
-    payload,
-  }: {
-    active?: boolean;
-    payload?: Array<{ name?: string; value: number; fill?: string } & Record<string, unknown>>;
-  }) {
-    if (!active || !payload || payload.length === 0) return null;
-
-    return (
-      <div className={styles.stackedTooltipWrapper}>
-        <div className={styles.stackedTooltipTitle}>Details</div>
-        <div className={styles.stackedTooltipContent}>
-          {payload.map((entry, idx) => (
-            <div key={idx} className={styles.stackedTooltipRow}>
-              <div className={styles.stackedTooltipLabel}>
-                <div
-                  className={styles.colorCircle}
-                  data-color={entry.fill}
-                />
-                <span>{entry.name}</span>
-              </div>
-              <span>{Math.round(entry.value * 100)}%</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  // 💡 Refactored to use useCallback for stable function references
+  // Handlers
   const updateLabel = useCallback((id: string, label: string) => {
     setData((prev) => prev.map((d) => (d.id === id ? { ...d, label } : d)));
   }, []);
+
   const updateValue = useCallback((id: string, next: string) => {
     const parsed = Number(next);
-    setData((prev) =>
-      prev.map((d) =>
-        d.id === id ? { ...d, value: isFinite(parsed) ? parsed : 0 } : d
-      )
-    );
+    setData((prev) => prev.map((d) => 
+      d.id === id ? { ...d, value: isFinite(parsed) ? parsed : 0 } : d
+    ));
   }, []);
+
   const updateColor = useCallback((id: string, color: string) => {
     setData((prev) => prev.map((d) => (d.id === id ? { ...d, color } : d)));
   }, []);
 
-  function addRow() {
+  const addRow = useCallback(() => {
     const nextIndex = data.length;
     setData((prev) => [
       ...prev,
@@ -520,20 +318,26 @@ export default function DataVisualizer() {
         id: generateId(),
         label: `Item ${nextIndex + 1}`,
         value: 0,
-        color: presetColors[nextIndex % presetColors.length],
+        color: PRESET_COLORS[nextIndex % PRESET_COLORS.length],
       },
     ]);
     toast.success("Row added!", { duration: 900 });
-  }
+  }, [data.length]);
 
-  function removeRow(id: string) {
-    setData((prev) =>
-      prev.length > 1 ? prev.filter((d) => d.id !== id) : prev
-    );
-  }
+  const removeRow = useCallback((id: string) => {
+    setData((prev) => prev.length > 1 ? prev.filter((d) => d.id !== id) : prev);
+  }, []);
 
-  function handleDragEnd(event: DragEndEvent) {
-    if (sortConfig !== null) return;
+  const requestSort = useCallback((key: "label" | "value") => {
+    setSortConfig((prev) => {
+      if (!prev || prev.key !== key) return { key, direction: "asc" };
+      if (prev.direction === "asc") return { key, direction: "desc" };
+      return null;
+    });
+  }, []);
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    if (sortConfig) return;
 
     const { active, over } = event;
     if (over && active.id !== over.id) {
@@ -543,40 +347,152 @@ export default function DataVisualizer() {
         return arrayMove(prev, oldIndex, newIndex);
       });
     }
-  }
+  }, [sortConfig]);
 
+  const copyChartSvg = useCallback(async (containerEl: HTMLElement | null) => {
+    if (!containerEl) {
+      toast.error("Cannot copy chart: Container not found");
+      return;
+    }
+
+    try {
+      let chartSvg: SVGSVGElement | null = null;
+      
+      for (let i = 0; i < 3; i++) {
+        await new Promise(resolve => setTimeout(resolve, 100 * (i + 1)));
+        const wrapper = containerEl.querySelector('.recharts-wrapper');
+        if (wrapper) {
+          chartSvg = wrapper.querySelector('svg');
+          if (chartSvg) break;
+        }
+      }
+
+      if (!chartSvg) {
+        toast.error("Cannot find chart to copy");
+        return;
+      }
+
+      const box = chartSvg.getBoundingClientRect();
+      const newSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      newSvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      newSvg.setAttribute("width", Math.round(box.width).toString());
+      newSvg.setAttribute("height", Math.round(box.height).toString());
+      newSvg.setAttribute("viewBox", `0 0 ${Math.round(box.width)} ${Math.round(box.height)}`);
+      
+      Array.from(chartSvg.childNodes).forEach(node => {
+        newSvg.appendChild(node.cloneNode(true));
+      });
+      
+      await navigator.clipboard.writeText(newSvg.outerHTML);
+      
+      toast.success("Chart copied!", {
+        duration: 850,
+        style: { background: "#0EC04F", color: "#ffffff" },
+      });
+    } catch (error) {
+      console.error("SVG Copy Error:", error);
+      toast.error("Failed to copy chart");
+    }
+  }, []);
+
+  const parseMarkdownTable = useCallback((md: string): Datum[] => {
+    const lines = md.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    if (!lines.length) return [];
+
+    const result: Datum[] = [];
+    let itemCount = 0;
+    const isMarkdownTable = lines.some((l) => l.includes("|"));
+
+    if (!isMarkdownTable) {
+      const headerLine = lines[0]?.toLowerCase().replace(/\s/g, "") || "";
+      const hasHeader = headerLine.includes("label") && headerLine.includes("value");
+      const dataLines = hasHeader ? lines.slice(1) : lines;
+
+      let labelIndex = 0, valueIndex = 1, colorIndex = 2;
+      if (hasHeader) {
+        const parts = headerLine.split(",").map((s) => s.trim());
+        labelIndex = parts.indexOf("label");
+        valueIndex = parts.indexOf("value");
+        colorIndex = parts.indexOf("color");
+      }
+
+      dataLines.forEach((line) => {
+        const parts = line.split(",").map((s) => s.trim());
+        if (parts.length >= 2) {
+          const label = parts[labelIndex] || `Item ${itemCount + 1}`;
+          const value = Number(parts[valueIndex]?.replace(/["\s,]/g, ""));
+          const color = parts[colorIndex] || PRESET_COLORS[itemCount % PRESET_COLORS.length];
+
+          if (isFinite(value)) {
+            result.push({ id: generateId(), label, value: Math.max(0, value), color });
+            itemCount++;
+          }
+        }
+      });
+
+      if (result.length) return result;
+    }
+
+    // Parse Markdown table
+    const startIdx = lines.length > 1 && /-\s*-/.test(lines[1]) ? 2 : 1;
+    for (let i = startIdx; i < lines.length; i++) {
+      const row = lines[i];
+      if (!row.includes("|")) continue;
+
+      const parts = row.split("|").map((s) => s.trim()).filter((s, idx, arr) => 
+        !(idx === 0 && s === "") && !(idx === arr.length - 1 && s === "")
+      );
+      if (parts.length < 2) continue;
+
+      const value = Number(parts[1]?.replace(/["\s,]/g, ""));
+      if (isFinite(value)) {
+        result.push({
+          id: generateId(),
+          label: parts[0] || `Item ${itemCount + 1}`,
+          value: Math.max(0, value),
+          color: parts[2] || PRESET_COLORS[itemCount % PRESET_COLORS.length],
+        });
+        itemCount++;
+      }
+    }
+
+    return result;
+  }, []);
+
+  const transformData = useCallback(() => {
+    const rows = parseMarkdownTable(markdownInput);
+    if (rows.length) {
+      setData(rows);
+      setSortConfig(null);
+      toast.success("Data transformed successfully!", { duration: 900 });
+    } else {
+      toast.error("Error: Invalid data format or no data found.");
+    }
+  }, [markdownInput, parseMarkdownTable]);
+
+  const loadExample = useCallback((type: "csv" | "markdown") => {
+    const examples = {
+      csv: `Label,Value,Color\nA, 12, #3b82f6\nB, 30, #22c55e\nC, 18, #ef4444`,
+      markdown: "| Label | Value | Color |\n|------:|------:|:-----:|\n| A     | 12    | #3b82f6 |\n| B     | 30    | #22c55e |\n| C     | 18    | #ef4444 |"
+    };
+    setMarkdownInput(examples[type]);
+    setSortConfig(null);
+    toast.success(`${type.toUpperCase()} Example loaded!`, { duration: 900 });
+  }, []);
+
+  // DnD sensors
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  const isDndEnabled = sortConfig === null;
-
-  // Full-screen functions
-  const openFullscreen = (chartType: string) => {
-    setFullscreenChart(chartType);
-  };
-
-  const closeFullscreen = () => {
-    setFullscreenChart(null);
-  };
-
-  // Handle escape key to close fullscreen and body scroll lock
+  // Fullscreen escape key handler
   useEffect(() => {
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && fullscreenChart) {
-        closeFullscreen();
-      }
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && fullscreenChart) setFullscreenChart(null);
     };
 
     if (fullscreenChart) {
-      // Prevent body scroll when modal is open
       document.body.style.overflow = 'hidden';
       document.addEventListener("keydown", handleEscape);
       return () => {
@@ -586,106 +502,28 @@ export default function DataVisualizer() {
     }
   }, [fullscreenChart]);
 
-  // Full-screen modal component
-  const FullscreenModal = ({ chartType, children }: { chartType: string; children: React.ReactNode }) => {
-    if (fullscreenChart !== chartType) return null;
+  const chartRefs = { bar: barCardRef, pie: pieCardRef, stacked: stackedCardRef, line: lineCardRef };
 
-    return (
-      <div 
-        className={styles.fullscreenModal}
-        onClick={(e) => e.target === e.currentTarget && closeFullscreen()}
-      >
-        <div className={styles.fullscreenContent}>
-          <div className="flex items-center justify-between p-4 border-b">
-            <h2 className="text-xl font-semibold capitalize">{chartType} Chart - Full Screen</h2>
-            <div className="flex items-center gap-2">
-              {(chartType === "bar" || chartType === "stacked") && (
-                <Button
-                  variant="secondary"
-                  aria-label={`Toggle ${chartType} chart orientation`}
-                  onClick={() => {
-                    if (chartType === "bar") {
-                      setBarHorizontal((v) => !v);
-                    } else if (chartType === "stacked") {
-                      setStackedHorizontal((v) => !v);
-                    }
-                  }}
-                >
-                  {chartType === "bar" 
-                    ? (barHorizontal ? "Vertical" : "Horizontal")
-                    : (stackedHorizontal ? "Vertical" : "Horizontal")
-                  }
-                </Button>
-              )}
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => {
-                  const refs = {
-                    bar: barCardRef,
-                    pie: pieCardRef,
-                    stacked: stackedCardRef,
-                    line: lineCardRef
-                  };
-                  const ref = refs[chartType as keyof typeof refs];
-                  if (ref?.current) {
-                    copyChartSvg(ref.current);
-                  }
-                }}
-                aria-label={`Copy ${chartType} chart as SVG`}
-              >
-                Copy SVG
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={closeFullscreen}
-                className="h-8 w-8 p-0"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          <div className={styles.chartContent}>
-            {children}
-          </div>
-        </div>
-      </div>
-    );
-  };
-const maxLabelLength = React.useMemo(() => {
-  return Math.max(...sortedData.map(d => d.label.length))
-}, [sortedData])
-
-const fullscreenYAxisWidth = Math.min(Math.max(maxLabelLength * 8, 60), 150)
-const fullscreenXAxisHeight = Math.min(Math.max(maxLabelLength * 5, 40), 100)
   return (
     <>
       <div className="p-4 space-y-6" data-testid="data-visualizer">
         <div>
           <h1 className="text-2xl font-semibold">Data Visualizer</h1>
           <p className="text-sm text-muted-foreground">
-            Edit values in either panel to update the charts live. Click
-            Label/Value headers to sort.
+            Edit values in either panel to update the charts live. Click Label/Value headers to sort.
           </p>
         </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Data Tables */}
+          {/* Data Table */}
           <div className="rounded-lg border p-4">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-medium">
-                Data Table{" "}
-                {sortConfig && (
-                  <span className="text-sm text-primary">(Sorted)</span>
-                )}
+                Data Table {sortConfig && <span className="text-sm text-primary">(Sorted)</span>}
               </h2>
               <div className="flex items-center gap-2">
-                <div className="text-sm text-muted-foreground">
-                  Total: {total.toLocaleString()}
-                </div>
-                <Button variant="secondary" onClick={addRow}>
-                  Add Row
-                </Button>
+                <div className="text-sm text-muted-foreground">Total: {total.toLocaleString()}</div>
+                <Button variant="secondary" onClick={addRow}>Add Row</Button>
               </div>
             </div>
             <div className="overflow-x-auto">
@@ -696,32 +534,22 @@ const fullscreenXAxisHeight = Math.min(Math.max(maxLabelLength * 5, 40), 100)
                       <button
                         className="inline-flex items-center gap-1 font-semibold hover:text-foreground/80 transition-colors"
                         onClick={() => requestSort("label")}
-                        aria-label="Sort by Label"
                       >
                         Label
                         {sortConfig?.key === "label" && (
-                          <span aria-hidden="true">
-                            {sortConfig.direction === "asc" ? "↑" : "↓"}
-                          </span>
+                          <span>{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
                         )}
-                        {isDndEnabled && (
-                          <span className="text-xs text-muted-foreground ml-1">
-                            (Drag)
-                          </span>
-                        )}
+                        {!sortConfig && <span className="text-xs text-muted-foreground ml-1">(Drag)</span>}
                       </button>
                     </th>
                     <th className="text-left py-2 pr-2 min-w-[120px]">
                       <button
                         className="inline-flex items-center gap-1 font-semibold hover:text-foreground/80 transition-colors"
                         onClick={() => requestSort("value")}
-                        aria-label="Sort by Value"
                       >
                         Value
                         {sortConfig?.key === "value" && (
-                          <span aria-hidden="true">
-                            {sortConfig.direction === "asc" ? "↑" : "↓"}
-                          </span>
+                          <span>{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
                         )}
                       </button>
                     </th>
@@ -730,15 +558,8 @@ const fullscreenXAxisHeight = Math.min(Math.max(maxLabelLength * 5, 40), 100)
                   </tr>
                 </thead>
                 <tbody>
-                  <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleDragEnd}
-                  >
-                    <SortableContext
-                      items={sortedData.map((d) => d.id)}
-                      strategy={verticalListSortingStrategy}
-                    >
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                    <SortableContext items={sortedData.map((d) => d.id)} strategy={verticalListSortingStrategy}>
                       {sortedData.map((row) => (
                         <SortableRow
                           key={row.id}
@@ -747,7 +568,7 @@ const fullscreenXAxisHeight = Math.min(Math.max(maxLabelLength * 5, 40), 100)
                           onUpdateValue={updateValue}
                           onUpdateColor={updateColor}
                           onRemove={removeRow}
-                          presetColors={presetColors}
+                          presetColors={PRESET_COLORS}
                         />
                       ))}
                     </SortableContext>
@@ -757,151 +578,54 @@ const fullscreenXAxisHeight = Math.min(Math.max(maxLabelLength * 5, 40), 100)
             </div>
           </div>
 
-          {/* --- Right Panel: Markdown Input --- */}
+          {/* Markdown Input */}
           <div className="rounded-lg border p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-medium">Paste Data</h2>
-            </div>
+            <h2 className="text-lg font-medium mb-3">Paste Data</h2>
             <div className="grid grid-cols-1 gap-3">
               <textarea
                 className="min-h-[160px] w-full rounded-md border bg-background px-3 py-2 font-mono text-xs"
-                aria-label="Markdown table input"
+                aria-label="Paste CSV or Markdown data"
+                placeholder="Paste your data here..."
                 value={markdownInput}
                 onChange={(e) => setMarkdownInput(e.target.value)}
               />
               <div className="flex items-center justify-between gap-2">
-                <Button
-                  onClick={() => {
-                    const rows = parseMarkdownTable(markdownInput);
-                    if (rows.length) {
-                      setData(rows);
-                      toast.success("Data transformed successfully!", {
-                        duration: 900,
-                      });
-                    } else {
-                      toast.error("Error: Invalid data format or no data found.");
-                    }
-                    setSortConfig(null);
-                  }}
-                >
-                  Transform to Table
-                </Button>
-
-                {/* Grouped Buttons (ButtonGroup Style) */}
+                <Button onClick={transformData}>Transform to Table</Button>
                 <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setMarkdownInput(
-                        `Label,Value,Color\nA, 12, #3b82f6\nB, 30, #22c55e\nC, 18, #ef4444`
-                      );
-                      setSortConfig(null);
-                      toast.success("CSV Example loaded!", { duration: 900 });
-                    }}
-                    aria-label="Load CSV Example"
-                  >
-                    CSV Example
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setMarkdownInput(
-                        "| Label | Value | Color |\n|------:|------:|:-----:|\n| A     | 12    | #3b82f6 |\n| B     | 30    | #22c55e |\n| C     | 18    | #ef4444 |"
-                      );
-                      setSortConfig(null);
-                      toast.success("Markdown Example loaded!", {
-                        duration: 900,
-                      });
-                    }}
-                    aria-label="Load Markdown Example"
-                  >
-                    Markdown Example
-                  </Button>
+                  <Button variant="outline" onClick={() => loadExample("csv")}>CSV Example</Button>
+                  <Button variant="outline" onClick={() => loadExample("markdown")}>Markdown Example</Button>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                Accepts Markdown Table (Label | Value | Color) or **Structured CSV
-                (Label,Value,Color)**.
+                Accepts Markdown Table (Label | Value | Color) or CSV (Label,Value,Color).
               </p>
             </div>
           </div>
         </div>
 
-        {/* --- Charts Section --- */}
+        {/* Charts */}
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div ref={barCardRef} className="rounded-lg border p-4 min-h-[380px]">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-base font-medium">Bar Chart</h3>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="secondary"
-                    aria-label="Toggle bar chart orientation"
-                    onClick={() => setBarHorizontal((v) => !v)}
-                  >
-                    {barHorizontal ? "Vertical" : "Horizontal"}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={async () => {
-                      await copyChartSvg(barCardRef.current);
-                    }}
-                    aria-label="Copy Bar Chart as SVG"
-                  >
-                    Copy SVG
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => openFullscreen("bar")}
-                    aria-label="Open Bar Chart in full screen"
-                  >
-                    <Maximize2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-              <div className="h-[calc(100%-3rem)]">
-                <BarChart
-                  data={sortedData}
-                  containerRef={barCardRef}
-                  isHorizontal={barHorizontal}
-                />
-              </div>
-            </div>
+            <ChartCard
+              title="Bar Chart"
+              chartRef={barCardRef}
+              onCopySvg={() => copyChartSvg(barCardRef.current)}
+              onFullscreen={() => setFullscreenChart("bar")}
+              showOrientation
+              isHorizontal={barHorizontal}
+              onToggleOrientation={() => setBarHorizontal((v) => !v)}
+            >
+              <BarChart data={sortedData} containerRef={barCardRef} isHorizontal={barHorizontal} />
+            </ChartCard>
 
-            <div ref={pieCardRef} className="rounded-lg border p-4 min-h-[380px]">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-base font-medium">
-                  Pie Chart - Donut with Total
-                </h3>
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => copyChartSvg(pieCardRef.current)}
-                    aria-label="Copy Pie Chart as SVG"
-                  >
-                    Copy SVG
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => openFullscreen("pie")}
-                    aria-label="Open Pie Chart in full screen"
-                  >
-                    <Maximize2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-              <div className="h-[calc(100%-3rem)]">
-                <PieChart
-                  data={sortedData}
-                  total={total}
-                  containerRef={pieCardRef}
-                />
-              </div>
-            </div>
+            <ChartCard
+              title="Pie Chart - Donut with Total"
+              chartRef={pieCardRef}
+              onCopySvg={() => copyChartSvg(pieCardRef.current)}
+              onFullscreen={() => setFullscreenChart("pie")}
+            >
+              <PieChart data={sortedData} total={total} containerRef={pieCardRef} />
+            </ChartCard>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -909,358 +633,86 @@ const fullscreenXAxisHeight = Math.min(Math.max(maxLabelLength * 5, 40), 100)
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-base font-medium">100% Stacked Chart</h3>
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="secondary"
-                    aria-label="Toggle stacked chart orientation"
-                    onClick={() => setStackedHorizontal((v) => !v)}
-                  >
+                  <Button variant="secondary" onClick={() => setStackedHorizontal((v) => !v)}>
                     {stackedHorizontal ? "Vertical" : "Horizontal"}
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => copyChartSvg(stackedCardRef.current)}
-                    aria-label="Copy Stacked Chart as SVG"
-                  >
+                  <Button size="sm" variant="secondary" onClick={() => copyChartSvg(stackedCardRef.current)}>
                     Copy SVG
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => openFullscreen("stacked")}
-                    aria-label="Open Stacked Chart in full screen"
-                  >
-                    <Maximize2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-              <ResponsiveContainer width="100%" height="90%">
-                <RechartsBarChart
-                  data={stackedData}
-                  stackOffset="expand"
-                  margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
-                  layout={stackedHorizontal ? "vertical" : "horizontal"}
-                >
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  {stackedHorizontal ? (
-                    <>
-                      <YAxis
-                        type="category"
-                        dataKey="name"
-                        tickLine={false}
-                        axisLine={false}
-                        width={60}
-                      />
-                      <XAxis
-                        type="number"
-                        domain={[0, 1]}
-                        tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <XAxis
-                        type="category"
-                        dataKey="name"
-                        tickLine={false}
-                        axisLine={false}
-                        height={60}
-                      />
-                      <YAxis
-                        type="number"
-                        domain={[0, 1]}
-                        tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                    </>
-                  )}
-                  <Tooltip content={<StackedTooltip />} />
-                  {sortedData.map((d) => (
-                    <Bar key={d.id} dataKey={d.label} stackId="stacked" fill={d.color} name={d.label} />
-                  ))}
-                </RechartsBarChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div ref={lineCardRef} className="rounded-lg border p-4 min-h-[320px]">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-base font-medium">Line Chart - Linear</h3>
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => copyChartSvg(lineCardRef.current)}
-                    aria-label="Copy Line Chart as SVG"
-                  >
-                    Copy SVG
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => openFullscreen("line")}
-                    aria-label="Open Line Chart in full screen"
-                  >
+                  <Button size="sm" variant="secondary" onClick={() => setFullscreenChart("stacked")}>
                     <Maximize2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
               <div className="h-[calc(100%-3rem)]">
-                <LineChart
-                  data={sortedData}
-                  containerRef={lineCardRef}
-                />
+                <StackedChart data={sortedData} containerRef={stackedCardRef} isHorizontal={stackedHorizontal} />
               </div>
             </div>
+
+            <ChartCard
+              title="Line Chart - Linear"
+              chartRef={lineCardRef}
+              onCopySvg={() => copyChartSvg(lineCardRef.current)}
+              onFullscreen={() => setFullscreenChart("line")}
+            >
+              <LineChart data={sortedData} containerRef={lineCardRef} />
+            </ChartCard>
           </div>
         </div>
       </div>
 
       <Toaster
         position="bottom-center"
-        reverseOrder={false}
-        gutter={3}
-        containerClassName=""
-        containerStyle={{}}
         toastOptions={{
-          className: "",
           duration: 900,
-          style: {
-            background: "black",
-            color: "#ffff",
-          },
-          iconTheme: {
-            primary: "white",
-            secondary: "black",
-          },
-          error: {
-            duration: 900,
-            iconTheme: {
-              primary: "#ef4444",
-              secondary: "black",
-            },
-          },
+          style: { background: "black", color: "#ffff" },
+          iconTheme: { primary: "white", secondary: "black" },
+          error: { iconTheme: { primary: "#ef4444", secondary: "black" } },
         }}
       />
 
-      {/* --- Full-screen Modals --- */}
-      {fullscreenChart === "bar" && (
-  <FullscreenModal chartType="bar">
-    <div className="h-full w-full">
-      {barHorizontal ? (
-        <ResponsiveContainer width="100%" height="100%">
-          <RechartsBarChart
-            data={sortedData}
-            layout="vertical"
-            margin={{ 
-              top: 20, 
-              right: 40, 
-              bottom: 20, 
-              left: 20
-            }}
-            barCategoryGap="15%"
-          >
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-            <XAxis 
-              type="number" 
-              tickLine={false} 
-              axisLine={false}
-              style={{ fontSize: '14px' }}
-            />
-            <YAxis 
-              dataKey="label" 
-              type="category" 
-              tickLine={false} 
-              axisLine={false}
-              width={fullscreenYAxisWidth}
-              style={{ fontSize: '14px' }}
-            />
-            <Tooltip />
-            <Bar 
-              dataKey="value" 
-              radius={[0, 8, 8, 0]}
-              maxBarSize={80}
-            >
-              {sortedData.map((entry) => (
-                <Cell key={entry.id} fill={entry.color} />
-              ))}
-            </Bar>
-          </RechartsBarChart>
-        </ResponsiveContainer>
-      ) : (
-        <ResponsiveContainer width="100%" height="100%">
-          <RechartsBarChart
-            data={sortedData}
-            layout="horizontal"
-            margin={{ 
-              top: 40, 
-              right: 40, 
-              bottom: 20, 
-              left: 60
-            }}
-            barCategoryGap="15%"
-          >
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-            <XAxis 
-              dataKey="label" 
-              tickLine={false} 
-              axisLine={false}
-              height={fullscreenXAxisHeight}
-              style={{ fontSize: '14px' }}
-            />
-            <YAxis 
-              type="number" 
-              tickLine={false} 
-              axisLine={false}
-              style={{ fontSize: '14px' }}
-            />
-            <Tooltip />
-            <Bar 
-              dataKey="value" 
-              radius={[8, 8, 0, 0]}
-              maxBarSize={120}
-            >
-              {sortedData.map((entry) => (
-                <Cell key={entry.id} fill={entry.color} />
-              ))}
-            </Bar>
-          </RechartsBarChart>
-        </ResponsiveContainer>
-      )}
-    </div>
-  </FullscreenModal>
-)}
+      {/* Fullscreen Modals */}
+      <FullscreenModal
+        chartType="bar"
+        isOpen={fullscreenChart === "bar"}
+        onClose={() => setFullscreenChart(null)}
+        onCopySvg={() => copyChartSvg(chartRefs.bar.current)}
+        showOrientation
+        isHorizontal={barHorizontal}
+        onToggleOrientation={() => setBarHorizontal((v) => !v)}
+      >
+        <BarChart data={sortedData} isHorizontal={barHorizontal} />
+      </FullscreenModal>
 
-      {fullscreenChart === "pie" && (
-        <FullscreenModal chartType="pie">
-          <ResponsiveContainer width="100%" height="100%">
-            <RechartsPieChart>
-              <Tooltip />
-              <Pie
-                data={sortedData}
-                dataKey="value"
-                nameKey="label"
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={100}
-                paddingAngle={2}
-                cornerRadius={6}
-                strokeWidth={5}
-              >
-                {sortedData.map((entry) => (
-                  <Cell key={entry.id} fill={entry.color} />
-                ))}
-                <Label
-                  content={({ viewBox }) => {
-                    if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                      return (
-                        <text
-                          x={viewBox.cx}
-                          y={viewBox.cy}
-                          textAnchor="middle"
-                          dominantBaseline="middle"
-                        >
-                          <tspan
-                            x={viewBox.cx}
-                            y={viewBox.cy}
-                            className="fill-foreground text-2xl font-bold"
-                          >
-                            {total.toLocaleString()}
-                          </tspan>
-                          <tspan
-                            x={viewBox.cx}
-                            y={(viewBox.cy || 0) + 24}
-                            className="fill-muted-foreground text-sm"
-                          >
-                            Total
-                          </tspan>
-                        </text>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-              </Pie>
-            </RechartsPieChart>
-          </ResponsiveContainer>
-        </FullscreenModal>
-      )}
+      <FullscreenModal
+        chartType="pie"
+        isOpen={fullscreenChart === "pie"}
+        onClose={() => setFullscreenChart(null)}
+        onCopySvg={() => copyChartSvg(chartRefs.pie.current)}
+      >
+        <PieChart data={sortedData} total={total} />
+      </FullscreenModal>
 
-      {fullscreenChart === "stacked" && (
-        <FullscreenModal chartType="stacked">
-          <ResponsiveContainer width="100%" height="100%">
-            <RechartsBarChart
-              data={stackedData}
-              stackOffset="expand"
-              margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
-              layout={stackedHorizontal ? "vertical" : "horizontal"}
-            >
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              {stackedHorizontal ? (
-                <>
-                  <YAxis
-                    dataKey="name"
-                    type="category"
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <XAxis
-                    type="number"
-                    tickFormatter={(v) => `${Math.round((v as number) * 100)}%`}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                </>
-              ) : (
-                <>
-                  <XAxis dataKey="name" tickLine={false} axisLine={false} />
-                  <YAxis
-                    tickFormatter={(v) => `${Math.round((v as number) * 100)}%`}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                </>
-              )}
-              <Tooltip content={<StackedTooltip />} />
-              {sortedData.map((d) => (
-                <Bar key={d.id} dataKey={d.label} stackId="stacked" name={d.label}>
-                  <Cell fill={d.color} />
-                </Bar>
-              ))}
-            </RechartsBarChart>
-          </ResponsiveContainer>
-        </FullscreenModal>
-      )}
+      <FullscreenModal
+        chartType="stacked"
+        isOpen={fullscreenChart === "stacked"}
+        onClose={() => setFullscreenChart(null)}
+        onCopySvg={() => copyChartSvg(chartRefs.stacked.current)}
+        showOrientation
+        isHorizontal={stackedHorizontal}
+        onToggleOrientation={() => setStackedHorizontal((v) => !v)}
+      >
+        <StackedChart data={sortedData} isHorizontal={stackedHorizontal} />
+      </FullscreenModal>
 
-      {fullscreenChart === "line" && (
-        <FullscreenModal chartType="line">
-          <ResponsiveContainer width="100%" height="100%">
-            <RechartsLineChart margin={{ top: 20, right: 20, left: 20, bottom: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="label"
-                interval={0}
-                angle={-45}
-                textAnchor="end"
-                height={60}
-              />
-              <YAxis width={80} />
-              <Tooltip />
-              <Line
-                type="monotone"
-                dataKey="value"
-                stroke="#8884d8"
-                strokeWidth={2}
-                data={sortedData}
-                dot={{ fill: "#8884d8", strokeWidth: 2 }}
-              />
-            </RechartsLineChart>
-          </ResponsiveContainer>
-        </FullscreenModal>
-      )}
+      <FullscreenModal
+        chartType="line"
+        isOpen={fullscreenChart === "line"}
+        onClose={() => setFullscreenChart(null)}
+        onCopySvg={() => copyChartSvg(chartRefs.line.current)}
+      >
+        <LineChart data={sortedData} />
+      </FullscreenModal>
     </>
   );
 }
