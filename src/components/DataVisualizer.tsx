@@ -556,14 +556,26 @@ export default function DataVisualizer() {
     toast.success("Row added!", { duration: 900 });
   }, [data.length, setDataAndForceUpdate]);
 
-  const removeRow = useCallback((id: string) => {
+ const removeRow = useCallback((id: string) => {
+    let removed = false;
+    
     setDataAndForceUpdate((prev) => {
+      // ตรวจสอบว่ามีข้อมูลเหลืออย่างน้อย 1 แถว 
       if (prev.length > 1) {
-        return prev.filter((d) => d.id !== id);
+        const newData = prev.filter((d) => d.id !== id);
+        if (newData.length < prev.length) {
+            removed = true; 
+        }
+        return newData;
       }
-      return prev;
+      return prev; // ไม่ลบ ถ้าเหลือแค่ 1 แถว
     });
-  }, [setDataAndForceUpdate]);
+
+    // เพิ่มการแจ้งเตือน (Toast Notification) 
+    if (removed) {
+        toast.error("Row removed!", { duration: 900 });
+    } 
+}, [setDataAndForceUpdate]);
 
   // Sort Handler
   const requestSort = useCallback((key: "label" | "value") => {
