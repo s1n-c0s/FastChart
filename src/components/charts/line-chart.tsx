@@ -5,6 +5,7 @@ import {
   CartesianGrid,
   XAxis,
   YAxis,
+  LabelList,
 } from "recharts"
 import type { Datum } from "@/types"
 import {
@@ -16,9 +17,10 @@ import {
 export interface LineChartProps {
   data: Datum[]
   containerRef?: React.RefObject<HTMLDivElement>
+  showLabels?: boolean
 }
 
-export const LineChart = React.memo(function LineChart({ data, containerRef }: LineChartProps) {
+export const LineChart = React.memo(function LineChart({ data, containerRef, showLabels = false }: LineChartProps) {
   // Derive series config from unique IDs (supports multi-series, but we use one)
   const chartConfig = React.useMemo(() => {
     const uniqueIds = Array.from(new Set(data.map(d => d.id)))
@@ -67,13 +69,25 @@ export const LineChart = React.memo(function LineChart({ data, containerRef }: L
             strokeWidth={2}
             dot={false}
             isAnimationActive={false}
-          />
+          >
+            {showLabels && (
+              <LabelList
+                dataKey="value"
+                position="top"
+                offset={8}
+                className="fill-foreground"
+                fontSize={12}
+                formatter={(value: number) => value.toLocaleString()}
+              />
+            )}
+          </Line>
         </RechartsLineChart>
       </ChartContainer>
     </div>
   )
 }, (prevProps, nextProps) => {
   return (
+    prevProps.showLabels === nextProps.showLabels &&
     prevProps.data.length === nextProps.data.length &&
     prevProps.data.every((item, idx) => 
       item.id === nextProps.data[idx]?.id &&

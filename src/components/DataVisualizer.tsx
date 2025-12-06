@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { RemoveButton } from "@/components/ui/RemoveButton";
+import { Switch } from "@/components/ui/switch";
 import toast, { Toaster } from "react-hot-toast";
 import { generateId } from "@/lib/utils/data-parser";
 import type { Datum } from "@/types";
@@ -436,6 +437,7 @@ export default function DataVisualizer() {
   const [stackedHorizontal, setStackedHorizontal] = useState(true);
   const [fullscreenChart, setFullscreenChart] = useState<ChartType | null>(null);
   const [showStackedTooltip, setShowStackedTooltip] = useState(false);
+  const [showLabels, setShowLabels] = useState(false);
   const stackedTooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // State to manually trigger chart re-render for non-structural changes (label/color)
@@ -893,7 +895,19 @@ export default function DataVisualizer() {
 
           {/* Markdown Input */}
           <div className="rounded-lg border p-4">
-            <h2 className="text-lg font-medium mb-3">Paste Data</h2>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-medium">Paste Data</h2>
+              <div className="flex items-center gap-2">
+                <label htmlFor="show-labels" className="text-sm text-muted-foreground cursor-pointer">
+                  Show labels
+                </label>
+                <Switch
+                  id="show-labels"
+                  checked={showLabels}
+                  onCheckedChange={setShowLabels}
+                />
+              </div>
+            </div>
             <div className="grid grid-cols-1 gap-3">
               <textarea
                 className="min-h-[160px] w-full rounded-md border bg-background px-3 py-2 font-mono text-xs"
@@ -932,7 +946,8 @@ export default function DataVisualizer() {
                 key={`bar-${chartKey}`}
                 data={chartData} 
                 containerRef={barCardRef} 
-                isHorizontal={barHorizontal} 
+                isHorizontal={barHorizontal}
+                showLabels={showLabels}
               />
             </ChartCard>
 
@@ -1015,7 +1030,8 @@ export default function DataVisualizer() {
                     key={`stacked-${chartKey}`}
                     data={chartData} 
                     containerRef={stackedCardRef} 
-                    isHorizontal={stackedHorizontal} 
+                    isHorizontal={stackedHorizontal}
+                    showLabels={showLabels}
                   />
                 </div>
               </div>
@@ -1030,7 +1046,8 @@ export default function DataVisualizer() {
               <LineChart 
                 key={`line-${chartKey}`}
                 data={chartData} 
-                containerRef={lineCardRef} 
+                containerRef={lineCardRef}
+                showLabels={showLabels}
               />
             </ChartCard>
           </div>
@@ -1057,7 +1074,7 @@ export default function DataVisualizer() {
         isHorizontal={barHorizontal}
         onToggleOrientation={toggleBarOrientation}
       >
-        <BarChart key={`full-bar-${chartKey}`} data={fullscreenChartData} isHorizontal={barHorizontal} />
+        <BarChart key={`full-bar-${chartKey}`} data={fullscreenChartData} isHorizontal={barHorizontal} showLabels={showLabels} />
       </FullscreenModal>
 
       <FullscreenModal
@@ -1078,7 +1095,7 @@ export default function DataVisualizer() {
         isHorizontal={stackedHorizontal}
         onToggleOrientation={toggleStackedOrientation}
       >
-        <StackedChart key={`full-stacked-${chartKey}`} data={fullscreenChartData} isHorizontal={stackedHorizontal} />
+        <StackedChart key={`full-stacked-${chartKey}`} data={fullscreenChartData} isHorizontal={stackedHorizontal} showLabels={showLabels} />
       </FullscreenModal>
 
       <FullscreenModal
@@ -1087,7 +1104,7 @@ export default function DataVisualizer() {
         onClose={closeFullscreen}
         onCopySvg={() => copyChartSvg(chartRefs.line.current)}
       >
-        <LineChart key={`full-line-${chartKey}`} data={fullscreenChartData} />
+        <LineChart key={`full-line-${chartKey}`} data={fullscreenChartData} showLabels={showLabels} />
       </FullscreenModal>
     </>
   );

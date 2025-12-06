@@ -7,6 +7,7 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
+  LabelList,
 } from "recharts"
 import type { Datum } from "@/types"
 
@@ -14,6 +15,7 @@ export interface StackedChartProps {
   data: Datum[]
   isHorizontal?: boolean
   containerRef?: React.RefObject<HTMLDivElement>
+  showLabels?: boolean
 }
 
 interface StackedTooltipProps {
@@ -55,6 +57,7 @@ export const StackedChart = React.memo(function StackedChart({
   data,
   isHorizontal = true,
   containerRef,
+  showLabels = false,
 }: StackedChartProps) {
   // Transform data for stacked chart
   const stackedData = React.useMemo(() => {
@@ -107,7 +110,18 @@ export const StackedChart = React.memo(function StackedChart({
                 fill={d.color} 
                 name={d.label}
                 isAnimationActive={false}
-              />
+              >
+                {showLabels && (
+                  <LabelList
+                    dataKey={d.label}
+                    position="right"
+                    offset={8}
+                    className="fill-foreground"
+                    fontSize={12}
+                    formatter={(value: number) => `${(value * 100).toFixed(0)}%`}
+                  />
+                )}
+              </Bar>
             ))}
           </RechartsBarChart>
         </ResponsiveContainer>
@@ -152,7 +166,18 @@ export const StackedChart = React.memo(function StackedChart({
               fill={d.color} 
               name={d.label}
               isAnimationActive={false}
-            />
+            >
+              {showLabels && (
+                <LabelList
+                  dataKey={d.label}
+                  position="top"
+                  offset={8}
+                  className="fill-foreground"
+                  fontSize={12}
+                  formatter={(value: number) => `${(value * 100).toFixed(0)}%`}
+                />
+              )}
+            </Bar>
           ))}
         </RechartsBarChart>
       </ResponsiveContainer>
@@ -161,6 +186,7 @@ export const StackedChart = React.memo(function StackedChart({
 }, (prevProps, nextProps) => {
   return (
     prevProps.isHorizontal === nextProps.isHorizontal &&
+    prevProps.showLabels === nextProps.showLabels &&
     prevProps.data.length === nextProps.data.length &&
     prevProps.data.every((item, idx) => 
       item.id === nextProps.data[idx]?.id &&
