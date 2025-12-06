@@ -256,6 +256,9 @@ const ChartCard = React.memo(({
   isHorizontal,
   onToggleOrientation,
 }: ChartCardProps) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleChartAreaClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     
@@ -278,12 +281,42 @@ const ChartCard = React.memo(({
     e.stopPropagation();
   }, []);
 
+  const handleMouseEnter = useCallback(() => {
+    setShowTooltip(true);
+    // Clear existing timeout if any
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    // Hide tooltip after 2.5 seconds
+    timeoutRef.current = setTimeout(() => {
+      setShowTooltip(false);
+    }, 2500);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setShowTooltip(false);
+  }, []);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
   return (
     <div 
       ref={chartRef} 
       className="rounded-lg border p-4 min-h-[380px] cursor-pointer relative group"
       onClick={handleChartAreaClick}
-      title="Click anywhere in card to open fullscreen"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-base font-medium">{title}</h3>
@@ -302,7 +335,7 @@ const ChartCard = React.memo(({
         </div>
       </div>
       <div className="h-[calc(100%-3rem)] relative">
-        <div className="absolute inset-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none flex items-center justify-center">
+        <div className={`absolute inset-0 z-10 transition-opacity pointer-events-none flex items-center justify-center ${showTooltip ? 'opacity-100' : 'opacity-0'}`}>
           <div className="bg-black/50 text-white px-3 py-1 rounded-md text-xs font-medium">
             Click to fullscreen
           </div>
@@ -402,6 +435,8 @@ export default function DataVisualizer() {
   const [barHorizontal, setBarHorizontal] = useState(true);
   const [stackedHorizontal, setStackedHorizontal] = useState(true);
   const [fullscreenChart, setFullscreenChart] = useState<ChartType | null>(null);
+  const [showStackedTooltip, setShowStackedTooltip] = useState(false);
+  const stackedTooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // State to manually trigger chart re-render for non-structural changes (label/color)
   const [chartUpdateKey, setChartUpdateKey] = useState(0); 
@@ -751,6 +786,15 @@ export default function DataVisualizer() {
     });
   }, []);
 
+  // Cleanup stacked tooltip timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (stackedTooltipTimeoutRef.current) {
+        clearTimeout(stackedTooltipTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Fullscreen escape key handler
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -925,6 +969,22 @@ export default function DataVisualizer() {
                 // Click anywhere in the entire card (including title) opens fullscreen
                 openFullscreen("stacked");
               }}
+              onMouseEnter={() => {
+                setShowStackedTooltip(true);
+                if (stackedTooltipTimeoutRef.current) {
+                  clearTimeout(stackedTooltipTimeoutRef.current);
+                }
+                stackedTooltipTimeoutRef.current = setTimeout(() => {
+                  setShowStackedTooltip(false);
+                }, 3500);
+              }}
+              onMouseLeave={() => {
+                if (stackedTooltipTimeoutRef.current) {
+                  clearTimeout(stackedTooltipTimeoutRef.current);
+                  stackedTooltipTimeoutRef.current = null;
+                }
+                setShowStackedTooltip(false);
+              }}
               title="Click anywhere in card to open fullscreen"
             >
               <div className="flex items-center justify-between mb-3">
@@ -945,7 +1005,7 @@ export default function DataVisualizer() {
                 </div>
               </div>
               <div className="h-[calc(100%-3rem)] relative">
-                <div className="absolute inset-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none flex items-center justify-center">
+                <div className={`absolute inset-0 z-10 transition-opacity pointer-events-none flex items-center justify-center ${showStackedTooltip ? 'opacity-100' : 'opacity-0'}`}>
                   <div className="bg-black/50 text-white px-3 py-1 rounded-md text-xs font-medium">
                     Click to fullscreen
                   </div>
