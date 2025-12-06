@@ -976,7 +976,7 @@ export default function DataVisualizer() {
                 }
                 stackedTooltipTimeoutRef.current = setTimeout(() => {
                   setShowStackedTooltip(false);
-                }, 3500);
+                }, 2500);
               }}
               onMouseLeave={() => {
                 if (stackedTooltipTimeoutRef.current) {
@@ -985,7 +985,6 @@ export default function DataVisualizer() {
                 }
                 setShowStackedTooltip(false);
               }}
-              title="Click anywhere in card to open fullscreen"
             >
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-base font-medium">100% Stacked Chart</h3>
