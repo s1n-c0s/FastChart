@@ -54,8 +54,18 @@
   align-items: center;
   justify-content: center;
   z-index: 50;
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
+  will-change: opacity;
+  transform: translateZ(0);
+  animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .fullscreenContent {
@@ -66,6 +76,20 @@
   height: 90vh;
   display: flex;
   flex-direction: column;
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) translateZ(0);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) translateZ(0);
+  }
 }
 
 .chartContent {
@@ -73,6 +97,8 @@
   padding: 1rem;
   overflow: hidden;
   height: calc(100% - 73px);
+  will-change: contents;
+  transform: translateZ(0);
 }
 
 .fullscreenChart {

@@ -54,6 +54,7 @@ export const BarChart = React.memo(function BarChart({
             layout="vertical"
             margin={{ top: 5, right: 15, bottom: 5, left: 5 }}
             barCategoryGap="15%"
+            isAnimationActive={false}
           >
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis 
@@ -104,6 +105,7 @@ export const BarChart = React.memo(function BarChart({
           layout="horizontal"
           margin={{ top: 5, right: 15, bottom: 5, left: 5 }}
           barCategoryGap="15%"
+          isAnimationActive={false}
         >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis

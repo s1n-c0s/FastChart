@@ -43,7 +43,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
       className="flex h-full w-full items-center justify-center"
     >
       <div className="relative h-[250px] w-[250px]">
-        <RechartsPieChart width={250} height={250}>
+        <RechartsPieChart width={250} height={250} isAnimationActive={false}>
           <Tooltip content={<CustomTooltip />} />
           <Pie
             data={data}

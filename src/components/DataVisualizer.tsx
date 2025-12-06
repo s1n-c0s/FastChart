@@ -304,6 +304,23 @@ const FullscreenModal = React.memo(({
   isHorizontal,
   onToggleOrientation,
 }: FullscreenModalProps) => {
+  // Lazy render chart content only when modal is open
+  const [shouldRenderChart, setShouldRenderChart] = React.useState(false);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      // Small delay to allow modal animation to start first
+      const timer = requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setShouldRenderChart(true);
+        });
+      });
+      return () => cancelAnimationFrame(timer);
+    } else {
+      setShouldRenderChart(false);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
@@ -325,7 +342,9 @@ const FullscreenModal = React.memo(({
             </Button>
           </div>
         </div>
-        <div className={styles.chartContent}>{children}</div>
+        <div className={styles.chartContent}>
+          {shouldRenderChart ? children : <div className="h-full w-full flex items-center justify-center">Loading...</div>}
+        </div>
       </div>
     </div>
   );
@@ -375,6 +394,12 @@ export default function DataVisualizer() {
   }, [data, sortConfig]);
 
   const chartData = useMemo(() => sortedData, [sortedData]);
+  
+  // Defer chart data updates when in fullscreen for smoother performance
+  const deferredChartData = React.useDeferredValue(chartData);
+  
+  // Use deferred data when fullscreen is open, otherwise use regular data
+  const fullscreenChartData = fullscreenChart ? deferredChartData : chartData;
   
   // -----------------------------------------------------------------------------
   // Handlers (Order adjusted to fix Code 2304, 2448, 2454)
@@ -519,28 +544,49 @@ export default function DataVisualizer() {
   }, []);
 
   // Data Update Handlers (ใช้ setDataAndForceUpdate)
+  // When fullscreen is open, use startTransition for smoother updates
   const updateLabel = useCallback((id: string, label: string) => {
-    setDataAndForceUpdate(prev => prev.map(d => (d.id === id ? { ...d, label } : d)));
-  }, [setDataAndForceUpdate]);
+    if (fullscreenChart) {
+      startTransition(() => {
+        setDataAndForceUpdate(prev => prev.map(d => (d.id === id ? { ...d, label } : d)));
+      });
+    } else {
+      setDataAndForceUpdate(prev => prev.map(d => (d.id === id ? { ...d, label } : d)));
+    }
+  }, [setDataAndForceUpdate, fullscreenChart]);
 
   const updateColor = useCallback((id: string, color: string) => {
-    setDataAndForceUpdate(prev => prev.map(d => (d.id === id ? { ...d, color } : d)));
-  }, [setDataAndForceUpdate]);
+    if (fullscreenChart) {
+      startTransition(() => {
+        setDataAndForceUpdate(prev => prev.map(d => (d.id === id ? { ...d, color } : d)));
+      });
+    } else {
+      setDataAndForceUpdate(prev => prev.map(d => (d.id === id ? { ...d, color } : d)));
+    }
+  }, [setDataAndForceUpdate, fullscreenChart]);
 
   const updateValue = useCallback((id: string, next: string) => {
     const parsed = Number(next);
     const finalValue = isFinite(parsed) ? parsed : 0;
 
-    setData((prev) => {
-      const originalValue = prev.find(d => d.id === id)?.value;
-      const newData = prev.map(d => (d.id === id ? { ...d, value: finalValue } : d));
-      
-      if (originalValue !== finalValue) {
-          setChartUpdateKey(prevKey => prevKey + 1); 
-      }
-      return newData;
-    });
-  }, []); 
+    const updateFn = () => {
+      setData((prev) => {
+        const originalValue = prev.find(d => d.id === id)?.value;
+        const newData = prev.map(d => (d.id === id ? { ...d, value: finalValue } : d));
+        
+        if (originalValue !== finalValue) {
+            setChartUpdateKey(prevKey => prevKey + 1); 
+        }
+        return newData;
+      });
+    };
+
+    if (fullscreenChart) {
+      startTransition(updateFn);
+    } else {
+      updateFn();
+    }
+  }, [fullscreenChart]); 
 
   const addRow = useCallback(() => {
     const nextIndex = data.length;
@@ -653,10 +699,25 @@ export default function DataVisualizer() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
+  // Optimized fullscreen handlers with startTransition for smooth opening
+  const openFullscreen = useCallback((chartType: ChartType) => {
+    startTransition(() => {
+      setFullscreenChart(chartType);
+    });
+  }, []);
+
+  const closeFullscreen = useCallback(() => {
+    startTransition(() => {
+      setFullscreenChart(null);
+    });
+  }, []);
+
   // Fullscreen escape key handler
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && fullscreenChart) setFullscreenChart(null);
+      if (e.key === "Escape" && fullscreenChart) {
+        closeFullscreen();
+      }
     };
 
     if (fullscreenChart) {
@@ -667,7 +728,7 @@ export default function DataVisualizer() {
         document.removeEventListener("keydown", handleEscape);
       };
     }
-  }, [fullscreenChart]);
+  }, [fullscreenChart, closeFullscreen]);
 
   const chartRefs = { bar: barCardRef, pie: pieCardRef, stacked: stackedCardRef, line: lineCardRef };
 
@@ -779,7 +840,7 @@ export default function DataVisualizer() {
               title="Bar Chart"
               chartRef={barCardRef}
               onCopySvg={() => copyChartSvg(barCardRef.current)}
-              onFullscreen={() => setFullscreenChart("bar")}
+              onFullscreen={() => openFullscreen("bar")}
               showOrientation
               isHorizontal={barHorizontal}
               onToggleOrientation={toggleBarOrientation}
@@ -796,7 +857,7 @@ export default function DataVisualizer() {
               title="Pie Chart - Donut with Total"
               chartRef={pieCardRef}
               onCopySvg={() => copyChartSvg(pieCardRef.current)}
-              onFullscreen={() => setFullscreenChart("pie")}
+              onFullscreen={() => openFullscreen("pie")}
             >
               <PieChart 
                 key={`pie-${chartKey}`}
@@ -818,7 +879,7 @@ export default function DataVisualizer() {
                   <Button size="sm" variant="secondary" onClick={() => copyChartSvg(stackedCardRef.current)}>
                     Copy SVG
                   </Button>
-                  <Button size="sm" variant="secondary" onClick={() => setFullscreenChart("stacked")}>
+                  <Button size="sm" variant="secondary" onClick={() => openFullscreen("stacked")}>
                     <Maximize2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -837,7 +898,7 @@ export default function DataVisualizer() {
               title="Line Chart - Linear"
               chartRef={lineCardRef}
               onCopySvg={() => copyChartSvg(lineCardRef.current)}
-              onFullscreen={() => setFullscreenChart("line")}
+              onFullscreen={() => openFullscreen("line")}
             >
               <LineChart 
                 key={`line-${chartKey}`}
@@ -863,43 +924,43 @@ export default function DataVisualizer() {
       <FullscreenModal
         chartType="bar"
         isOpen={fullscreenChart === "bar"}
-        onClose={() => setFullscreenChart(null)}
+        onClose={closeFullscreen}
         onCopySvg={() => copyChartSvg(chartRefs.bar.current)}
         showOrientation
         isHorizontal={barHorizontal}
         onToggleOrientation={toggleBarOrientation}
       >
-        <BarChart key={`full-bar-${chartKey}`} data={chartData} isHorizontal={barHorizontal} />
+        <BarChart key={`full-bar-${chartKey}`} data={fullscreenChartData} isHorizontal={barHorizontal} />
       </FullscreenModal>
 
       <FullscreenModal
         chartType="pie"
         isOpen={fullscreenChart === "pie"}
-        onClose={() => setFullscreenChart(null)}
+        onClose={closeFullscreen}
         onCopySvg={() => copyChartSvg(chartRefs.pie.current)}
       >
-        <PieChart key={`full-pie-${chartKey}`} data={chartData} total={total} />
+        <PieChart key={`full-pie-${chartKey}`} data={fullscreenChartData} total={total} />
       </FullscreenModal>
 
       <FullscreenModal
         chartType="stacked"
         isOpen={fullscreenChart === "stacked"}
-        onClose={() => setFullscreenChart(null)}
+        onClose={closeFullscreen}
         onCopySvg={() => copyChartSvg(chartRefs.stacked.current)}
         showOrientation
         isHorizontal={stackedHorizontal}
         onToggleOrientation={toggleStackedOrientation}
       >
-        <StackedChart key={`full-stacked-${chartKey}`} data={chartData} isHorizontal={stackedHorizontal} />
+        <StackedChart key={`full-stacked-${chartKey}`} data={fullscreenChartData} isHorizontal={stackedHorizontal} />
       </FullscreenModal>
 
       <FullscreenModal
         chartType="line"
         isOpen={fullscreenChart === "line"}
-        onClose={() => setFullscreenChart(null)}
+        onClose={closeFullscreen}
         onCopySvg={() => copyChartSvg(chartRefs.line.current)}
       >
-        <LineChart key={`full-line-${chartKey}`} data={chartData} />
+        <LineChart key={`full-line-${chartKey}`} data={fullscreenChartData} />
       </FullscreenModal>
     </>
   );

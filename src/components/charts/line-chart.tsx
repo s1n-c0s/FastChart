@@ -42,6 +42,7 @@ export const LineChart = React.memo(function LineChart({ data, containerRef }: L
           data={data}
           margin={{ top: 8, right: 12, bottom: 8, left: 12 }}
           accessibilityLayer
+          isAnimationActive={false}
         >
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
           <XAxis

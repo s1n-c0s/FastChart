@@ -80,6 +80,7 @@ export const StackedChart = React.memo(function StackedChart({
             stackOffset="expand"
             layout="vertical"
             margin={{ top: 5, right: 15, bottom: 5, left: 5 }}
+            isAnimationActive={false}
           >
             <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
             <YAxis
@@ -123,6 +124,7 @@ export const StackedChart = React.memo(function StackedChart({
           stackOffset="expand"
           layout="horizontal"
           margin={{ top: 5, right: 15, bottom: 5, left: 5 }}
+          isAnimationActive={false}
         >
           <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
           <XAxis
