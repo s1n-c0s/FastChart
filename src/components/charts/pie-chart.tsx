@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Pie, PieChart as RechartsPieChart, Cell, Tooltip } from "recharts";
+import { Pie, PieChart as RechartsPieChart, Cell, Tooltip, Label } from "recharts";
 import type { TooltipProps } from "recharts";
 import type { Datum } from "@/types";
 
@@ -89,34 +89,43 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
             isAnimationActive={true}
             animationDuration={animationDuration}
             animationEasing="ease-out"
-            label={({ viewBox }) => {
-              if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                return (
-                  <>
+          >
+            <Label
+              content={({ viewBox }) => {
+                if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                  return (
                     <text
                       x={viewBox.cx}
                       y={viewBox.cy}
                       textAnchor="middle"
                       dominantBaseline="middle"
-                      className={`fill-foreground font-bold ${isFullscreen ? 'text-5xl' : 'text-2xl'}`}
                     >
-                      {total.toLocaleString()}
+                      <tspan
+                        x={viewBox.cx}
+                        y={(viewBox.cy || 0) - (isFullscreen ? 50 : 30)}
+                        className={`fill-foreground ${isFullscreen ? 'text-xl' : 'text-base'}`}
+                      >
+                      </tspan>
+                      <tspan
+                        x={viewBox.cx}
+                        y={viewBox.cy}
+                        className={`fill-foreground font-bold ${isFullscreen ? 'text-5xl' : 'text-2xl'}`}
+                      >
+                        {total.toLocaleString()}
+                      </tspan>
+                      <tspan
+                        x={viewBox.cx}
+                        y={(viewBox.cy || 0) + (isFullscreen ? 50 : 30)}
+                        className={`fill-muted-foreground ${isFullscreen ? 'text-lg' : 'text-sm'}`}
+                      >
+                        Total
+                      </tspan>
                     </text>
-                    <text
-                      x={viewBox.cx}
-                      y={(viewBox.cy || 0) + (isFullscreen ? 40 : 24)}
-                      textAnchor="middle"
-                      dominantBaseline="middle"
-                      className={`fill-muted-foreground ${isFullscreen ? 'text-lg' : 'text-sm'}`}
-                    >
-                      Total
-                    </text>
-                  </>
-                );
-              }
-              return null;
-            }}
-          >
+                  );
+                }
+                return null;
+              }}
+            />
             {data.map((item: Datum) => (
               <Cell key={item.id} fill={item.color} />
             ))}
