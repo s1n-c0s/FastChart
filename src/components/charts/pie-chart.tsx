@@ -70,9 +70,9 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
   return (
     <div
       ref={containerRef}
-      className="flex h-full w-full items-center justify-center"
+      className="flex h-full w-full items-center justify-center flex-col"
     >
-      <div className="relative" style={{ width: size, height: size }}>
+      <div className="flex-shrink-0" style={{ width: size, height: size }}>
         <RechartsPieChart width={size} height={size}>
           <Tooltip content={<CustomTooltip />} />
           <Pie
@@ -122,29 +122,36 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
             ))}
           </Pie>
         </RechartsPieChart>
+      </div>
 
-        {/* Legend: No Wrap, Center Alignment, Allow Overflow */}
-        <div 
-          className={`absolute top-full left-1/2 -translate-x-1/2 ${isFullscreen ? 'mt-6' : 'mt-4'} 
-                     flex 
-                     justify-center 
-                     gap-x-4 p-0.5`}
-        >
-          {data.map((item: Datum) => (
-            <div 
-              key={item.id} 
-              className="flex items-center gap-2 flex-shrink-0"
+      {/* Legend: Center-aligned, Wrapping, Within Card Boundaries */}
+      <div 
+        className={`w-full ${isFullscreen ? 'mt-6' : 'mt-4'} 
+                   flex 
+                   flex-wrap
+                   justify-center
+                   items-center
+                   gap-x-3 gap-y-2 
+                   px-2
+                   overflow-hidden`}
+      >
+        {data.map((item: Datum) => (
+          <div 
+            key={`${item.id}-${item.label}`} 
+            className="flex items-center gap-1.5 flex-shrink-0"
+          >
+            <div
+              className={`${isFullscreen ? 'h-4 w-4' : 'h-3 w-3'} rounded-sm flex-shrink-0`}
+              style={{ backgroundColor: item.color }}
+            />
+            <span 
+              className={`${isFullscreen ? 'text-sm' : 'text-xs'} font-medium text-foreground whitespace-nowrap`} 
+              title={item.label}
             >
-              <div
-                className={`${isFullscreen ? 'h-4 w-4' : 'h-3 w-3'} rounded-sm flex-shrink-0`}
-                style={{ backgroundColor: item.color }}
-              />
-              <span className={`${isFullscreen ? 'text-sm' : 'text-xs'} font-medium text-foreground whitespace-nowrap`}>
-                {item.label}
-              </span>
-            </div>
-          ))}
-        </div>
+              {item.label}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   );
