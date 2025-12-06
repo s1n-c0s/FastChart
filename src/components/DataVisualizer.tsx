@@ -255,27 +255,66 @@ const ChartCard = React.memo(({
   showOrientation,
   isHorizontal,
   onToggleOrientation,
-}: ChartCardProps) => (
-  <div ref={chartRef} className="rounded-lg border p-4 min-h-[380px]">
-    <div className="flex items-center justify-between mb-3">
-      <h3 className="text-base font-medium">{title}</h3>
-      <div className="flex items-center gap-2">
-        {showOrientation && onToggleOrientation && (
-          <Button variant="secondary" onClick={onToggleOrientation}>
-            {isHorizontal ? "Vertical" : "Horizontal"}
+}: ChartCardProps) => {
+  const handleChartAreaClick = useCallback((e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    
+    // Don't trigger if clicking on buttons or tooltips
+    if (
+      target.closest('button') ||
+      target.closest('[role="tooltip"]') ||
+      target.closest('.recharts-tooltip-wrapper') ||
+      target.tagName === 'BUTTON'
+    ) {
+      return;
+    }
+
+    // Click anywhere in the entire card content area opens fullscreen
+    onFullscreen();
+  }, [onFullscreen]);
+
+  const handleButtonClick = useCallback((e: React.MouseEvent) => {
+    // Stop propagation to prevent triggering fullscreen when clicking buttons
+    e.stopPropagation();
+  }, []);
+
+  return (
+    <div 
+      ref={chartRef} 
+      className="rounded-lg border p-4 min-h-[380px] cursor-pointer relative group"
+      onClick={handleChartAreaClick}
+      title="Click anywhere in card to open fullscreen"
+    >
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-base font-medium">{title}</h3>
+        <div className="flex items-center gap-2" onClick={handleButtonClick}>
+          {showOrientation && onToggleOrientation && (
+            <Button variant="secondary" onClick={onToggleOrientation}>
+              {isHorizontal ? "Vertical" : "Horizontal"}
+            </Button>
+          )}
+          <Button size="sm" variant="secondary" onClick={onCopySvg}>
+            Copy SVG
           </Button>
-        )}
-        <Button size="sm" variant="secondary" onClick={onCopySvg}>
-          Copy SVG
-        </Button>
-        <Button size="sm" variant="secondary" onClick={onFullscreen}>
-          <Maximize2 className="h-4 w-4" />
-        </Button>
+          <Button size="sm" variant="secondary" onClick={onFullscreen}>
+            <Maximize2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+      <div className="h-[calc(100%-3rem)] relative">
+        <div className="absolute inset-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none flex items-center justify-center">
+          <div className="bg-black/50 text-white px-3 py-1 rounded-md text-xs font-medium">
+            Click to fullscreen
+          </div>
+        </div>
+        {/* Wrapper to ensure entire area is clickable, including empty space */}
+        <div className="h-full w-full min-h-full">
+          {children}
+        </div>
       </div>
     </div>
-    <div className="h-[calc(100%-3rem)]">{children}</div>
-  </div>
-));
+  );
+});
 
 ChartCard.displayName = "ChartCard";
 
@@ -869,10 +908,31 @@ export default function DataVisualizer() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div ref={stackedCardRef} className="rounded-lg border p-4 h-[400px]">
+            <div 
+              ref={stackedCardRef} 
+              className="rounded-lg border p-4 h-[400px] cursor-pointer relative group"
+              onClick={(e) => {
+                const target = e.target as HTMLElement;
+                // Don't trigger if clicking on buttons or tooltips
+                if (
+                  target.closest('button') ||
+                  target.closest('[role="tooltip"]') ||
+                  target.closest('.recharts-tooltip-wrapper') ||
+                  target.tagName === 'BUTTON'
+                ) {
+                  return;
+                }
+                // Click anywhere in the entire card (including title) opens fullscreen
+                openFullscreen("stacked");
+              }}
+              title="Click anywhere in card to open fullscreen"
+            >
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-base font-medium">100% Stacked Chart</h3>
-                <div className="flex items-center gap-2">
+                <div 
+                  className="flex items-center gap-2"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <Button variant="secondary" onClick={toggleStackedOrientation}>
                     {stackedHorizontal ? "Vertical" : "Horizontal"}
                   </Button>
@@ -884,13 +944,21 @@ export default function DataVisualizer() {
                   </Button>
                 </div>
               </div>
-              <div className="h-[calc(100%-3rem)]">
-                <StackedChart 
-                  key={`stacked-${chartKey}`}
-                  data={chartData} 
-                  containerRef={stackedCardRef} 
-                  isHorizontal={stackedHorizontal} 
-                />
+              <div className="h-[calc(100%-3rem)] relative">
+                <div className="absolute inset-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none flex items-center justify-center">
+                  <div className="bg-black/50 text-white px-3 py-1 rounded-md text-xs font-medium">
+                    Click to fullscreen
+                  </div>
+                </div>
+                {/* Wrapper to ensure entire area is clickable, including empty space */}
+                <div className="h-full w-full min-h-full">
+                  <StackedChart 
+                    key={`stacked-${chartKey}`}
+                    data={chartData} 
+                    containerRef={stackedCardRef} 
+                    isHorizontal={stackedHorizontal} 
+                  />
+                </div>
               </div>
             </div>
 
@@ -939,7 +1007,7 @@ export default function DataVisualizer() {
         onClose={closeFullscreen}
         onCopySvg={() => copyChartSvg(chartRefs.pie.current)}
       >
-        <PieChart key={`full-pie-${chartKey}`} data={fullscreenChartData} total={total} />
+        <PieChart key={`full-pie-${chartKey}`} data={fullscreenChartData} total={total} isFullscreen={true} />
       </FullscreenModal>
 
       <FullscreenModal
