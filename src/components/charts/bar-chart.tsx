@@ -81,7 +81,7 @@ export const BarChart = React.memo(function BarChart({
                 />
               )}
             />
-            <Bar dataKey="value" radius={[0, 6, 6, 0]} maxBarSize={50} isAnimationActive={false}>
+            <Bar dataKey="value" radius={[0, 6, 6, 0]} maxBarSize={50}>
               {data.map((item) => (
                 <Cell key={item.id} fill={item.color} />
               ))}
@@ -135,7 +135,6 @@ export const BarChart = React.memo(function BarChart({
             dataKey="value" 
             radius={[6, 6, 0, 0]}
             maxBarSize={80}
-            isAnimationActive={false}
           >
             {data.map((item) => (
               <Cell key={item.id} fill={item.color} />
