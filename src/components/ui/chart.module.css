@@ -1,0 +1,88 @@
+.chart {
+  display: flex;
+  justify-content: center;
+  aspect-ratio: video;
+  font-size: 0.75rem;
+}
+
+.chart :global(.recharts-cartesian-axis-tick_text) {
+  fill: var(--muted-foreground);
+}
+
+.chart :global(.recharts-cartesian-grid_line[stroke='#ccc']) {
+  stroke: var(--border-50);
+}
+
+.chart :global(.recharts-curve.recharts-tooltip-cursor) {
+  stroke: var(--border);
+}
+
+.chart :global(.recharts-polar-grid_[stroke='#ccc']) {
+  stroke: var(--border);
+}
+
+.chart :global(.recharts-radial-bar-background-sector) {
+  fill: var(--muted);
+}
+
+.chart :global(.recharts-rectangle.recharts-tooltip-cursor) {
+  fill: var(--muted);
+}
+
+.chart :global(.recharts-reference-line_[stroke='#ccc']) {
+  stroke: var(--border);
+}
+
+.chart :global(.recharts-dot[stroke='#fff']) {
+  stroke: transparent;
+}
+
+.chart :global(.recharts-layer),
+.chart :global(.recharts-sector),
+.chart :global(.recharts-surface) {
+  outline: none;
+}
+
+.chart :global(.recharts-sector[stroke='#fff']) {
+  stroke: transparent;
+}
+
+.indicator {
+  flex-shrink: 0;
+  border-radius: 2px;
+  border-color: var(--indicator-color);
+  background-color: var(--indicator-color);
+}
+
+:global(.js-before-indicator)::before {
+  content: '';
+  border-color: attr(data-color);
+  background-color: attr(data-color);
+}
+
+.indicator[data-variant='dot'] {
+  width: 0.625rem;
+  height: 0.625rem;
+}
+
+.indicator[data-variant='line'] {
+  width: 0.25rem;
+}
+
+.indicator[data-variant='dashed'] {
+  width: 0;
+  border-width: 1.5px;
+  border-style: dashed;
+  background-color: transparent;
+}
+
+.indicator[data-variant='dashed'][data-nested='true'] {
+  margin-top: 0.125rem;
+  margin-bottom: 0.125rem;
+}
+
+.tooltipIcon {
+  height: 0.625rem;
+  width: 0.625rem;
+  color: var(--muted-foreground);
+}

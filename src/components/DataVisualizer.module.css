@@ -1,0 +1,140 @@
+.colorCircle {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 9999px;
+}
+
+.colorCircle[data-color] {
+  background-color: var(--color);
+}
+
+/* Set the CSS variable using custom property */
+.colorCircle {
+  --color: var(--dot-color, currentColor);
+}
+
+.colorCircle[data-color] {
+  --color: var(--dot-color);
+}
+
+.colorPreview {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 9999px;
+  background-color: var(--preview-color);
+}
+
+.colorPreview[data-color] {
+  --preview-color: attr(data-color);
+}
+
+.sortableRow {
+  transform: none;
+  transition: none;
+}
+
+.sortableRow[data-transform] {
+  transform: var(--transform);
+}
+
+.sortableRow[data-transition] {
+  transition: var(--transition);
+}
+
+.sortableRow {
+  --transform: none;
+  --transition: none;
+}
+
+.fullscreenModal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  will-change: opacity;
+  transform: translateZ(0);
+  animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.fullscreenContent {
+  background: var(--background);
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  width: 90vw;
+  height: 90vh;
+  display: flex;
+  flex-direction: column;
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) translateZ(0);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) translateZ(0);
+  }
+}
+
+.chartContent {
+  flex: 1;
+  padding: 1rem;
+  overflow: hidden;
+  height: calc(100% - 73px);
+  will-change: contents;
+  transform: translateZ(0);
+}
+
+.fullscreenChart {
+  width: 100%;
+  height: 100%;
+}
+
+.stackedTooltipWrapper {
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  font-size: 0.75rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.stackedTooltipTitle {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.stackedTooltipContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.stackedTooltipRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.stackedTooltipLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
