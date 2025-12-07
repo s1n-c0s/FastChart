@@ -438,6 +438,7 @@ export default function DataVisualizer() {
   const [fullscreenChart, setFullscreenChart] = useState<ChartType | null>(null);
   const [showStackedTooltip, setShowStackedTooltip] = useState(false);
   const [showLabels, setShowLabels] = useState(false);
+  const [showGradientArea, setShowGradientArea] = useState(false);
   const stackedTooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // State to manually trigger chart re-render for non-structural changes (label/color)
@@ -1043,11 +1044,22 @@ export default function DataVisualizer() {
               onCopySvg={() => copyChartSvg(lineCardRef.current)}
               onFullscreen={() => openFullscreen("line")}
             >
+              <div className="absolute top-4 right-4 z-20 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                <label htmlFor="show-gradient" className="text-xs text-muted-foreground cursor-pointer">
+                  Gradient area
+                </label>
+                <Switch
+                  id="show-gradient"
+                  checked={showGradientArea}
+                  onCheckedChange={setShowGradientArea}
+                />
+              </div>
               <LineChart 
                 key={`line-${chartKey}`}
                 data={chartData} 
                 containerRef={lineCardRef}
                 showLabels={showLabels}
+                showGradientArea={showGradientArea}
               />
             </ChartCard>
           </div>
@@ -1104,7 +1116,17 @@ export default function DataVisualizer() {
         onClose={closeFullscreen}
         onCopySvg={() => copyChartSvg(chartRefs.line.current)}
       >
-        <LineChart key={`full-line-${chartKey}`} data={fullscreenChartData} showLabels={showLabels} />
+        <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+          <label htmlFor="fullscreen-show-gradient" className="text-xs text-muted-foreground cursor-pointer">
+            Gradient area
+          </label>
+          <Switch
+            id="fullscreen-show-gradient"
+            checked={showGradientArea}
+            onCheckedChange={setShowGradientArea}
+          />
+        </div>
+        <LineChart key={`full-line-${chartKey}`} data={fullscreenChartData} showLabels={showLabels} showGradientArea={showGradientArea} />
       </FullscreenModal>
     </>
   );

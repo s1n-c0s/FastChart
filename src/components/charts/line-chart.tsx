@@ -1,11 +1,12 @@
 import * as React from "react"
 import {
   Line,
-  LineChart as RechartsLineChart,
+  ComposedChart,
   CartesianGrid,
   XAxis,
   YAxis,
   LabelList,
+  Area,
 } from "recharts"
 import type { Datum } from "@/types"
 import {
@@ -18,9 +19,10 @@ export interface LineChartProps {
   data: Datum[]
   containerRef?: React.RefObject<HTMLDivElement>
   showLabels?: boolean
+  showGradientArea?: boolean
 }
 
-export const LineChart = React.memo(function LineChart({ data, containerRef, showLabels = false }: LineChartProps) {
+export const LineChart = React.memo(function LineChart({ data, containerRef, showLabels = false, showGradientArea = false }: LineChartProps) {
   // Derive series config from unique IDs (supports multi-series, but we use one)
   const chartConfig = React.useMemo(() => {
     const uniqueIds = Array.from(new Set(data.map(d => d.id)))
@@ -36,15 +38,22 @@ export const LineChart = React.memo(function LineChart({ data, containerRef, sho
 
   // Assume all data belongs to one series (e.g., "desktop")
   const seriesId = data[0]?.id || "value"
+  const lineColor = data[0]?.color || "#3b82f6"
+  const gradientId = React.useMemo(() => `gradient-${seriesId}`, [seriesId])
 
   return (
     <div ref={containerRef} className="h-full w-full">
       <ChartContainer config={chartConfig} className="h-full w-full">
-        <RechartsLineChart
+        <ComposedChart
           data={data}
           margin={{ top: 8, right: 12, bottom: 8, left: 12 }}
-          accessibilityLayer
         >
+          <defs>
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={lineColor} stopOpacity={0.5} />
+              <stop offset="100%" stopColor={lineColor} stopOpacity={0.05} />
+            </linearGradient>
+          </defs>
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
           <XAxis
             dataKey="label"
@@ -62,10 +71,20 @@ export const LineChart = React.memo(function LineChart({ data, containerRef, sho
             cursor={false}
             content={<ChartTooltipContent hideLabel />}
           />
+          {showGradientArea && (
+            <Area
+              type="linear"
+              dataKey="value"
+              fill={`url(#${gradientId})`}
+              stroke="none"
+              isAnimationActive={false}
+              connectNulls={false}
+            />
+          )}
           <Line
             type="linear"
             dataKey="value"
-            stroke={`var(--color-${seriesId})`}
+            stroke={lineColor}
             strokeWidth={2}
             dot={false}
             isAnimationActive={false}
@@ -81,13 +100,14 @@ export const LineChart = React.memo(function LineChart({ data, containerRef, sho
               />
             )}
           </Line>
-        </RechartsLineChart>
+        </ComposedChart>
       </ChartContainer>
     </div>
   )
 }, (prevProps, nextProps) => {
   return (
     prevProps.showLabels === nextProps.showLabels &&
+    prevProps.showGradientArea === nextProps.showGradientArea &&
     prevProps.data.length === nextProps.data.length &&
     prevProps.data.every((item, idx) => 
       item.id === nextProps.data[idx]?.id &&
