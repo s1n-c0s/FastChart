@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { RemoveButton } from "@/components/ui/RemoveButton";
+import { Switch } from "@/components/ui/switch";
 import toast, { Toaster } from "react-hot-toast";
 import { generateId } from "@/lib/utils/data-parser";
 import type { Datum } from "@/types";
@@ -244,6 +245,7 @@ interface ChartCardProps {
   showOrientation?: boolean;
   isHorizontal?: boolean;
   onToggleOrientation?: () => void;
+  customActions?: React.ReactNode;
 }
 
 const ChartCard = React.memo(({
@@ -255,6 +257,7 @@ const ChartCard = React.memo(({
   showOrientation,
   isHorizontal,
   onToggleOrientation,
+  customActions,
 }: ChartCardProps) => {
   const [showTooltip, setShowTooltip] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -321,6 +324,7 @@ const ChartCard = React.memo(({
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-base font-medium">{title}</h3>
         <div className="flex items-center gap-2" onClick={handleButtonClick}>
+          {customActions}
           {showOrientation && onToggleOrientation && (
             <Button variant="secondary" onClick={onToggleOrientation}>
               {isHorizontal ? "Vertical" : "Horizontal"}
@@ -364,6 +368,7 @@ interface FullscreenModalProps {
   showOrientation?: boolean;
   isHorizontal?: boolean;
   onToggleOrientation?: () => void;
+  customActions?: React.ReactNode;
 }
 
 const FullscreenModal = React.memo(({
@@ -375,6 +380,7 @@ const FullscreenModal = React.memo(({
   showOrientation,
   isHorizontal,
   onToggleOrientation,
+  customActions,
 }: FullscreenModalProps) => {
   // Lazy render chart content only when modal is open
   const [shouldRenderChart, setShouldRenderChart] = React.useState(false);
@@ -401,6 +407,7 @@ const FullscreenModal = React.memo(({
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-xl font-semibold capitalize">{chartType} Chart - Full Screen</h2>
           <div className="flex items-center gap-2">
+            {customActions}
             {showOrientation && onToggleOrientation && (
               <Button variant="secondary" onClick={onToggleOrientation}>
                 {isHorizontal ? "Vertical" : "Horizontal"}
@@ -436,6 +443,8 @@ export default function DataVisualizer() {
   const [stackedHorizontal, setStackedHorizontal] = useState(true);
   const [fullscreenChart, setFullscreenChart] = useState<ChartType | null>(null);
   const [showStackedTooltip, setShowStackedTooltip] = useState(false);
+  const [showLabels, setShowLabels] = useState(false);
+  const [showGradientArea, setShowGradientArea] = useState(false);
   const stackedTooltipTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // State to manually trigger chart re-render for non-structural changes (label/color)
@@ -893,7 +902,19 @@ export default function DataVisualizer() {
 
           {/* Markdown Input */}
           <div className="rounded-lg border p-4">
-            <h2 className="text-lg font-medium mb-3">Paste Data</h2>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-medium">Paste Data</h2>
+              <div className="flex items-center gap-2">
+                <label htmlFor="show-labels" className="text-sm text-muted-foreground cursor-pointer">
+                  Show labels
+                </label>
+                <Switch
+                  id="show-labels"
+                  checked={showLabels}
+                  onCheckedChange={setShowLabels}
+                />
+              </div>
+            </div>
             <div className="grid grid-cols-1 gap-3">
               <textarea
                 className="min-h-[160px] w-full rounded-md border bg-background px-3 py-2 font-mono text-xs"
@@ -932,7 +953,8 @@ export default function DataVisualizer() {
                 key={`bar-${chartKey}`}
                 data={chartData} 
                 containerRef={barCardRef} 
-                isHorizontal={barHorizontal} 
+                isHorizontal={barHorizontal}
+                showLabels={showLabels}
               />
             </ChartCard>
 
@@ -1015,7 +1037,8 @@ export default function DataVisualizer() {
                     key={`stacked-${chartKey}`}
                     data={chartData} 
                     containerRef={stackedCardRef} 
-                    isHorizontal={stackedHorizontal} 
+                    isHorizontal={stackedHorizontal}
+                    showLabels={showLabels}
                   />
                 </div>
               </div>
@@ -1026,11 +1049,25 @@ export default function DataVisualizer() {
               chartRef={lineCardRef}
               onCopySvg={() => copyChartSvg(lineCardRef.current)}
               onFullscreen={() => openFullscreen("line")}
-            >
+              customActions={
+                <div className="flex items-center gap-2">
+                  <label htmlFor="show-gradient" className="text-xs text-muted-foreground cursor-pointer">
+                    Gradient area
+                  </label>
+                  <Switch
+                    id="show-gradient"
+                    checked={showGradientArea}
+                    onCheckedChange={setShowGradientArea}
+                  />
+                </div>
+              }
+             >
               <LineChart 
                 key={`line-${chartKey}`}
                 data={chartData} 
-                containerRef={lineCardRef} 
+                containerRef={lineCardRef}
+                showLabels={showLabels}
+                showGradientArea={showGradientArea}
               />
             </ChartCard>
           </div>
@@ -1057,7 +1094,7 @@ export default function DataVisualizer() {
         isHorizontal={barHorizontal}
         onToggleOrientation={toggleBarOrientation}
       >
-        <BarChart key={`full-bar-${chartKey}`} data={fullscreenChartData} isHorizontal={barHorizontal} />
+        <BarChart key={`full-bar-${chartKey}`} data={fullscreenChartData} isHorizontal={barHorizontal} showLabels={showLabels} />
       </FullscreenModal>
 
       <FullscreenModal
@@ -1078,7 +1115,7 @@ export default function DataVisualizer() {
         isHorizontal={stackedHorizontal}
         onToggleOrientation={toggleStackedOrientation}
       >
-        <StackedChart key={`full-stacked-${chartKey}`} data={fullscreenChartData} isHorizontal={stackedHorizontal} />
+        <StackedChart key={`full-stacked-${chartKey}`} data={fullscreenChartData} isHorizontal={stackedHorizontal} showLabels={showLabels} />
       </FullscreenModal>
 
       <FullscreenModal
@@ -1086,8 +1123,20 @@ export default function DataVisualizer() {
         isOpen={fullscreenChart === "line"}
         onClose={closeFullscreen}
         onCopySvg={() => copyChartSvg(chartRefs.line.current)}
+        customActions={
+          <div className="flex items-center gap-2">
+            <label htmlFor="fullscreen-show-gradient" className="text-xs text-muted-foreground cursor-pointer">
+              Gradient area
+            </label>
+            <Switch
+              id="fullscreen-show-gradient"
+              checked={showGradientArea}
+              onCheckedChange={setShowGradientArea}
+            />
+          </div>
+        }
       >
-        <LineChart key={`full-line-${chartKey}`} data={fullscreenChartData} />
+        <LineChart key={`full-line-${chartKey}`} data={fullscreenChartData} showLabels={showLabels} showGradientArea={showGradientArea} />
       </FullscreenModal>
     </>
   );

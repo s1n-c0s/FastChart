@@ -6,6 +6,7 @@ import {
   XAxis,
   YAxis,
   Cell,
+  LabelList,
 } from "recharts"
 import type { Datum } from "@/types"
 import {
@@ -19,6 +20,7 @@ export interface BarChartProps {
   isHorizontal?: boolean
   containerRef?: React.RefObject<HTMLDivElement>
   children?: React.ReactNode
+  showLabels?: boolean
 }
 
 export const BarChart = React.memo(function BarChart({
@@ -26,6 +28,7 @@ export const BarChart = React.memo(function BarChart({
   isHorizontal = true,
   containerRef,
   children,
+  showLabels = false,
 }: BarChartProps) {
   const chartConfig = React.useMemo(() => {
     return data.reduce((acc, item) => {
@@ -85,6 +88,16 @@ export const BarChart = React.memo(function BarChart({
               {data.map((item) => (
                 <Cell key={item.id} fill={item.color} />
               ))}
+              {showLabels && (
+                <LabelList
+                  dataKey="value"
+                  position="right"
+                  offset={8}
+                  className="fill-foreground"
+                  fontSize={12}
+                  formatter={(value: number) => value.toLocaleString()}
+                />
+              )}
             </Bar>
             {children}
           </RechartsBarChart>
@@ -139,6 +152,16 @@ export const BarChart = React.memo(function BarChart({
             {data.map((item) => (
               <Cell key={item.id} fill={item.color} />
             ))}
+            {showLabels && (
+              <LabelList
+                dataKey="value"
+                position="top"
+                offset={8}
+                className="fill-foreground"
+                fontSize={12}
+                formatter={(value: number) => value.toLocaleString()}
+              />
+            )}
           </Bar>
           {children}
         </RechartsBarChart>
@@ -148,6 +171,7 @@ export const BarChart = React.memo(function BarChart({
 }, (prevProps, nextProps) => {
   return (
     prevProps.isHorizontal === nextProps.isHorizontal &&
+    prevProps.showLabels === nextProps.showLabels &&
     prevProps.data.length === nextProps.data.length &&
     prevProps.data.every((item, idx) => 
       item.id === nextProps.data[idx]?.id &&
