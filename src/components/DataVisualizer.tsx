@@ -245,6 +245,7 @@ interface ChartCardProps {
   showOrientation?: boolean;
   isHorizontal?: boolean;
   onToggleOrientation?: () => void;
+  customActions?: React.ReactNode;
 }
 
 const ChartCard = React.memo(({
@@ -256,6 +257,7 @@ const ChartCard = React.memo(({
   showOrientation,
   isHorizontal,
   onToggleOrientation,
+  customActions,
 }: ChartCardProps) => {
   const [showTooltip, setShowTooltip] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -322,6 +324,7 @@ const ChartCard = React.memo(({
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-base font-medium">{title}</h3>
         <div className="flex items-center gap-2" onClick={handleButtonClick}>
+          {customActions}
           {showOrientation && onToggleOrientation && (
             <Button variant="secondary" onClick={onToggleOrientation}>
               {isHorizontal ? "Vertical" : "Horizontal"}
@@ -365,6 +368,7 @@ interface FullscreenModalProps {
   showOrientation?: boolean;
   isHorizontal?: boolean;
   onToggleOrientation?: () => void;
+  customActions?: React.ReactNode;
 }
 
 const FullscreenModal = React.memo(({
@@ -376,6 +380,7 @@ const FullscreenModal = React.memo(({
   showOrientation,
   isHorizontal,
   onToggleOrientation,
+  customActions,
 }: FullscreenModalProps) => {
   // Lazy render chart content only when modal is open
   const [shouldRenderChart, setShouldRenderChart] = React.useState(false);
@@ -402,6 +407,7 @@ const FullscreenModal = React.memo(({
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-xl font-semibold capitalize">{chartType} Chart - Full Screen</h2>
           <div className="flex items-center gap-2">
+            {customActions}
             {showOrientation && onToggleOrientation && (
               <Button variant="secondary" onClick={onToggleOrientation}>
                 {isHorizontal ? "Vertical" : "Horizontal"}
@@ -1043,17 +1049,19 @@ export default function DataVisualizer() {
               chartRef={lineCardRef}
               onCopySvg={() => copyChartSvg(lineCardRef.current)}
               onFullscreen={() => openFullscreen("line")}
-            >
-              <div className="absolute top-4 right-4 z-20 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                <label htmlFor="show-gradient" className="text-xs text-muted-foreground cursor-pointer">
-                  Gradient area
-                </label>
-                <Switch
-                  id="show-gradient"
-                  checked={showGradientArea}
-                  onCheckedChange={setShowGradientArea}
-                />
-              </div>
+              customActions={
+                <div className="flex items-center gap-2">
+                  <label htmlFor="show-gradient" className="text-xs text-muted-foreground cursor-pointer">
+                    Gradient area
+                  </label>
+                  <Switch
+                    id="show-gradient"
+                    checked={showGradientArea}
+                    onCheckedChange={setShowGradientArea}
+                  />
+                </div>
+              }
+             >
               <LineChart 
                 key={`line-${chartKey}`}
                 data={chartData} 
@@ -1115,17 +1123,19 @@ export default function DataVisualizer() {
         isOpen={fullscreenChart === "line"}
         onClose={closeFullscreen}
         onCopySvg={() => copyChartSvg(chartRefs.line.current)}
+        customActions={
+          <div className="flex items-center gap-2">
+            <label htmlFor="fullscreen-show-gradient" className="text-xs text-muted-foreground cursor-pointer">
+              Gradient area
+            </label>
+            <Switch
+              id="fullscreen-show-gradient"
+              checked={showGradientArea}
+              onCheckedChange={setShowGradientArea}
+            />
+          </div>
+        }
       >
-        <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
-          <label htmlFor="fullscreen-show-gradient" className="text-xs text-muted-foreground cursor-pointer">
-            Gradient area
-          </label>
-          <Switch
-            id="fullscreen-show-gradient"
-            checked={showGradientArea}
-            onCheckedChange={setShowGradientArea}
-          />
-        </div>
         <LineChart key={`full-line-${chartKey}`} data={fullscreenChartData} showLabels={showLabels} showGradientArea={showGradientArea} />
       </FullscreenModal>
     </>
