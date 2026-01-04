@@ -844,7 +844,8 @@ useEffect(() => {
   const chartRefs = { bar: barCardRef, pie: pieCardRef, stacked: stackedCardRef, line: lineCardRef };
 
   return (
-    <><div className="p-4 space-y-6" data-testid="data-visualizer">
+    <>
+    <div className="p-4 space-y-6" data-testid="data-visualizer">
   <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between border-b pb-6">
     <div>
       <h1 className="text-3xl font-bold tracking-tight">Data Visualizer</h1>
@@ -853,17 +854,21 @@ useEffect(() => {
       </p>
     </div>
 
-    {/* Larger Toggle Container */}
-    <div className="flex items-center gap-4 px-5 py-2.5 rounded-full bg-muted/50 border w-fit shadow-sm">
-      <span className="text-lg font-semibold select-none">Dark Mode</span>
-      <div className="scale-125 origin-center flex items-center">
+    {/* Entire area is now clickable to toggle */}
+    <label 
+      htmlFor="theme-toggle"
+      className="flex items-center gap-4 px-6 py-3 rounded-full bg-muted/50 border w-fit shadow-sm cursor-pointer hover:bg-muted transition-colors select-none"
+    >
+      <span className="text-lg font-semibold">Dark Mode</span>
+      <div className="scale-150 origin-center flex items-center">
         <Switch 
+          id="theme-toggle"
           checked={isDarkMode} 
           onCheckedChange={setIsDarkMode} 
           aria-label="Toggle dark mode"
         />
       </div>
-    </div>
+    </label>
   </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
