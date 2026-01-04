@@ -457,6 +457,25 @@ export default function DataVisualizer() {
   const stackedCardRef = useRef<HTMLDivElement>(null!);
   const lineCardRef = useRef<HTMLDivElement>(null!);
 
+
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+  // Check system preference or previous setting on initial load
+  if (typeof window !== "undefined") {
+    return document.documentElement.classList.contains("dark") || 
+           window.matchMedia("(prefers-color-scheme: dark)").matches;
+  }
+  return false;
+});
+
+useEffect(() => {
+  const root = window.document.documentElement;
+  if (isDarkMode) {
+    root.classList.add("dark");
+  } else {
+    root.classList.remove("dark");
+  }
+}, [isDarkMode]);
+
   // Chart key now depends on the manual counter
   const chartKey = useMemo(() => chartUpdateKey, [chartUpdateKey]); 
 
@@ -826,13 +845,31 @@ export default function DataVisualizer() {
 
   return (
     <>
-      <div className="p-4 space-y-6" data-testid="data-visualizer">
-        <div>
-          <h1 className="text-2xl font-semibold">Data Visualizer</h1>
-          <p className="text-sm text-muted-foreground">
-            Edit values in either panel to update the charts live. Click Label/Value headers to sort.
-          </p>
-        </div>
+    <div className="p-4 space-y-6" data-testid="data-visualizer">
+  <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between border-b pb-6">
+    <div>
+      <h1 className="text-3xl font-bold tracking-tight">Data Visualizer</h1>
+      <p className="text-base text-muted-foreground">
+        Edit values in either panel to update the charts live.
+      </p>
+    </div>
+
+    {/* Entire area is now clickable to toggle */}
+    <label 
+      htmlFor="theme-toggle"
+      className="flex items-center gap-4 px-6 py-3 rounded-full bg-muted/50 border w-fit shadow-sm cursor-pointer hover:bg-muted transition-colors select-none"
+    >
+      <span className="text-lg font-semibold">Dark Mode</span>
+      <div className="scale-150 origin-center flex items-center">
+        <Switch 
+          id="theme-toggle"
+          checked={isDarkMode} 
+          onCheckedChange={setIsDarkMode} 
+          aria-label="Toggle dark mode"
+        />
+      </div>
+    </label>
+  </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Data Table */}
