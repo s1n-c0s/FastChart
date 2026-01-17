@@ -1,6 +1,6 @@
 import React, { type ReactNode, useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Maximize2 } from "lucide-react";
+import { Maximize2, ImageIcon } from "lucide-react";
 
 interface ChartCardProps {
   title: string;
@@ -101,10 +101,14 @@ export function ChartCard({
           <Button
             size="sm"
             variant="outline"
-            onClick={onCopyPng}
-            title="Copy chart as PNG"
+            onClick={(e) => {
+              e.stopPropagation();
+              onCopyPng();
+            }}
+            title="Copy as PNG"
+            className="h-8 w-8 p-0"
           >
-            Copy PNG
+            <ImageIcon className="w-4 h-4" />
           </Button>
           <Button
             size="sm"
