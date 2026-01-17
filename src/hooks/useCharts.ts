@@ -56,8 +56,8 @@ export function useCharts() {
 
     img.onload = async () => {
       if (ctx) {
-        ctx.fillStyle = "white"; // พื้นหลังสีขาว
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // ตั้ง background เป็น transparent (clearRect จะเป็น RGBA transparent)
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         
         canvas.toBlob(async (blob) => {

@@ -475,6 +475,7 @@ export default function DataVisualizer() {
         onClose={closeFullscreen}
         chartType="pie"
         onCopySvg={() => copyChartSvg(chartRefs.pie.current)}
+        onCopyPng={() => copyChartPng(chartRefs.pie.current)}
       >
         <PieChart data={sortedData} total={total} isFullscreen={true} />
       </FullscreenModal>
@@ -484,6 +485,7 @@ export default function DataVisualizer() {
         onClose={closeFullscreen}
         chartType="stacked"
         onCopySvg={() => copyChartSvg(chartRefs.stacked.current)}
+        onCopyPng={() => copyChartPng(chartRefs.stacked.current)}
         showOrientation
         isHorizontal={stackedHorizontal}
         onToggleOrientation={() => setStackedHorizontal(!stackedHorizontal)}
@@ -496,6 +498,7 @@ export default function DataVisualizer() {
         onClose={closeFullscreen}
         chartType="line"
         onCopySvg={() => copyChartSvg(chartRefs.line.current)}
+        onCopyPng={() => copyChartPng(chartRefs.line.current)}
         customActions={
           <div className="flex items-center gap-2">
             <label htmlFor="fullscreen-show-gradient" className="text-xs text-muted-foreground cursor-pointer">
