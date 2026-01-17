@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { X , ImageIcon } from "lucide-react";
 import styles from "./DataVisualizer.module.css";
 
 interface FullscreenModalProps {
@@ -8,6 +8,7 @@ interface FullscreenModalProps {
   onClose: () => void;
   chartType?: string;
   onCopySvg?: () => void;
+  onCopyPng?: () => void;
   onToggleOrientation?: () => void;
   isHorizontal?: boolean;
   showOrientation?: boolean;
@@ -20,6 +21,7 @@ export function FullscreenModal({
   onClose,
   chartType = "Chart",
   onCopySvg,
+  onCopyPng,
   onToggleOrientation,
   isHorizontal = false,
   showOrientation = false,
@@ -66,15 +68,16 @@ export function FullscreenModal({
           <h2 className="text-xl font-semibold capitalize">{chartType} Chart - Full Screen</h2>
           <div className="flex items-center gap-2">
             {customActions}
-            {showOrientation && onToggleOrientation && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={onToggleOrientation}
-              >
-                {isHorizontal ? "Vertical" : "Horizontal"}
-              </Button>
-            )}
+            {showOrientation && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={onToggleOrientation}
+                          title={isHorizontal ? "Switch to vertical" : "Switch to horizontal"}
+                        >
+                          {isHorizontal ? "↔ Vertical" : "↕ Horizontal"}
+                        </Button>
+                      )}
             {onCopySvg && (
               <Button 
                 variant="outline" 
@@ -84,6 +87,17 @@ export function FullscreenModal({
                 Copy SVG
               </Button>
             )}
+            {onCopyPng && (
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={onCopyPng}
+          className="flex items-center gap-2"
+        >
+          <ImageIcon className="h-4 w-4" />
+          <span>Copy PNG</span>
+        </Button>
+      )}
             <Button 
               variant="ghost" 
               size="sm" 

@@ -1,10 +1,11 @@
 import React, { type ReactNode, useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Maximize2 } from "lucide-react";
+import { Maximize2, ImageIcon } from "lucide-react";
 
 interface ChartCardProps {
   title: string;
   chartRef: React.RefObject<HTMLDivElement | null>;
+  onCopyPng: () => void;
   onCopySvg: () => void;
   onFullscreen: () => void;
   children: ReactNode;
@@ -18,6 +19,7 @@ export function ChartCard({
   title,
   chartRef,
   onCopySvg,
+  onCopyPng,
   onFullscreen,
   children,
   showOrientation = false,
@@ -95,6 +97,18 @@ export function ChartCard({
             title="Copy chart as SVG"
           >
             Copy SVG
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={(e) => {
+              e.stopPropagation();
+              onCopyPng();
+            }}
+            title="Copy as PNG"
+            className="h-8 w-8 p-0"
+          >
+            <ImageIcon className="w-4 h-4" />
           </Button>
           <Button
             size="sm"
