@@ -51,58 +51,84 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
   // 2. ฟังก์ชันวาด Legend ภายใน SVG ให้จัดวางตรงกลาง
   // ฟังก์ชันวาด Legend ภายใน SVG โดยกำหนดให้มี 5 รายการต่อแถว
   const renderSvgLegend = () => {
-    const itemsPerRow = 5; // เปลี่ยนจากเดิม (3 หรือ 4) เป็น 5 รายการต่อแถว
-    const rowCount = Math.ceil(data.length / itemsPerRow);
     const spacingY = 25;
     const rectSize = 12;
-    const gap = 8;
+    const gap = 6;
+    const itemMargin = 20;
     
-    // คำนวณจุดเริ่มต้น Y ของกลุ่ม Legend ทั้งหมดให้อยู่ท้าย Chart
-    const startY = size - (rowCount * spacingY) + 5;
+    // โครงสร้างสำหรับเก็บข้อมูลแต่ละแถวหลังจากคำนวณ Wrap
+    const rows: { items: Datum[]; width: number; itemWidths: number[] }[] = [];
+    let currentRow: Datum[] = [];
+    let currentRowWidth = 0;
+    let currentRowItemWidths: number[] = [];
 
-    return data.map((item, index) => {
-      const row = Math.floor(index / itemsPerRow);
-      const col = index % itemsPerRow;
-      
-      // คำนวณจำนวนไอเทมที่มีจริงในแถวปัจจุบัน (เพื่อใช้จัดกึ่งกลางแถวสุดท้าย)
-      const itemsInThisRow = Math.min(itemsPerRow, data.length - row * itemsPerRow);
-      
-      // คำนวณความกว้างเฉลี่ยต่อช่องในแถวนั้นๆ
-      const colWidth = size / itemsInThisRow;
-      
-      // หาจุดกึ่งกลางของช่อง (Center X)
-      const centerX = col * colWidth + (colWidth / 2);
-      
-      // กะระยะความกว้างของข้อความโดยประมาณ (ใช้ 6px ต่อตัวอักษร)
-      const textEstimate = item.label.length * 6;
-      const totalItemWidth = rectSize + gap + textEstimate;
-      
-      // คำนวณจุดเริ่ม X ของแต่ละไอเทมเพื่อให้เซต (Square + Text) อยู่กลาง centerX
-      const startX = centerX - (totalItemWidth / 2);
+    // 1. คำนวณการแบ่งแถวตามความกว้างจริง (Auto Wrap)
+    data.forEach((item) => {
+      const textWidth = item.label.length * 7; // ประมาณการความกว้างตัวอักษร
+      const itemWidth = rectSize + gap + textWidth + itemMargin;
 
-      return (
-        <g key={`svg-leg-${item.id}`}>
-          <rect 
-            x={startX} 
-            y={startY + (row * spacingY) - 10} 
-            width={rectSize} 
-            height={rectSize} 
-            fill={item.color} 
-            rx={2} 
-          />
-          <text
-            x={startX + rectSize + gap}
-            y={startY + (row * spacingY)}
-            fontSize={isFullscreen ? 14 : 11}
-            className="fill-foreground font-medium"
-            textAnchor="start"
-            style={{ pointerEvents: 'none' }}
-          >
-            {/* ตัดคำถ้าชื่อยาวเกินไปเพื่อไม่ให้ชนกัน */}
-            {item.label.length > 12 ? `${item.label.slice(0, 10)}...` : item.label}
-          </text>
-        </g>
-      );
+      // ถ้าเพิ่ม Item นี้แล้วเกินความกว้างของ Chart ให้ขึ้นแถวใหม่
+      // (ลบ itemMargin ออกเพราะตัวสุดท้ายของแถวไม่ต้องมีระยะห่าง)
+      if (currentRowWidth + itemWidth - itemMargin > size && currentRow.length > 0) {
+        rows.push({ 
+          items: currentRow, 
+          width: currentRowWidth - itemMargin, 
+          itemWidths: currentRowItemWidths 
+        });
+        currentRow = [item];
+        currentRowWidth = itemWidth;
+        currentRowItemWidths = [itemWidth];
+      } else {
+        currentRow.push(item);
+        currentRowWidth += itemWidth;
+        currentRowItemWidths.push(itemWidth);
+      }
+    });
+
+    // เพิ่มแถวสุดท้ายที่ค้างอยู่
+    if (currentRow.length > 0) {
+      rows.push({ 
+        items: currentRow, 
+        width: currentRowWidth - itemMargin, 
+        itemWidths: currentRowItemWidths 
+      });
+    }
+
+    const startY = size - (rows.length * spacingY) + 5;
+
+    return rows.flatMap((row, rowIndex) => {
+      // คำนวณจุดเริ่มต้น X เพื่อให้แถวนี้อยู่ตรงกลาง
+      let currentX = (size - row.width) / 2;
+
+      return row.items.map((item, colIndex) => {
+        const x = currentX;
+        const y = startY + (rowIndex * spacingY);
+        
+        currentX += row.itemWidths[colIndex];
+
+        return (
+          <g key={`svg-leg-${item.id}`}>
+            <rect 
+              x={x} 
+              y={y - 10} 
+              width={rectSize} 
+              height={rectSize} 
+              fill={item.color} 
+              rx={2} 
+            />
+            <text
+              x={x + rectSize + gap}
+              y={y}
+              fontSize={isFullscreen ? 14 : 11}
+              className="fill-foreground font-medium"
+              textAnchor="start"
+              style={{ pointerEvents: 'none' }}
+            >
+              {item.label}
+            </text>
+          </g>
+        );
+      });
     });
   };
 
