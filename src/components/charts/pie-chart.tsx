@@ -29,6 +29,9 @@ const CustomTooltip = React.memo(({ active, payload }: TooltipProps<number, stri
 });
 
 export const PieChart = React.memo(function PieChart({ data, total, containerRef, isFullscreen = false }: PieChartProps) {
+  // กำหนดสีตัวอักษรให้คงที่ (หรือใช้การเช็ค Dark Mode จากตัวแปรอื่นถ้าต้องการ)
+  const textColor = "#71717a"; // muted-foreground
+  const textMainColor = "currentColor"; // จะใช้สีปัจจุบันของระบบ หรือระบุเป็น #000000 / #ffffff
   // 1. เพิ่มความสูง (height) เพื่อเผื่อพื้นที่ให้ Legend ด้านล่างภายใน SVG
   const [size, setSize] = React.useState(() => {
     if (isFullscreen) {
@@ -53,28 +56,21 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
   const renderSvgLegend = () => {
     const spacingY = 25;
     const rectSize = 12;
-    const gap = 6;
+    const gap = 8;
     const itemMargin = 20;
     
-    // โครงสร้างสำหรับเก็บข้อมูลแต่ละแถวหลังจากคำนวณ Wrap
     const rows: { items: Datum[]; width: number; itemWidths: number[] }[] = [];
     let currentRow: Datum[] = [];
     let currentRowWidth = 0;
     let currentRowItemWidths: number[] = [];
 
-    // 1. คำนวณการแบ่งแถวตามความกว้างจริง (Auto Wrap)
     data.forEach((item) => {
-      const textWidth = item.label.length * 7; // ประมาณการความกว้างตัวอักษร
+      // ปรับการคำนวณความกว้างให้แม่นยำขึ้นตาม Font Size จริง
+      const textWidth = item.label.length * (isFullscreen ? 8 : 7); 
       const itemWidth = rectSize + gap + textWidth + itemMargin;
 
-      // ถ้าเพิ่ม Item นี้แล้วเกินความกว้างของ Chart ให้ขึ้นแถวใหม่
-      // (ลบ itemMargin ออกเพราะตัวสุดท้ายของแถวไม่ต้องมีระยะห่าง)
       if (currentRowWidth + itemWidth - itemMargin > size && currentRow.length > 0) {
-        rows.push({ 
-          items: currentRow, 
-          width: currentRowWidth - itemMargin, 
-          itemWidths: currentRowItemWidths 
-        });
+        rows.push({ items: currentRow, width: currentRowWidth - itemMargin, itemWidths: currentRowItemWidths });
         currentRow = [item];
         currentRowWidth = itemWidth;
         currentRowItemWidths = [itemWidth];
@@ -85,43 +81,30 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
       }
     });
 
-    // เพิ่มแถวสุดท้ายที่ค้างอยู่
     if (currentRow.length > 0) {
-      rows.push({ 
-        items: currentRow, 
-        width: currentRowWidth - itemMargin, 
-        itemWidths: currentRowItemWidths 
-      });
+      rows.push({ items: currentRow, width: currentRowWidth - itemMargin, itemWidths: currentRowItemWidths });
     }
 
     const startY = size - (rows.length * spacingY) + 5;
 
     return rows.flatMap((row, rowIndex) => {
-      // คำนวณจุดเริ่มต้น X เพื่อให้แถวนี้อยู่ตรงกลาง
       let currentX = (size - row.width) / 2;
 
       return row.items.map((item, colIndex) => {
         const x = currentX;
         const y = startY + (rowIndex * spacingY);
-        
         currentX += row.itemWidths[colIndex];
 
         return (
           <g key={`svg-leg-${item.id}`}>
-            <rect 
-              x={x} 
-              y={y - 10} 
-              width={rectSize} 
-              height={rectSize} 
-              fill={item.color} 
-              rx={2} 
-            />
+            <rect x={x} y={y - 10} width={rectSize} height={rectSize} fill={item.color} rx={2} />
             <text
               x={x + rectSize + gap}
               y={y}
-              fontSize={isFullscreen ? 14 : 11}
-              className="fill-foreground font-medium"
-              textAnchor="start"
+              fill={textMainColor} // ใช้ Inline Attribute แทน Class
+              fontSize={isFullscreen ? 14 : 11} // ระบุ Size ชัดเจน
+              fontWeight="500" // กำหนดความหนา (Medium)
+              fontFamily="sans-serif"
               style={{ pointerEvents: 'none' }}
             >
               {item.label}
@@ -133,7 +116,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
   };
 
   return (
-    <div ref={containerRef} className="flex h-full w-full items-center justify-center">
+    <div ref={containerRef} className="flex h-full w-full items-center justify-center flex-col">
       <div className="flex-shrink-0" style={{ width: size, height: size }}>
         <RechartsPieChart width={size} height={size}>
           <Tooltip content={<CustomTooltip />} />
@@ -142,9 +125,9 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
             dataKey="value"
             nameKey="label"
             cx="50%"
-            cy="40%" // ขยับวงกลมขึ้นด้านบนเล็กน้อย
-            innerRadius={isFullscreen ? size * 0.22 : 55}
-            outerRadius={isFullscreen ? size * 0.35 : 90}
+            cy="40%"
+            innerRadius={isFullscreen ? size * 0.24 : 60}
+            outerRadius={isFullscreen ? size * 0.4 : 100}
             paddingAngle={2}
             cornerRadius={6}
             isAnimationActive={true}
@@ -154,8 +137,21 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
                 if (viewBox && "cx" in viewBox && "cy" in viewBox) {
                   return (
                     <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
-                      <tspan x={viewBox.cx} y={(viewBox.cy || 0) - (isFullscreen ? 30 : 20)} className="fill-muted-foreground text-xs">Total</tspan>
-                      <tspan x={viewBox.cx} y={(viewBox.cy || 0) + (isFullscreen ? 15 : 10)} className={`fill-foreground font-bold ${isFullscreen ? 'text-5xl' : 'text-2xl'}`}>
+                      <tspan
+                        x={viewBox.cx}
+                        y={(viewBox.cy || 0) - (isFullscreen ? 50 : 30)}
+                        fill={textColor} // กำหนดสี Muted
+                        fontSize={isFullscreen ? 18 : 14}
+                      >
+                        Total
+                      </tspan>
+                      <tspan
+                        x={viewBox.cx}
+                        y={(viewBox.cy || 0) + (isFullscreen ? 10 : 5)}
+                        fill={textMainColor}
+                        fontSize={isFullscreen ? 48 : 24}
+                        fontWeight="bold" // กำหนดความหนา Bold ชัดเจน
+                      >
                         {total.toLocaleString()}
                       </tspan>
                     </text>
@@ -168,14 +164,13 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
               <Cell key={item.id} fill={item.color} stroke="none" />
             ))}
           </Pie>
-          
-          {/* Legend ถูกวาดที่นี่ (ภายใน SVG) */}
           {renderSvgLegend()}
         </RechartsPieChart>
       </div>
     </div>
   );
 }, (prevProps, nextProps) => {
+  // ... (memo comparison คงเดิม)
   return (
     prevProps.isFullscreen === nextProps.isFullscreen &&
     prevProps.total === nextProps.total &&
