@@ -5,6 +5,7 @@ import { Maximize2 } from "lucide-react";
 interface ChartCardProps {
   title: string;
   chartRef: React.RefObject<HTMLDivElement | null>;
+  onCopyPng: () => void;
   onCopySvg: () => void;
   onFullscreen: () => void;
   children: ReactNode;
@@ -18,6 +19,7 @@ export function ChartCard({
   title,
   chartRef,
   onCopySvg,
+  onCopyPng,
   onFullscreen,
   children,
   showOrientation = false,
@@ -95,6 +97,14 @@ export function ChartCard({
             title="Copy chart as SVG"
           >
             Copy SVG
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onCopyPng}
+            title="Copy chart as PNG"
+          >
+            Copy PNG
           </Button>
           <Button
             size="sm"

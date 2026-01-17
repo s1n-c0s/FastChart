@@ -8,6 +8,7 @@ interface FullscreenModalProps {
   onClose: () => void;
   chartType?: string;
   onCopySvg?: () => void;
+  onCopyPng?: () => void;
   onToggleOrientation?: () => void;
   isHorizontal?: boolean;
   showOrientation?: boolean;
@@ -20,6 +21,7 @@ export function FullscreenModal({
   onClose,
   chartType = "Chart",
   onCopySvg,
+  onCopyPng,
   onToggleOrientation,
   isHorizontal = false,
   showOrientation = false,
@@ -84,6 +86,16 @@ export function FullscreenModal({
                 Copy SVG
               </Button>
             )}
+            {onCopyPng && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={onCopyPng}
+              >
+                Copy PNG
+              </Button>
+            )}
+
             <Button 
               variant="ghost" 
               size="sm" 

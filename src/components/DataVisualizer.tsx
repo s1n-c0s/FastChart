@@ -47,7 +47,7 @@ export default function DataVisualizer() {
     barHorizontal, setBarHorizontal,
     stackedHorizontal, setStackedHorizontal,
     fullscreenChart, openFullscreen, closeFullscreen,
-    copyChartSvg,
+    copyChartSvg, copyChartPng,
     barCardRef, pieCardRef, stackedCardRef, lineCardRef
   } = useCharts();
 
@@ -367,6 +367,7 @@ export default function DataVisualizer() {
               title="Bar Chart"
               chartRef={barCardRef}
               onCopySvg={() => copyChartSvg(barCardRef.current)}
+              onCopyPng={() => copyChartPng(barCardRef.current)}
               onFullscreen={() => openFullscreen("bar")}
               showOrientation
               isHorizontal={barHorizontal}
@@ -384,6 +385,7 @@ export default function DataVisualizer() {
               title="Pie Chart - Donut with Total"
               chartRef={pieCardRef}
               onCopySvg={() => copyChartSvg(pieCardRef.current)}
+              onCopyPng={() => copyChartPng(pieCardRef.current)}
               onFullscreen={() => openFullscreen("pie")}
             >
               <PieChart 
@@ -399,6 +401,7 @@ export default function DataVisualizer() {
               title="100% Stacked Chart"
               chartRef={stackedCardRef}
               onCopySvg={() => copyChartSvg(stackedCardRef.current)}
+              onCopyPng={() => copyChartPng(stackedCardRef.current)}
               onFullscreen={() => openFullscreen("stacked")}
               showOrientation
               isHorizontal={stackedHorizontal}
@@ -416,6 +419,7 @@ export default function DataVisualizer() {
               title="Line Chart - Linear"
               chartRef={lineCardRef}
               onCopySvg={() => copyChartSvg(lineCardRef.current)}
+              onCopyPng={() => copyChartPng(lineCardRef.current)}
               onFullscreen={() => openFullscreen("line")}
               customActions={
                 <div className="flex items-center gap-2">
@@ -458,6 +462,7 @@ export default function DataVisualizer() {
         onClose={closeFullscreen}
         chartType="bar"
         onCopySvg={() => copyChartSvg(chartRefs.bar.current)}
+        onCopyPng={() => copyChartPng(chartRefs.bar.current)}
         showOrientation
         isHorizontal={barHorizontal}
         onToggleOrientation={() => setBarHorizontal(!barHorizontal)}

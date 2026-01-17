@@ -35,6 +35,48 @@ export function useCharts() {
     }
   }, []);
 
+  const copyChartPng = useCallback(async (containerEl: HTMLElement | null) => {
+  try {
+    const svg = containerEl?.querySelector("svg");
+    if (!svg) return;
+
+    // 1. เตรียมข้อมูล SVG
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const img = new Image();
+
+    // ตั้งค่าขนาด canvas ตาม SVG
+    const svgBounds = svg.getBoundingClientRect();
+    canvas.width = svgBounds.width * 2; // เพิ่มความชัด x2
+    canvas.height = svgBounds.height * 2;
+
+    const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(svgBlob);
+
+    img.onload = async () => {
+      if (ctx) {
+        ctx.fillStyle = "white"; // พื้นหลังสีขาว
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+        canvas.toBlob(async (blob) => {
+          if (blob) {
+            await navigator.clipboard.write([
+              new ClipboardItem({ "image/png": blob })
+            ]);
+            toast.success("PNG Copied to Clipboard!");
+          }
+          URL.revokeObjectURL(url);
+        }, "image/png");
+      }
+    };
+    img.src = url;
+  } catch {
+    toast.error("Failed to copy PNG.");
+  }
+}, []);
+
   const openFullscreen = useCallback((chartType: ChartType) => {
     setFullscreenChart(chartType);
   }, []);
@@ -54,6 +96,7 @@ export function useCharts() {
     stackedCardRef,
     lineCardRef,
     copyChartSvg,
+    copyChartPng,
     openFullscreen,
     closeFullscreen
   };
