@@ -137,19 +137,23 @@ export const StackedChart = React.memo(function StackedChart({
               <RechartsLabel
                 content={({ viewBox }) => {
                   if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                    const textSize = isFullscreen ? 80 : 32
+                    const labelSize = isFullscreen ? 24 : 16
+                    const offsetY = isFullscreen ? -24 : -16
+                    
                     return (
                       <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle">
                         <tspan
                           x={viewBox.cx}
-                          y={(viewBox.cy || 0) - 16}
-                          className="fill-foreground text-2xl font-bold"
+                          y={(viewBox.cy || 0) + offsetY}
+                          style={{ fontSize: `${textSize}px`, fontWeight: 'bold', fill: 'currentColor' }}
                         >
                           {totalValue.toLocaleString()}
                         </tspan>
                         <tspan
                           x={viewBox.cx}
-                          y={(viewBox.cy || 0) + 4}
-                          className="fill-muted-foreground"
+                          y={(viewBox.cy || 0) + 8}
+                          style={{ fontSize: `${labelSize}px`, fill: 'var(--muted-foreground)' }}
                         >
                           Total
                         </tspan>
@@ -159,7 +163,7 @@ export const StackedChart = React.memo(function StackedChart({
                 }}
               />
             </PolarRadiusAxis>
-            {data.map((d, idx) => (
+            {data.map((d) => (
               <RadialBar
                 key={d.id}
                 dataKey={d.label}
