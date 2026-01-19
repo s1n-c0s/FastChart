@@ -8,7 +8,17 @@ import {
   Tooltip,
   ResponsiveContainer,
   LabelList,
+  RadialBar,
+  RadialBarChart,
+  PolarRadiusAxis,
+  Label as RechartsLabel,
 } from "recharts"
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart"
 import type { Datum } from "@/types"
 
 export interface StackedChartProps {
@@ -16,6 +26,8 @@ export interface StackedChartProps {
   isHorizontal?: boolean
   containerRef?: React.RefObject<HTMLDivElement>
   showLabels?: boolean
+  showRadial?: boolean
+  isFullscreen?: boolean
 }
 
 interface StackedTooltipProps {
@@ -58,6 +70,8 @@ export const StackedChart = React.memo(function StackedChart({
   isHorizontal = true,
   containerRef,
   showLabels = false,
+  showRadial = false,
+  isFullscreen = false,
 }: StackedChartProps) {
   // Transform data for stacked chart
   const stackedData = React.useMemo(() => {
@@ -72,6 +86,99 @@ export const StackedChart = React.memo(function StackedChart({
       }
     ]
   }, [data])
+
+  // Transform data for radial chart
+  const radialData = React.useMemo(() => {
+    const total = data.reduce((sum, d) => sum + Math.max(0, d.value || 0), 0)
+    return [
+      data.reduce((acc, d) => ({
+        ...acc,
+        [d.label]: Math.max(0, d.value || 0) / (total || 1)
+      }), {})
+    ]
+  }, [data])
+
+  // Build chart config for radial
+  const chartConfig = React.useMemo(() => {
+    return data.reduce((acc, d) => ({
+      ...acc,
+      [d.label]: {
+        label: d.label,
+        color: d.color,
+      }
+    }), {}) as ChartConfig
+  }, [data])
+
+  // Calculate total for radial chart
+  const totalValue = React.useMemo(() => {
+    return data.reduce((sum, d) => sum + Math.max(0, d.value || 0), 0)
+  }, [data])
+
+  // Render radial chart
+  if (showRadial) {
+    const innerRadius = isFullscreen ? 300 : 150
+    const outerRadius = isFullscreen ? 600 : 350
+    
+    return (
+      <div ref={containerRef} className="h-full w-full flex items-center justify-center overflow-hidden">
+        <div className="flex items-center justify-center w-full h-full max-w-full max-h-full">
+          <ChartContainer config={chartConfig} className="w-full h-full">
+            <RadialBarChart
+              data={radialData}
+              endAngle={180}
+              innerRadius={innerRadius}
+              outerRadius={outerRadius}
+            >
+            <ChartTooltip
+              cursor={false}
+              content={<ChartTooltipContent hideLabel />}
+            />
+            <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
+              <RechartsLabel
+                content={({ viewBox }) => {
+                  if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                    const textSize = isFullscreen ? 80 : 32
+                    const labelSize = isFullscreen ? 24 : 16
+                    const offsetY = isFullscreen ? -24 : -16
+                    
+                    return (
+                      <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle">
+                        <tspan
+                          x={viewBox.cx}
+                          y={(viewBox.cy || 0) + offsetY}
+                          style={{ fontSize: `${textSize}px`, fontWeight: 'bold', fill: 'currentColor' }}
+                        >
+                          {totalValue.toLocaleString()}
+                        </tspan>
+                        <tspan
+                          x={viewBox.cx}
+                          y={(viewBox.cy || 0) + 8}
+                          style={{ fontSize: `${labelSize}px`, fill: 'var(--muted-foreground)' }}
+                        >
+                          Total
+                        </tspan>
+                      </text>
+                    )
+                  }
+                }}
+              />
+            </PolarRadiusAxis>
+            {data.map((d) => (
+              <RadialBar
+                key={d.id}
+                dataKey={d.label}
+                stackId="a"
+                cornerRadius={5}
+                fill={d.color}
+                className="stroke-transparent stroke-2"
+              />
+            ))}
+          </RadialBarChart>
+          </ChartContainer>
+        </div>
+      </div>
+    )
+  }
 
   // Horizontal mode: bars grow to the right
   if (isHorizontal) {
@@ -187,6 +294,8 @@ export const StackedChart = React.memo(function StackedChart({
   return (
     prevProps.isHorizontal === nextProps.isHorizontal &&
     prevProps.showLabels === nextProps.showLabels &&
+    prevProps.showRadial === nextProps.showRadial &&
+    prevProps.isFullscreen === nextProps.isFullscreen &&
     prevProps.data.length === nextProps.data.length &&
     prevProps.data.every((item, idx) => 
       item.id === nextProps.data[idx]?.id &&

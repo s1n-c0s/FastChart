@@ -1,0 +1,135 @@
+"use client"
+
+import { TrendingUp } from "lucide-react"
+import { Label, PolarRadiusAxis, RadialBar, RadialBarChart } from "recharts"
+
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart"
+
+export const description = "A radial chart with stacked sections"
+
+const chartData = [{ month: "january", desktop: 1260, mobile: 570 }]
+
+const chartConfig = {
+  desktop: {
+    label: "Desktop",
+    color: "var(--chart-1)",
+  },
+  mobile: {
+    label: "Mobile",
+    color: "var(--chart-2)",
+  },
+} satisfies ChartConfig
+
+interface ChartRadialStackedProps {
+  isFullscreen?: boolean
+}
+
+export function ChartRadialStacked({ isFullscreen = false }: ChartRadialStackedProps) {
+  const totalVisitors = chartData[0].desktop + chartData[0].mobile
+  
+  const innerRadius = isFullscreen ? 400 : 200
+  const outerRadius = isFullscreen ? 700 : 400
+  const containerClass = isFullscreen 
+    ? "w-full h-full" 
+    : "mx-auto aspect-square w-full max-w-[250px]"
+
+  return (
+    <Card className={isFullscreen ? "flex flex-col h-full" : "flex flex-col"}>
+      {!isFullscreen && (
+        <>
+          <CardHeader className="items-center pb-0">
+            <CardTitle>Radial Chart - Stacked</CardTitle>
+            <CardDescription>January - June 2024</CardDescription>
+          </CardHeader>
+        </>
+      )}
+      <CardContent className={isFullscreen ? "flex flex-1 pb-0 h-full overflow-hidden" : "flex flex-1 items-center pb-0"}>
+        <div className={isFullscreen ? "flex items-center justify-center w-full h-full" : ""}>
+          <ChartContainer
+            config={chartConfig}
+            className={containerClass}
+          >
+          <RadialBarChart
+            data={chartData}
+            endAngle={180}
+            innerRadius={innerRadius}
+            outerRadius={outerRadius}
+          >
+            <ChartTooltip
+              cursor={false}
+              content={<ChartTooltipContent hideLabel />}
+            />
+            <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
+              <Label
+                content={({ viewBox }) => {
+                  if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                    const textSize = isFullscreen ? 80 : 32
+                    const labelSize = isFullscreen ? 24 : 16
+                    const offsetY = isFullscreen ? -24 : -16
+                    
+                    return (
+                      <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle">
+                        <tspan
+                          x={viewBox.cx}
+                          y={(viewBox.cy || 0) + offsetY}
+                          style={{ fontSize: `${textSize}px`, fontWeight: 'bold', fill: 'currentColor' }}
+                        >
+                          {totalVisitors.toLocaleString()}
+                        </tspan>
+                        <tspan
+                          x={viewBox.cx}
+                          y={(viewBox.cy || 0) + 8}
+                          style={{ fontSize: `${labelSize}px`, fill: 'var(--muted-foreground)' }}
+                        >
+                          Visitors
+                        </tspan>
+                      </text>
+                    )
+                  }
+                }}
+              />
+            </PolarRadiusAxis>
+            <RadialBar
+              dataKey="desktop"
+              stackId="a"
+              cornerRadius={5}
+              fill="var(--color-desktop)"
+              className="stroke-transparent stroke-2"
+            />
+            <RadialBar
+              dataKey="mobile"
+              fill="var(--color-mobile)"
+              stackId="a"
+              cornerRadius={5}
+              className="stroke-transparent stroke-2"
+            />
+          </RadialBarChart>
+        </ChartContainer>
+        </div>
+      </CardContent>
+      {!isFullscreen && (
+        <CardFooter className="flex-col gap-2 text-m">
+          <div className="flex items-center gap-2 leading-none font-medium">
+            Trending up by 5.2% this month <TrendingUp className="h-4 w-4" />
+          </div>
+          <div className="text-muted-foreground leading-none">
+            Showing total visitors for the last 6 months
+          </div>
+        </CardFooter>
+      )}
+    </Card>
+  )
+}
