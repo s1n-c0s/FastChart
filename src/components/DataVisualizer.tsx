@@ -46,6 +46,7 @@ export default function DataVisualizer() {
   const {
     barHorizontal, setBarHorizontal,
     stackedHorizontal, setStackedHorizontal,
+    stackedRadial, setStackedRadial,
     fullscreenChart, openFullscreen, closeFullscreen,
     copyChartSvg, copyChartPng,
     barCardRef, pieCardRef, stackedCardRef, lineCardRef
@@ -403,15 +404,28 @@ export default function DataVisualizer() {
               onCopySvg={() => copyChartSvg(stackedCardRef.current)}
               onCopyPng={() => copyChartPng(stackedCardRef.current)}
               onFullscreen={() => openFullscreen("stacked")}
-              showOrientation
+              showOrientation={!stackedRadial}
               isHorizontal={stackedHorizontal}
               onToggleOrientation={() => setStackedHorizontal(!stackedHorizontal)}
+              customActions={
+                <div className="flex items-center gap-2">
+                  <label htmlFor="show-radial" className="text-xs text-muted-foreground cursor-pointer">
+                    Radial
+                  </label>
+                  <Switch
+                    id="show-radial"
+                    checked={stackedRadial}
+                    onCheckedChange={setStackedRadial}
+                  />
+                </div>
+              }
             >
               <StackedChart 
                 data={sortedData} 
                 containerRef={stackedCardRef as React.RefObject<HTMLDivElement>}
                 isHorizontal={stackedHorizontal}
                 showLabels={showLabels}
+                showRadial={stackedRadial}
               />
             </ChartCard>
 
@@ -486,11 +500,23 @@ export default function DataVisualizer() {
         chartType="stacked"
         onCopySvg={() => copyChartSvg(chartRefs.stacked.current)}
         onCopyPng={() => copyChartPng(chartRefs.stacked.current)}
-        showOrientation
+        showOrientation={!stackedRadial}
         isHorizontal={stackedHorizontal}
         onToggleOrientation={() => setStackedHorizontal(!stackedHorizontal)}
+        customActions={
+          <div className="flex items-center gap-2">
+            <label htmlFor="fullscreen-show-radial" className="text-xs text-muted-foreground cursor-pointer">
+              Radial
+            </label>
+            <Switch
+              id="fullscreen-show-radial"
+              checked={stackedRadial}
+              onCheckedChange={setStackedRadial}
+            />
+          </div>
+        }
       >
-        <StackedChart data={sortedData} isHorizontal={stackedHorizontal} showLabels={showLabels} />
+        <StackedChart data={sortedData} isHorizontal={stackedHorizontal} showLabels={showLabels} showRadial={stackedRadial} isFullscreen={fullscreenChart === "stacked"} />
       </FullscreenModal>
 
       <FullscreenModal

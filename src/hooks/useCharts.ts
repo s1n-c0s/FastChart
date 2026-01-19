@@ -5,6 +5,7 @@ import type { ChartType } from '@/types';
 export function useCharts() {
   const [stackedHorizontal, setStackedHorizontal] = useState(true);
   const [barHorizontal, setBarHorizontal] = useState(true);
+  const [stackedRadial, setStackedRadial] = useState(false);
   const [fullscreenChart, setFullscreenChart] = useState<ChartType | null>(null);
 
   const barCardRef = useRef<HTMLDivElement>(null);
@@ -207,6 +208,8 @@ export function useCharts() {
     setStackedHorizontal,
     barHorizontal,
     setBarHorizontal,
+    stackedRadial,
+    setStackedRadial,
     fullscreenChart,
     barCardRef,
     pieCardRef,
