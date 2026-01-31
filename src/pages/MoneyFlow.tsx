@@ -8,69 +8,42 @@ import toast from "react-hot-toast";
 import type { Datum } from "@/types";
 
 export default function MoneyFlowPage() {
-  const { data, total } = useDataManipulation(INITIAL_DATA as Datum[]);
+  const { data, total: dataTotal } = useDataManipulation(INITIAL_DATA as Datum[]);
 
-  // Flow data state (nodes & links)
-  const DEFAULT_NODES: { name: string }[] = React.useMemo(() => [
-    { name: "Income" },
-    { name: "Savings" },
-    { name: "Expenses" },
-    { name: "Rent" },
-    { name: "Food" },
+  // Flow data state
+  const DEFAULT_NODES = React.useMemo(() => [
+    { name: "Income" }, { name: "Savings" }, { name: "Expenses" }, { name: "Rent" }, { name: "Food" },
   ], []);
+  
   const DEFAULT_LINKS = React.useMemo(() => [
-    { source: 0, target: 1, value: 2000 },
-    { source: 0, target: 2, value: 3000 },
-    { source: 2, target: 3, value: 1500 },
-    { source: 2, target: 4, value: 1500 },
+    { source: 0, target: 1, value: 2000 }, { source: 0, target: 2, value: 3000 },
+    { source: 2, target: 3, value: 1500 }, { source: 2, target: 4, value: 1500 },
   ], []);
 
   const [nodes, setNodes] = React.useState(DEFAULT_NODES);
   const [links, setLinks] = React.useState(DEFAULT_LINKS);
-
-  React.useEffect(() => {
-    console.debug("MoneyFlow nodes:", nodes);
-  }, [nodes]);
-
-  React.useEffect(() => {
-    console.debug("MoneyFlow links:", links);
-  }, [links]);
-
-
-  // Split controls: total amount
+  
+  // Input & Debounce Logic
   const [splitTotal, setSplitTotal] = React.useState<number>(10000);
-  // Toggle automatic distribution when blocks/total change
+  const [inputValue, setInputValue] = React.useState<string>("10000");
   const [autoSplit, setAutoSplit] = React.useState<boolean>(true);
-
-  // Blocks: allow user to add blocks with optional explicit values; remaining will be auto split
   const [blocks, setBlocks] = React.useState<Array<{ name: string; value: number | null; auto?: boolean; adjusted?: boolean }>>([]);
 
+  // Debounce global total input
+  React.useEffect(() => {
+    const handler = setTimeout(() => {
+      const numValue = Number(inputValue);
+      if (!isNaN(numValue)) setSplitTotal(numValue);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [inputValue]);
 
+  // Block Management
   const addBlock = () => {
     setBlocks((prev) => {
-      const total = Math.max(0, Math.floor(splitTotal));
-      const specified = prev.reduce((s, b) => s + (isFinite(b.value as number) && b.value != null ? Math.max(0, Math.floor(b.value as number)) : 0), 0);
-      const remaining = Math.max(0, total - specified);
-
-      // Prefer splitting the most recent block with an explicit numeric value
-      const idxToSplit = (() => {
-        for (let i = prev.length - 1; i >= 0; i--) {
-          if (prev[i].value != null && isFinite(prev[i].value as number)) return i;
-        }
-        return -1;
-      })();
-
-      if (idxToSplit >= 0) {
-        const orig = Math.max(0, Math.floor(prev[idxToSplit].value as number));
-        const take = Math.floor(orig / 2);
-        if (take > 0) {
-          const newPrev = prev.map((b, i) => (i === idxToSplit ? { ...b, value: orig - take } : b));
-          return [...newPrev, { name: `Block ${prev.length + 1}`, value: take, auto: true }];
-        }
-        // if orig too small (0 or 1), fall through to remaining split
-      }
-
-      // Fallback: split remaining if any
+      const currentTotal = Math.max(0, Math.floor(splitTotal));
+      const specified = prev.reduce((s, b) => s + (b.value != null ? Math.max(0, Math.floor(b.value)) : 0), 0);
+      const remaining = Math.max(0, currentTotal - specified);
       const assign = remaining > 0 ? Math.floor(remaining / 2) : null;
       return [...prev, { name: `Block ${prev.length + 1}`, value: assign, auto: assign != null }];
     });
@@ -83,9 +56,8 @@ export default function MoneyFlowPage() {
   const updateBlock = (index: number, next: Partial<{ name: string; value: number | null }>) => {
     setBlocks((prev) => prev.map((b, i) => {
       if (i !== index) return b;
-      const updated = { ...b, ...next } as { name: string; value: number | null; auto?: boolean; adjusted?: boolean };
-      // Any manual change should clear the auto/adjusted flags so user edits are respected
-      if (Object.prototype.hasOwnProperty.call(next, 'value') || Object.prototype.hasOwnProperty.call(next, 'name')) {
+      const updated = { ...b, ...next } as any;
+      if (next.value !== undefined || next.name !== undefined) {
         updated.auto = false;
         updated.adjusted = false;
       }
@@ -93,203 +65,132 @@ export default function MoneyFlowPage() {
     }));
   };
 
-  // Auto-distribute remaining amount among blocks whenever blocks or total changes (when enabled)
+  // NEW: Validation Check after user stops typing block values
   React.useEffect(() => {
-    if (!autoSplit) return;
-    if (!Array.isArray(blocks) || blocks.length === 0) return;
+    const handler = setTimeout(() => {
+      const currentTotal = Math.max(0, Math.floor(splitTotal));
+      const specified = blocks.reduce((s, b) => s + (!b.auto && b.value != null ? b.value : 0), 0);
 
-    const total = Math.max(0, Math.floor(splitTotal));
-    const specified = blocks.reduce((s, b) => s + (isFinite(b.value as number) && b.value != null ? Math.max(0, Math.floor(b.value as number)) : 0), 0);
-    const remaining = total - specified;
-
-    if (remaining < 0) {
-      toast.error("Sum of specified block values exceeds total.");
-      return;
-    }
-
-    // Consider only blocks that are not already auto-assigned and have no explicit value
-    const targetIndexes = blocks.map((b, idx) => (b.value == null && !b.auto ? idx : -1)).filter((i) => i >= 0);
-
-    if (targetIndexes.length === 0) {
-      // If no target auto blocks and there's remaining amount, either adjust the last block (when autoSplit)
-      // or notify the user and leave blocks unchanged.
-      if (remaining > 0) {
-        if (autoSplit && blocks.length > 0) {
-          const lastIdx = blocks.length - 1;
-          const newBlocks = blocks.map((b, i) => i === lastIdx ? { ...b, value: Math.max(0, (b.value ?? 0) + remaining), adjusted: true } : { ...b });
-          setBlocks(newBlocks);
-          const newNodes = [{ name: "Income" }, ...newBlocks.map((b) => ({ name: b.name }))];
-          const newLinks = newBlocks.map((b, i) => ({ source: 0, target: i + 1, value: Math.max(0, b.value ?? 0) }));
-          setNodes(newNodes);
-          setLinks(newLinks);
-          toast.success(`Adjusted '${newBlocks[lastIdx].name}' by ${remaining.toLocaleString()} to match total.`);
-          return;
-        }
-
-        toast(`Remaining unassigned: ${remaining.toLocaleString()}`);
+      if (specified > currentTotal) {
+        toast.error(`Warning: Sum of manual blocks (${specified.toLocaleString()}) exceeds total (${currentTotal.toLocaleString()})`);
       }
+    }, 800); // Slightly longer delay for individual block edits
 
-      // update nodes/links to reflect the explicit blocks only
-      const newNodes = [{ name: "Income" }, ...blocks.map((b) => ({ name: b.name }))];
-      const newLinks = blocks.map((b, i) => ({ source: 0, target: i + 1, value: Math.max(0, b.value ?? 0) }));
-      setNodes(newNodes);
-      setLinks(newLinks);
-      return;
+    return () => clearTimeout(handler);
+  }, [blocks, splitTotal]);
+
+  // Auto-distribution logic
+  React.useEffect(() => {
+    if (!autoSplit || blocks.length === 0) return;
+
+    const currentTotal = Math.max(0, Math.floor(splitTotal));
+    const manualSum = blocks.reduce((s, b) => s + (!b.auto && b.value != null ? b.value : 0), 0);
+    const remaining = currentTotal - manualSum;
+
+    if (remaining < 0) return; // Wait for user to fix via the validation toast above
+
+    const targetIndexes = blocks.map((b, idx) => (b.auto || b.value == null ? idx : -1)).filter(i => i >= 0);
+
+    if (targetIndexes.length === 0 && remaining > 0) {
+        // Adjust the last block if everything is manual but doesn't reach total
+        const lastIdx = blocks.length - 1;
+        setBlocks(prev => prev.map((b, i) => i === lastIdx ? { ...b, value: (b.value || 0) + remaining, adjusted: true } : b));
+        return;
     }
 
-    // Distribute evenly among target blocks (leaving existing auto blocks untouched)
-    const per = Math.floor(remaining / targetIndexes.length);
-    let rem = remaining - per * targetIndexes.length;
+    if (targetIndexes.length > 0) {
+      const per = Math.floor(remaining / targetIndexes.length);
+      let rem = remaining - (per * targetIndexes.length);
 
-    const newBlocks = blocks.map((b) => ({ ...b }));
-    for (let idx of targetIndexes) {
-      const assign = per + (rem > 0 ? 1 : 0);
-      newBlocks[idx].value = assign;
-      newBlocks[idx].auto = true;
-      if (rem > 0) rem -= 1;
-    }
+      const newBlocks = blocks.map((b, i) => {
+        if (targetIndexes.includes(i)) {
+          const val = per + (rem > 0 ? 1 : 0);
+          if (rem > 0) rem--;
+          return { ...b, value: val, auto: true };
+        }
+        return b;
+      });
 
-    // Only update if values or auto flags changed
-    const changed = newBlocks.some((b, i) => (b.value ?? null) !== (blocks[i].value ?? null) || (b.auto ?? false) !== (blocks[i].auto ?? false));
-    if (changed) {
-      setBlocks(newBlocks);
-      const newNodes = [{ name: "Income" }, ...newBlocks.map((b) => ({ name: b.name }))];
-      const newLinks = newBlocks.map((b, i) => ({ source: 0, target: i + 1, value: Math.max(0, b.value ?? 0) }));
-      setNodes(newNodes);
-      setLinks(newLinks);
+      const changed = newBlocks.some((b, i) => b.value !== blocks[i].value);
+      if (changed) setBlocks(newBlocks);
     }
   }, [blocks, splitTotal, autoSplit]);
 
-
-
-
-
-  const resetFlow = () => {
-    setNodes(DEFAULT_NODES);
-    setLinks(DEFAULT_LINKS);
-    setBlocks([]);
-  };
-
-  // Sync blocks to nodes/links
+  // Sync state to Chart
   React.useEffect(() => {
-    if (!Array.isArray(blocks) || blocks.length === 0) {
+    if (blocks.length === 0) {
       setNodes(DEFAULT_NODES);
       setLinks(DEFAULT_LINKS);
       return;
     }
-
-    const newNodes = [{ name: "Income" }, ...blocks.map((b) => ({ name: b.name }))];
-    const newLinks = blocks.map((b, i) => ({ source: 0, target: i + 1, value: Math.max(0, b.value ?? 0) }));
-    setNodes(newNodes);
-    setLinks(newLinks);
+    setNodes([{ name: "Income" }, ...blocks.map(b => ({ name: b.name }))]);
+    setLinks(blocks.map((b, i) => ({ source: 0, target: i + 1, value: b.value || 0 })));
   }, [blocks]);
+
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Money Flow</h1>
-          <p className="text-sm text-muted-foreground">Visualize money flow across categories with a stacked / radial chart.</p>
-        </div>
-          <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-muted-foreground">Total</label>
-            <input aria-label="Split total" type="number" min="0" className="w-28 rounded border px-2 py-1 text-sm" value={String(splitTotal)} onChange={(e) => setSplitTotal(Number(e.target.value))} />
+    <div className="flex h-screen w-full overflow-hidden bg-background">
+      <aside className="w-80 border-r flex flex-col bg-muted/20">
+        <div className="p-4 border-b bg-background font-bold text-xl">Flow Editor</div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-6">
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase text-muted-foreground">Global Total</label>
+            <input 
+              type="number" 
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm" 
+              value={inputValue} 
+              onChange={(e) => setInputValue(e.target.value)} 
+            />
           </div>
 
-          <label className="flex items-center gap-2 cursor-pointer">
-            <span className="text-sm text-muted-foreground">Auto split</span>
-            <Switch id="auto-split" checked={autoSplit} onCheckedChange={setAutoSplit} />
-          </label>
-
-          <Button variant="outline" size="sm" onClick={resetFlow}>Reset Flow</Button>
-        </div>
-      </div>
-
-      <div className="rounded-lg border p-4 h-[640px]">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
-          <div className="md:col-span-2 h-full w-full flex items-center justify-center">
-            <FlowChart nodes={nodes} links={links} height={520} />
+          <div className="flex items-center justify-between py-2 border-y">
+            <span className="text-sm font-medium">Auto-split remaining</span>
+            <Switch checked={autoSplit} onCheckedChange={setAutoSplit} />
           </div>
 
-          <div className="md:col-span-1 h-full w-full flex flex-col gap-4">
-            {/* Blocks editor */}
-            <div className="rounded border p-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Blocks</h3>
-                <div className="flex items-center gap-3">
-                  <Button size="sm" onClick={addBlock}>New Block</Button>
-                  <span className="text-xs text-muted-foreground">{autoSplit ? 'Auto-splitting enabled' : 'Manual mode'}</span>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-semibold uppercase text-muted-foreground">Blocks</h3>
+              <Button size="sm" variant="secondary" onClick={addBlock}>+ Add</Button>
+            </div>
+            <div className="space-y-2">
+              {blocks.map((b, idx) => (
+                <div key={idx} className="relative p-2 rounded-md border bg-background space-y-1">
+                  <input 
+                    className="w-full bg-transparent text-sm font-medium outline-none" 
+                    value={b.name} 
+                    onChange={(e) => updateBlock(idx, { name: e.target.value })} 
+                  />
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="number" 
+                      className="flex-1 bg-muted/50 rounded px-2 py-1 text-xs" 
+                      value={b.value ?? ""} 
+                      onChange={(e) => updateBlock(idx, { value: e.target.value === "" ? null : Number(e.target.value) })} 
+                    />
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeBlock(idx)}>✕</Button>
+                  </div>
+                  {b.auto && <span className="absolute -top-2 -right-1 bg-primary text-[10px] text-primary-foreground px-1.5 rounded-full">auto</span>}
+                  {b.adjusted && <span className="absolute -top-2 -right-1 bg-amber-500 text-[10px] text-white px-1.5 rounded-full">fixed</span>}
                 </div>
-              </div>
-
-              <div className="mt-3 space-y-2">
-                {blocks.length === 0 && (
-                  <div className="text-xs text-muted-foreground">No blocks. Click <strong>New Block</strong> to add sections.</div>
-                )}
-
-                {blocks.map((b, idx) => (
-                  <div key={idx} className={`flex items-center gap-2 ${b.auto ? 'bg-gray-50 dark:bg-gray-800 rounded px-2 py-1' : ''}`}>
-                    <input className="flex-1 rounded border px-2 py-1 text-sm" value={b.name} onChange={(e) => updateBlock(idx, { name: e.target.value })} />
-                    <div className="flex items-center gap-2">
-                      <input aria-label={`Block ${idx} value`} placeholder="auto" type="number" min="0" className="w-24 rounded border px-2 py-1 text-sm" value={b.value == null ? '' : String(b.value)} onChange={(e) => updateBlock(idx, { value: e.target.value === '' ? null : Number(e.target.value) })} />
-                      {b.auto && <span title="Auto-assigned (won't change automatically)" className="text-xs text-muted-foreground px-2">auto</span>}
-                      <Button variant="outline" size="sm" onClick={() => removeBlock(idx)}>Remove</Button>
-                    </div>
-                  </div>
-                ))} 
-              </div>
+              ))}
             </div>
-
-            {/* Debug info to diagnose blank rendering */}
-            <div className="rounded border p-3">
-              <div className="text-sm">Nodes: <span className="font-mono">{nodes.length}</span> | Links: <span className="font-mono">{links.length}</span></div>
-              <details className="mt-2 text-xs text-muted-foreground">
-                <summary className="cursor-pointer">Show flow JSON</summary>
-                <pre className="text-xs mt-2 whitespace-pre-wrap">{JSON.stringify({ nodes, links }, null, 2)}</pre>
-              </details>
-            </div>
-
-            <div className="flex-1 rounded border p-3 overflow-auto">
-              <h3 className="font-semibold mb-2">Derived Nodes</h3>
-              <div className="space-y-2">
-                {nodes.map((n, idx) => (
-                  <div key={idx} className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <div className="font-mono text-sm">{idx}</div>
-                      <div>{n.name}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <h3 className="font-semibold mt-4 mb-2">Derived Links</h3>
-              <div className="space-y-2">
-                {links.map((l, idx) => (
-                  <div key={idx} className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-4">
-                      <div className="font-mono">{l.source}</div>
-                      <div className="text-sm">→</div>
-                      <div className="font-mono">{l.target}</div>
-                      <div className="text-sm font-mono">{l.value}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {blocks.some(b => b.adjusted) && (
-                <div className="mt-3 text-xs text-muted-foreground">Note: <strong>adjusted</strong> blocks were auto-updated to make the sum match the Total.</div>
-              )}
-            </div>
-
           </div>
         </div>
-      </div>
-      <div className="rounded-lg border p-4">
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">Total: <span className="font-mono">{total.toLocaleString()}</span></div>
-          <div className="text-xs text-muted-foreground">Tip: edit values in Data Visualizer to see them here live.</div>
+      </aside>
+
+      <main className="flex-1 flex flex-col bg-muted/5">
+        <header className="h-16 border-b bg-background flex items-center justify-between px-6">
+          <h1 className="font-semibold text-lg">Money Flow Visualization</h1>
+          <div className="text-sm text-muted-foreground">
+            Active Total: <span className="font-mono text-foreground font-bold">{splitTotal.toLocaleString()}</span>
+          </div>
+        </header>
+        <div className="flex-1 p-8 flex items-center justify-center">
+          <div className="w-full h-full bg-background rounded-xl border shadow-sm p-4">
+            <FlowChart nodes={nodes} links={links} height={600} />
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
