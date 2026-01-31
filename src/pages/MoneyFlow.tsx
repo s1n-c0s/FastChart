@@ -8,7 +8,7 @@ import toast from "react-hot-toast";
 import type { Datum } from "@/types";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
-// Define the interface for blocks to replace 'any' and fix linting errors
+// Interface for block items to ensure type safety and fix linting errors
 interface BlockItem {
   name: string;
   value: number | null;

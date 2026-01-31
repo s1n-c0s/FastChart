@@ -1,14 +1,23 @@
 import * as React from "react";
-import { Sankey, Tooltip, ResponsiveContainer } from "recharts";
+import { Sankey, Tooltip, ResponsiveContainer, Layer, Rectangle } from "recharts";
 
+/**
+ * Interfaces for better type safety and to resolve linting errors
+ */
 export interface FlowNode {
   name: string;
+  color?: string;
+  x?: number;
+  y?: number;
+  dx?: number;
+  dy?: number;
 }
+
 export interface FlowLink {
   source: number;
   target: number;
   value: number;
-}   
+}
 
 const DEFAULT_NODES: FlowNode[] = [
   { name: "Income" }, { name: "Savings" }, { name: "Expenses" }, { name: "Rent" }, { name: "Food" },
@@ -26,6 +35,37 @@ interface FlowChartProps {
   nodeWidth?: number;
   nodePadding?: number;
 }
+
+/**
+ * Custom Node component to render the rectangle and the text label on the graph
+ */
+const renderCustomNode = (props: any) => {
+  const { x, y, width, height, index, payload, containerWidth } = props;
+  const isOut = x + width + 6 > containerWidth;
+  
+  return (
+    <Layer key={`sankey-node-${index}`}>
+      <Rectangle
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        fill={payload.color || "#3b82f6"}
+        fillOpacity={0.8}
+      />
+      <text
+        x={isOut ? x - 6 : x + width + 6}
+        y={y + height / 2}
+        textAnchor={isOut ? "end" : "start"}
+        verticalAnchor="middle"
+        fontSize="12"
+        className="fill-foreground font-medium"
+      >
+        {payload.name}
+      </text>
+    </Layer>
+  );
+};
 
 class FlowChartErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
   constructor(props: { children: React.ReactNode }) {
@@ -58,13 +98,16 @@ export function FlowChart({ nodes = DEFAULT_NODES, links = DEFAULT_LINKS, height
     return <div className="p-4 text-sm text-muted-foreground">No data to render.</div>;
   }
 
-  // Fixed Tooltip typing to match Recharts expected ContentType
+  /**
+   * Custom tooltip to show branch name and value on hover
+   */
   const sankeyTooltip = (props: any) => {
     const { payload } = props;
     if (!payload || !payload.length) return null;
     const item = payload[0].payload;
 
-    if (item.name) {
+    // Hovering over a Node
+    if (item.name && item.value === undefined) {
       return (
         <div className="bg-background border rounded-lg p-2 text-xs shadow-xl font-medium">
           {item.name}
@@ -72,27 +115,35 @@ export function FlowChart({ nodes = DEFAULT_NODES, links = DEFAULT_LINKS, height
       );
     }
 
-    const from = coloredNodes[item.source]?.name || item.source;
-    const to = coloredNodes[item.target]?.name || item.target;
+    // Hovering over a Branch (Link)
+    const from = coloredNodes[item.source]?.name || "Source";
+    const to = coloredNodes[item.target]?.name || "Target";
     return (
       <div className="bg-background border rounded-lg p-2 text-xs shadow-xl font-medium">
-        {from} → {to}: {Number(item.value).toLocaleString()}
+        <div className="text-muted-foreground mb-1">Flow</div>
+        <div className="flex items-center gap-2">
+          <span>{from}</span>
+          <span className="text-muted-foreground">→</span>
+          <span>{to}</span>
+        </div>
+        <div className="mt-1 font-mono font-bold text-primary">
+          {Number(item.value).toLocaleString()}
+        </div>
       </div>
     );
   };
 
   return (
-    // Fixed inline-style warning by using a wrapper with CSS variable or standard prop
     <div className="w-full h-full" style={{ minHeight: height }}>
       <FlowChartErrorBoundary>
         <ResponsiveContainer width="100%" height="100%">
           <Sankey
             data={sankeyData}
-            node={{ stroke: "#111827", strokeWidth: 1, width: nodeWidth }}
+            // Fix: 'padding' is moved to nodePadding on the root Sankey component
+            node={renderCustomNode}
             nodePadding={nodePadding}
-            link={{ stroke: "#e2e8f0" }}
-            margin={{ top: 20, left: 20, bottom: 20, right: 20 }}
-            // Removed 'align' as it is not a valid prop on current Sankey versions
+            link={{ stroke: "#e2e8f0", strokeOpacity: 0.4 }}
+            margin={{ top: 20, left: 20, bottom: 20, right: 100 }} // Increased right margin for labels
           >
             <Tooltip content={sankeyTooltip} />
           </Sankey>
