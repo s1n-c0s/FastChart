@@ -8,8 +8,16 @@ import toast from "react-hot-toast";
 import type { Datum } from "@/types";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
+// Define the interface for blocks to replace 'any' and fix linting errors
+interface BlockItem {
+  name: string;
+  value: number | null;
+  auto?: boolean;
+  adjusted?: boolean;
+}
+
 export default function MoneyFlowPage() {
-  // Destructured unused variables replaced with underscores or removed to fix lint warnings
+  // Call hook for side effects; unused variables removed to satisfy lint warnings
   useDataManipulation(INITIAL_DATA as Datum[]);
 
   const DEFAULT_NODES = React.useMemo(() => [
@@ -23,15 +31,17 @@ export default function MoneyFlowPage() {
 
   const [nodes, setNodes] = React.useState(DEFAULT_NODES);
   const [links, setLinks] = React.useState(DEFAULT_LINKS);
+  
+  // --- UI State ---
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
 
-  // Split controls
+  // --- Input & Debounce Logic ---
   const [splitTotal, setSplitTotal] = React.useState<number>(10000);
   const [inputValue, setInputValue] = React.useState<string>("10000");
   const [autoSplit, setAutoSplit] = React.useState<boolean>(true);
-  const [blocks, setBlocks] = React.useState<Array<{ name: string; value: number | null; auto?: boolean; adjusted?: boolean }>>([]);
+  const [blocks, setBlocks] = React.useState<BlockItem[]>([]);
 
-  // Debounce global total input
+  // Debounce global total input: updates calculations 500ms after typing stops
   React.useEffect(() => {
     const handler = setTimeout(() => {
       const numValue = Number(inputValue);
@@ -40,6 +50,7 @@ export default function MoneyFlowPage() {
     return () => clearTimeout(handler);
   }, [inputValue]);
 
+  // --- Block Management ---
   const addBlock = () => {
     setBlocks((prev) => {
       const currentTotal = Math.max(0, Math.floor(splitTotal));
@@ -57,7 +68,8 @@ export default function MoneyFlowPage() {
   const updateBlock = (index: number, next: Partial<{ name: string; value: number | null }>) => {
     setBlocks((prev) => prev.map((b, i) => {
       if (i !== index) return b;
-      const updated = { ...b, ...next } as any; // Using explicit type casting if necessary to match block structure
+      const updated: BlockItem = { ...b, ...next };
+      // User manual edit clears auto/adjusted flags
       if (next.value !== undefined || next.name !== undefined) {
         updated.auto = false;
         updated.adjusted = false;
@@ -79,7 +91,7 @@ export default function MoneyFlowPage() {
     toast.success("Reset to default view.");
   };
 
-  // Auto-balancing & Validation
+  // --- Auto-balancing & Validation ---
   React.useEffect(() => {
     const handler = setTimeout(() => {
       const currentTotal = Math.max(0, Math.floor(splitTotal));
@@ -122,20 +134,25 @@ export default function MoneyFlowPage() {
     }
   }, [blocks, splitTotal, autoSplit]);
 
-  // Sync state to Chart components
+  // Sync state to Chart components with fixed dependency array
   React.useEffect(() => {
     if (blocks.length === 0) {
-      setNodes(DEFAULT_NODES);
-      setLinks(DEFAULT_LINKS);
+      setNodes(DEFAULT_NODES); 
+      setLinks(DEFAULT_LINKS); 
       return;
     }
     setNodes([{ name: "Income" }, ...blocks.map(b => ({ name: b.name }))]);
     setLinks(blocks.map((b, i) => ({ source: 0, target: i + 1, value: b.value || 0 })));
-  }, [blocks, DEFAULT_LINKS, DEFAULT_NODES]); // Included missing dependencies
+  }, [blocks, DEFAULT_NODES, DEFAULT_LINKS]);
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background relative">
-      <aside className={`border-r flex flex-col bg-muted/20 transition-all duration-300 ease-in-out shrink-0 ${isSidebarOpen ? "w-80" : "w-0 overflow-hidden border-none"}`}>
+      {/* --- SIDEBAR --- */}
+      <aside 
+        className={`border-r flex flex-col bg-muted/20 transition-all duration-300 ease-in-out shrink-0 ${
+          isSidebarOpen ? "w-80" : "w-0 overflow-hidden border-none"
+        }`}
+      >
         <div className="p-4 border-b bg-background font-bold text-xl flex items-center justify-between min-w-[320px]">
           <span>Flow Editor</span>
           <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(false)}>
@@ -165,7 +182,7 @@ export default function MoneyFlowPage() {
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-semibold uppercase text-muted-foreground">Blocks</h3>
               <div className="flex gap-2">
-                <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive" onClick={clearAllBlocks}>Clear All</Button>
+                <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive hover:bg-destructive/10" onClick={clearAllBlocks}>Clear All</Button>
                 <Button size="sm" variant="secondary" className="h-7" onClick={addBlock}>+ Add</Button>
               </div>
             </div>
@@ -192,6 +209,7 @@ export default function MoneyFlowPage() {
                     <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground" onClick={() => removeBlock(idx)}>✕</Button>
                   </div>
                   {b.auto && <span className="absolute -top-2 -right-1 bg-primary text-[10px] text-primary-foreground px-1.5 rounded-full shadow-sm">auto</span>}
+                  {b.adjusted && <span className="absolute -top-2 -right-1 bg-amber-500 text-[10px] text-white px-1.5 rounded-full shadow-sm">fixed</span>}
                 </div>
               ))}
             </div>
@@ -200,10 +218,11 @@ export default function MoneyFlowPage() {
         </div>
       </aside>
 
-      <main className="flex-1 min-w-0 flex flex-col bg-muted/5 overflow-hidden">
+      {/* --- RESPONSIVE MAIN AREA --- */}
+      <main className="flex-1 min-w-0 flex flex-col bg-muted/5 overflow-hidden transition-all duration-300">
         <header className="h-16 border-b bg-background flex items-center px-4 sm:px-6 gap-4 shrink-0">
           {!isSidebarOpen && (
-            <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(true)}>
+            <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(true)} className="shrink-0">
               <PanelLeftOpen className="h-5 w-5" />
             </Button>
           )}

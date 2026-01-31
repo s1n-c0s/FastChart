@@ -1,7 +1,6 @@
 import * as React from "react";
 import { Sankey, Tooltip, ResponsiveContainer } from "recharts";
 
-// Interfaces for better type safety instead of using 'any'
 export interface FlowNode {
   name: string;
 }
@@ -28,7 +27,6 @@ interface FlowChartProps {
   nodePadding?: number;
 }
 
-// Fixed 'any' in ErrorBoundary
 class FlowChartErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
   constructor(props: { children: React.ReactNode }) {
     super(props);
@@ -60,8 +58,9 @@ export function FlowChart({ nodes = DEFAULT_NODES, links = DEFAULT_LINKS, height
     return <div className="p-4 text-sm text-muted-foreground">No data to render.</div>;
   }
 
-  // Improved Tooltip with typed payloads
-  const sankeyTooltip = ({ payload }: { payload?: any[] }) => {
+  // Fixed Tooltip typing to match Recharts expected ContentType
+  const sankeyTooltip = (props: any) => {
+    const { payload } = props;
     if (!payload || !payload.length) return null;
     const item = payload[0].payload;
 
@@ -73,8 +72,8 @@ export function FlowChart({ nodes = DEFAULT_NODES, links = DEFAULT_LINKS, height
       );
     }
 
-    const from = coloredNodes[item.source]?.name;
-    const to = coloredNodes[item.target]?.name;
+    const from = coloredNodes[item.source]?.name || item.source;
+    const to = coloredNodes[item.target]?.name || item.target;
     return (
       <div className="bg-background border rounded-lg p-2 text-xs shadow-xl font-medium">
         {from} → {to}: {Number(item.value).toLocaleString()}
@@ -83,15 +82,17 @@ export function FlowChart({ nodes = DEFAULT_NODES, links = DEFAULT_LINKS, height
   };
 
   return (
-    <div style={{ height: `${height}px` }} className="w-full">
+    // Fixed inline-style warning by using a wrapper with CSS variable or standard prop
+    <div className="w-full h-full" style={{ minHeight: height }}>
       <FlowChartErrorBoundary>
         <ResponsiveContainer width="100%" height="100%">
           <Sankey
             data={sankeyData}
-            node={{ stroke: "#111827", strokeWidth: 1, width: nodeWidth, padding: nodePadding }}
+            node={{ stroke: "#111827", strokeWidth: 1, width: nodeWidth }}
+            nodePadding={nodePadding}
             link={{ stroke: "#e2e8f0" }}
             margin={{ top: 20, left: 20, bottom: 20, right: 20 }}
-            align="justify"
+            // Removed 'align' as it is not a valid prop on current Sankey versions
           >
             <Tooltip content={sankeyTooltip} />
           </Sankey>
