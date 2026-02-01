@@ -54,7 +54,7 @@ function App() {
   return (
     <BrowserRouter>
       <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
-        <nav className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 sm:px-6 py-4 gap-4 max-w-7xl mx-auto">
+        <nav className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 sm:px-6 py-4 gap-4 max-w-screen mx-auto">
           {/* Left side - Navigation */}
           <div className="flex items-center gap-6 sm:gap-8">
             <NavItem to="/">Data Visualizer</NavItem>
