@@ -1,45 +1,72 @@
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
-import { useState, useEffect } from 'react'  // Add this
+import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import DataVisualizer from '@/components/DataVisualizer'
 import MoneyFlow from '@/pages/MoneyFlow'
 import { Toaster } from 'react-hot-toast'
-import { Switch } from '@/components/ui/switch'  // Add this
+import { Switch } from '@/components/ui/switch'
+
+// Simple nav link with underline indicator
+function NavItem({ to, children }: { to: string; children: string }) {
+  return (
+    <NavLink
+      to={to}
+      className={({ isActive }) => `
+        relative font-bold text-lg tracking-wide transition-all duration-300
+        ${isActive 
+          ? 'text-primary opacity-100' 
+          : 'text-foreground/60 hover:text-foreground opacity-70 hover:opacity-100'
+        }
+      `}
+    >
+      {({ isActive }) => (
+        <>
+          <span className="relative z-10 font-medium">{children}</span>
+          <span 
+            className={`
+              absolute -bottom-1 left-0 h-0.5 bg-primary transition-all duration-300
+              ${isActive ? 'w-full' : 'w-0 hover:w-full'}
+            `}
+          />
+        </>
+      )}
+    </NavLink>
+  )
+}
 
 function App() {
-  // Move dark mode state here
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== "undefined") {
       return document.documentElement.classList.contains("dark") || 
-             window.matchMedia("(prefers-color-scheme: dark)").matches;
+             window.matchMedia("(prefers-color-scheme: dark)").matches
     }
-    return false;
-  });
+    return false
+  })
 
-  // Dark mode effect applied globally
   useEffect(() => {
-    const root = window.document.documentElement;
+    const root = window.document.documentElement
     if (isDarkMode) {
-      root.classList.add("dark");
+      root.classList.add("dark")
     } else {
-      root.classList.remove("dark");
+      root.classList.remove("dark")
     }
-  }, [isDarkMode]);
+  }, [isDarkMode])
 
   return (
     <BrowserRouter>
-      <div className="border-b p-4 bg-background">
-        <nav className="flex items-center justify-between">
-          <div className="flex gap-4">
-            <Link to="/" className="font-semibold text-foreground">Data Visualizer</Link>
-            <Link to="/money-flow" className="font-semibold text-foreground">Money Flow</Link>
+      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
+        <nav className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 sm:px-6 py-4 gap-4 max-w-7xl mx-auto">
+          {/* Left side - Navigation */}
+          <div className="flex items-center gap-6 sm:gap-8">
+            <NavItem to="/">Data Visualizer</NavItem>
+            <NavItem to="/money-flow">Money Flow</NavItem>
           </div>
           
-          {/* Dark Mode Toggle moved to navbar */}
+          {/* Right side - Dark Mode Toggle */}
           <label 
             htmlFor="theme-toggle"
             className="flex items-center gap-3 px-4 py-2 rounded-full bg-muted/50 border shadow-sm cursor-pointer hover:bg-muted transition-colors select-none"
           >
-            <span className="text-sm font-semibold text-foreground">Dark Mode</span>
+            <span className="text-sm font-semibold">Dark Mode</span>
             <Switch 
               id="theme-toggle"
               checked={isDarkMode} 
@@ -50,10 +77,12 @@ function App() {
         </nav>
       </div>
 
-      <Routes>
-        <Route path="/" element={<DataVisualizer />} />
-        <Route path="/money-flow" element={<MoneyFlow />} />
-      </Routes>
+      <main className="min-h-screen bg-background transition-colors">
+        <Routes>
+          <Route path="/" element={<DataVisualizer />} />
+          <Route path="/money-flow" element={<MoneyFlow />} />
+        </Routes>
+      </main>
       
       <Toaster
         position="bottom-center"
