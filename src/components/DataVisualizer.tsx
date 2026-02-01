@@ -56,25 +56,6 @@ export default function DataVisualizer() {
   const [markdownInput, setMarkdownInput] = useState(INITIAL_MARKDOWN);
   const [showLabels, setShowLabels] = useState(false);
   const [showGradientArea, setShowGradientArea] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    if (typeof window !== "undefined") {
-      return document.documentElement.classList.contains("dark") || 
-             window.matchMedia("(prefers-color-scheme: dark)").matches;
-    }
-    return false;
-  });
-
-  // --- 4. Dark mode effect ---
-  useEffect(() => {
-    const root = window.document.documentElement;
-    if (isDarkMode) {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
-  }, [isDarkMode]);
-
-  // --- 5. Memoized calculations ---
 
   // --- 6. Handlers for data transformation ---
   const parseMarkdownTable = useCallback((md: string): Datum[] => {
@@ -240,21 +221,6 @@ export default function DataVisualizer() {
               Edit values in either panel to update the charts live.
             </p>
           </div>
-
-          <label 
-            htmlFor="theme-toggle"
-            className="flex items-center gap-4 px-6 py-3 rounded-full bg-muted/50 border w-fit shadow-sm cursor-pointer hover:bg-muted transition-colors select-none"
-          >
-            <span className="text-lg font-semibold">Dark Mode</span>
-            <div className="scale-150 origin-center flex items-center">
-              <Switch 
-                id="theme-toggle"
-                checked={isDarkMode} 
-                onCheckedChange={setIsDarkMode} 
-                aria-label="Toggle dark mode"
-              />
-            </div>
-          </label>
         </div>
 
         {/* --- Data Input Section --- */}
@@ -458,17 +424,6 @@ export default function DataVisualizer() {
           </div>
         </div>
       </div>
-
-      {/* --- Toast Notifications ---
-      <Toaster
-        position="bottom-center"
-        toastOptions={{
-          duration: 900,
-          style: { background: "black", color: "#ffff" },
-          iconTheme: { primary: "white", secondary: "black" },
-          error: { iconTheme: { primary: "#ef4444", secondary: "black" } },
-        }}
-      /> */}
 
       {/* --- Fullscreen Modals --- */}
       <FullscreenModal
