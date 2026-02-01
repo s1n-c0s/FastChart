@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { FlowChart } from "@/components/charts";
 import toast from "react-hot-toast";
-import { PanelLeftClose, PanelLeftOpen, Trash2, Plus, Wallet, Tag } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, Trash2, Plus, Wallet } from "lucide-react";
 
 // --- Interfaces ---
 interface BlockItem {
