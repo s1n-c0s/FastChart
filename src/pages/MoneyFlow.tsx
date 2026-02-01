@@ -53,7 +53,7 @@ export default function MoneyFlowPage() {
     const remaining = currentTotal - manualSum;
     
     if (remaining < 0) {
-      toast.error("Manual blocks exceed total!");
+      toast.error("Manual blocks exceed total amount!");
       return;
     }
 
@@ -107,7 +107,7 @@ export default function MoneyFlowPage() {
 
   const clearBlocks = () => {
     setBlocks([]);
-    toast.success("All blocks cleared");
+    toast.success("Blocks list cleared");
   };
 
   return (
@@ -126,68 +126,77 @@ export default function MoneyFlowPage() {
         </div>
         
         <div className="flex-1 overflow-y-auto p-4 space-y-6 min-w-[320px]">
-          {/* Main Source Name */}
-          <div className="space-y-2">
-            <label htmlFor="main-source-input" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Source Name
-            </label>
-            <input 
-              id="main-source-input"
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-primary outline-none transition-all" 
-              value={sourceName} 
-              onChange={(e) => setSourceName(e.target.value)} 
-              placeholder="e.g. Income, Budget"
-            />
+          
+          {/* --- MERGED CARD: Source & Total Configuration --- */}
+          <div className="rounded-2xl border bg-background shadow-sm overflow-hidden ring-1 ring-black/5">
+            <div className="p-4 space-y-4">
+              {/* Source Name */}
+              <div className="space-y-1">
+                <label htmlFor="main-source-input" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
+                  Source Name
+                </label>
+                <input 
+                  id="main-source-input"
+                  className="w-full bg-transparent text-lg font-bold outline-none placeholder:text-muted-foreground/30 focus:text-primary transition-colors" 
+                  value={sourceName} 
+                  onChange={(e) => setSourceName(e.target.value)} 
+                  placeholder="Enter Name..."
+                />
+              </div>
+
+              <div className="h-px bg-border/60" />
+
+              {/* Global Total */}
+              <div className="space-y-1">
+                <label htmlFor="global-total-input" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
+                  Global Total
+                </label>
+                <div className="flex items-center gap-2">
+                  <span className="text-xl font-light text-muted-foreground tracking-tighter">฿</span>
+                  <input 
+                    id="global-total-input"
+                    type="number" 
+                    className="w-full bg-transparent text-2xl font-mono font-bold outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                    value={inputValue} 
+                    onChange={(e) => setInputValue(e.target.value)} 
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Global Total */}
-          <div className="space-y-2">
-            <label htmlFor="global-total-input" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Global Total
-            </label>
-            <input 
-              id="global-total-input"
-              type="number" 
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-primary outline-none" 
-              value={inputValue} 
-              onChange={(e) => setInputValue(e.target.value)} 
-              placeholder="0"
-            />
-          </div>
-
-          <div className="flex items-center justify-between py-2 border-y">
-            <span className="text-sm font-medium">Auto-split Remaining</span>
+          {/* Settings Switch */}
+          <div className="flex items-center justify-between px-1 py-2 border-y border-dashed border-border/60">
+            <span className="text-sm font-medium text-muted-foreground">Auto-split Remaining</span>
             <Switch checked={autoSplit} onCheckedChange={setAutoSplit} />
           </div>
 
           {/* Flow Blocks List */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between px-1">
               <h3 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Flow Blocks</h3>
-              <div className="flex items-center gap-1.5">
-                {/* Clear Button - Accessibility Fixed */}
+              <div className="flex items-center gap-1">
                 <Button 
                   size="sm" 
                   variant="ghost" 
                   className="h-7 px-2 text-destructive hover:bg-destructive/10" 
                   onClick={clearBlocks}
                 >
-                  <Trash2 className="h-3.5 w-3.5 mr-1" /> Clear
+                  <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Clear
                 </Button>
-                
-                {/* Add Button - Accessibility Fixed */}
                 <Button size="sm" variant="secondary" className="h-7 px-2" onClick={addBlock}>
-                  <Plus className="h-3.5 w-3.5 mr-1" /> Add
+                  <Plus className="h-3.5 w-3.5 mr-1.5" /> Add
                 </Button>
               </div>
             </div>
             
             <div className="space-y-2">
               {blocks.map((b, idx) => (
-                <div key={idx} className="relative p-3 rounded-lg border bg-background shadow-sm space-y-2 group">
+                <div key={idx} className="relative p-3 rounded-xl border bg-background shadow-sm space-y-2 group transition-all hover:border-primary/40 hover:shadow-md">
                   <input 
                     aria-label={`Name for block ${idx + 1}`}
-                    className="w-full bg-transparent text-sm font-semibold outline-none" 
+                    className="w-full bg-transparent text-sm font-semibold outline-none focus:text-primary" 
                     value={b.name} 
                     onChange={(e) => updateBlock(idx, { name: e.target.value })} 
                     placeholder="Category Name"
@@ -196,7 +205,7 @@ export default function MoneyFlowPage() {
                     <input 
                       aria-label={`Value for block ${idx + 1}`}
                       type="number" 
-                      className="flex-1 bg-muted/50 rounded-md px-2 py-1 text-xs font-mono" 
+                      className="flex-1 bg-muted/40 rounded-lg px-2.5 py-1.5 text-xs font-mono font-medium outline-none focus:bg-muted/60 transition-colors" 
                       value={b.value ?? ""} 
                       onChange={(e) => updateBlock(idx, { value: e.target.value === "" ? null : Number(e.target.value) })} 
                       placeholder="Auto"
@@ -204,14 +213,18 @@ export default function MoneyFlowPage() {
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      className="h-7 w-7 text-muted-foreground hover:text-destructive transition-colors" 
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/5" 
                       onClick={() => removeBlock(idx)}
                       aria-label="Remove block"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                  {b.auto && <span className="absolute top-2 right-2 bg-primary/10 text-primary text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">Auto</span>}
+                  {b.auto && (
+                    <span className="absolute top-3 right-3 bg-primary/10 text-primary text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-tighter border border-primary/20 shadow-sm">
+                      Auto
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
@@ -221,24 +234,26 @@ export default function MoneyFlowPage() {
 
       {/* --- MAIN CONTENT --- */}
       <main className="flex-1 min-w-0 flex flex-col bg-muted/5 overflow-hidden transition-all duration-300">
-        <header className="h-16 border-b bg-background flex items-center px-6 gap-4 shrink-0 shadow-sm">
+        <header className="h-16 border-b bg-background flex items-center px-6 gap-4 shrink-0 shadow-sm z-10">
           {!isSidebarOpen && (
             <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(true)} aria-label="Open sidebar">
               <PanelLeftOpen className="h-5 w-5" />
             </Button>
           )}
           <div className="flex-1 flex flex-col">
-            <h1 className="font-bold text-lg leading-none truncate">{sourceName} Analysis</h1>
-            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">Interactive Flow Chart</p>
+            <h1 className="font-bold text-lg leading-none truncate text-foreground/90">{sourceName} Analysis</h1>
+            <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-1">Sankey Visualization</p>
           </div>
-          <div className="px-4 py-1.5 bg-primary/5 rounded-full border border-primary/20 flex items-center gap-3">
-            <span className="text-[10px] font-black text-muted-foreground uppercase">Total</span>
-            <span className="font-mono text-base text-primary font-black">{splitTotal.toLocaleString()}</span>
+          <div className="px-4 py-2 bg-primary/5 rounded-2xl border border-primary/20 flex items-center gap-4 group hover:bg-primary/10 transition-colors cursor-default">
+            <span className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-tighter">Total Flow</span>
+            <span className="font-mono text-lg text-primary font-black leading-none tracking-tight">
+              {splitTotal.toLocaleString()}
+            </span>
           </div>
         </header>
         
         <div className="flex-1 p-6 lg:p-10 min-h-0 relative">
-          <div className="w-full h-full bg-background rounded-3xl border shadow-2xl p-6 overflow-hidden flex items-center justify-center transition-all ring-1 ring-black/5">
+          <div className="w-full h-full bg-background rounded-[2.5rem] border shadow-2xl p-8 overflow-hidden flex items-center justify-center transition-all ring-1 ring-black/5 hover:shadow-primary/5">
             <FlowChart nodes={nodes} links={links} height={600} />
           </div>
         </div>
