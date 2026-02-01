@@ -1,13 +1,10 @@
 import * as React from "react";
 import { Sankey, Tooltip, ResponsiveContainer, Layer, Rectangle } from "recharts";
 
-/**
- * Interfaces for better type safety
- */
 export interface FlowNode {
   name: string;
   color?: string;
-  value?: number; // Recharts injects the calculated node value
+  value?: number;
   x?: number;
   y?: number;
   dx?: number;
@@ -38,13 +35,11 @@ interface FlowChartProps {
 }
 
 /**
- * Custom Node component to render labels with Name, Value, and Percent
+ * Custom Node component with Value and Percent on a new line for better UX
  */
 const renderCustomNode = (props: any) => {
   const { x, y, width, height, index, payload, containerWidth, totalValue } = props;
   const isOut = x + width + 6 > containerWidth;
-  
-  // Calculate percentage relative to total chart flow
   const percentage = totalValue > 0 ? ((payload.value / totalValue) * 100).toFixed(0) : 0;
 
   return (
@@ -55,26 +50,46 @@ const renderCustomNode = (props: any) => {
         width={width}
         height={height}
         fill={payload.color || "#3b82f6"}
-        fillOpacity={0.8}
+        fillOpacity={0.9}
+        rx={2}
       />
       <text
-        x={isOut ? x - 6 : x + width + 6}
+        x={isOut ? x - 10 : x + width + 10}
         y={y + height / 2}
         textAnchor={isOut ? "end" : "start"}
-        verticalAnchor="middle"
         fontSize="12"
-        className="fill-foreground font-medium"
+        className="fill-foreground"
       >
-        {/* Format: Category Name (Value - 00%) */}
-        {payload.name} ({payload.value.toLocaleString()} — {percentage}%)
+        {/* ชื่อหมวดหมู่ */}
+        <tspan x={isOut ? x - 10 : x + width + 10} fontWeight="600" dy="-0.2em">
+          {payload.name}
+        </tspan>
+        {/* ค่าตัวเลขและเปอร์เซ็นต์ในบรรทัดใหม่ */}
+        <tspan 
+          x={isOut ? x - 10 : x + width + 10} 
+          dy="1.4em" 
+          fontSize="11" 
+          fill="currentColor" 
+          opacity="0.65"
+          fontWeight="medium"
+        >
+          {payload.value.toLocaleString()} ({percentage}%)
+        </tspan>
       </text>
     </Layer>
   );
 };
 
-const PALETTE = ["#3b82f6", "#22c55e", "#ef4444", "#f59e0b", "#7c3aed", "#06b6d4"];
+const PALETTE = ["#3b82f6", "#10b981", "#ef4444", "#f59e0b", "#8b5cf6", "#06b6d4"];
 
-export function FlowChart({ nodes = DEFAULT_NODES, links = DEFAULT_LINKS, height = 400, nodeWidth = 20, nodePadding = 12 }: FlowChartProps) {
+export function FlowChart({ 
+  nodes = DEFAULT_NODES, 
+  links = DEFAULT_LINKS, 
+  height = 400, 
+  nodeWidth = 20, 
+  nodePadding = 16 // Increased padding for better separation
+}: FlowChartProps) {
+  
   const safeNodes = Array.isArray(nodes) ? nodes : DEFAULT_NODES;
   const safeLinks = Array.isArray(links)
     ? links.filter((l) => typeof l.source === "number" && typeof l.target === "number" && isFinite(l.value))
@@ -83,51 +98,48 @@ export function FlowChart({ nodes = DEFAULT_NODES, links = DEFAULT_LINKS, height
   const coloredNodes = safeNodes.map((n, i) => ({ ...n, color: PALETTE[i % PALETTE.length] }));
   const sankeyData = { nodes: coloredNodes, links: safeLinks };
 
-  // Calculate the total flow (sum of all incoming/outgoing values)
   const totalValue = React.useMemo(() => 
     safeLinks.reduce((acc, link) => acc + (link.value || 0), 0), 
   [safeLinks]);
 
   if (coloredNodes.length === 0 || safeLinks.length === 0) {
-    return <div className="p-4 text-sm text-muted-foreground">No data to render.</div>;
+    return <div className="p-4 text-sm text-muted-foreground">No data available.</div>;
   }
 
-  /**
-   * Custom tooltip to show branch name, value, and percentage
-   */
   const sankeyTooltip = (props: any) => {
     const { payload } = props;
     if (!payload || !payload.length) return null;
     const item = payload[0].payload;
 
-    // Node Hover
-    if (item.name && item.value !== undefined && !item.source && item.source !== 0) {
-      const nodePerc = totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : 0;
-      return (
-        <div className="bg-background border rounded-lg p-2 text-xs shadow-xl font-medium">
-          <div className="text-muted-foreground mb-1">Total {item.name}</div>
-          <div className="font-mono font-bold text-primary">
-            {item.value.toLocaleString()} <span className="text-muted-foreground font-normal ml-1">({nodePerc}%)</span>
-          </div>
-        </div>
-      );
-    }
-
-    // Branch (Link) Hover
-    const from = coloredNodes[item.source]?.name || "Source";
-    const to = coloredNodes[item.target]?.name || "Target";
-    const linkPerc = totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : 0;
+    const isNode = item.name && item.value !== undefined && !item.source && item.source !== 0;
+    const from = coloredNodes[item.source]?.name;
+    const to = coloredNodes[item.target]?.name;
+    const val = item.value;
+    const perc = totalValue > 0 ? ((val / totalValue) * 100).toFixed(1) : 0;
 
     return (
-      <div className="bg-background border rounded-lg p-2 text-xs shadow-xl font-medium">
-        <div className="text-muted-foreground mb-1">Flow</div>
-        <div className="flex items-center gap-2 mb-1">
-          <span>{from}</span>
-          <span className="text-muted-foreground">→</span>
-          <span>{to}</span>
+      <div className="bg-background/95 backdrop-blur-sm border rounded-xl p-3 shadow-2xl min-w-[140px]">
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2 border-b pb-1">
+          {isNode ? "Node Details" : "Flow Path"}
         </div>
-        <div className="font-mono font-bold text-primary">
-          {Number(item.value).toLocaleString()} <span className="text-muted-foreground font-normal ml-1">({linkPerc}%)</span>
+        
+        {!isNode && (
+          <div className="flex items-center gap-2 mb-2 text-xs font-medium">
+            <span className="text-foreground">{from}</span>
+            <span className="text-muted-foreground">→</span>
+            <span className="text-foreground">{to}</span>
+          </div>
+        )}
+
+        {isNode && <div className="text-xs font-bold mb-2">{item.name}</div>}
+
+        <div className="flex justify-between items-end gap-4">
+          <div className="text-lg font-mono font-bold text-primary">
+            {val.toLocaleString()}
+          </div>
+          <div className="text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+            {perc}%
+          </div>
         </div>
       </div>
     );
@@ -138,11 +150,11 @@ export function FlowChart({ nodes = DEFAULT_NODES, links = DEFAULT_LINKS, height
       <ResponsiveContainer width="100%" height="100%">
         <Sankey
           data={sankeyData}
-          // Passing totalValue into the custom node renderer
-          node={(nodeProps: any) => renderCustomNode({ ...nodeProps, totalValue })}
+          nodeWidth={nodeWidth}
           nodePadding={nodePadding}
-          link={{ stroke: "#e2e8f0", strokeOpacity: 0.4 }}
-          margin={{ top: 20, left: 20, bottom: 20, right: 160 }} // Increased margin for longer labels
+          node={(nodeProps: any) => renderCustomNode({ ...nodeProps, totalValue })}
+          link={{ stroke: "#94a3b8", strokeOpacity: 0.2 }} // Softer links
+          margin={{ top: 20, left: 20, bottom: 20, right: 180 }} // Wide margin for labels
         >
           <Tooltip content={sankeyTooltip} />
         </Sankey>
