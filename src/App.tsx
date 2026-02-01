@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import DataVisualizer from '@/components/DataVisualizer'
 import MoneyFlow from '@/pages/MoneyFlow'
 import { Toaster } from 'react-hot-toast'
@@ -42,6 +42,14 @@ function App() {
     return false
   })
 
+  // Navbar auto-hide state
+  const [isNavVisible, setIsNavVisible] = useState(true)
+  const [isNavHovered, setIsNavHovered] = useState(false)
+  const lastScrollY = useRef(0)
+  const inactivityTimer = useRef<number | null>(null)
+  const isScrolling = useRef(false)
+
+  // Dark mode effect
   useEffect(() => {
     const root = window.document.documentElement
     if (isDarkMode) {
@@ -51,9 +59,93 @@ function App() {
     }
   }, [isDarkMode])
 
+  // Start inactivity timer
+  const startInactivityTimer = useCallback(() => {
+    // Clear existing timer
+    if (inactivityTimer.current) {
+      clearTimeout(inactivityTimer.current)
+    }
+    
+    // Show navbar when active
+    setIsNavVisible(true)
+    
+    // Set new 5 second timer to hide
+    inactivityTimer.current = window.setTimeout(() => {
+      // Only hide if not hovering and scrolled down
+      if (!isNavHovered && window.scrollY > 50) {
+        setIsNavVisible(false)
+      }
+    }, 1500)
+  }, [isNavHovered])
+
+  // Auto-hide navbar logic
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY
+      
+      // Show when scrolling up
+      if (currentScrollY < lastScrollY.current) {
+        setIsNavVisible(true)
+      }
+      
+      // Hide when scrolling down and past 100px
+      if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
+        // Small delay to not hide immediately
+        if (!isScrolling.current) {
+          isScrolling.current = true
+          setTimeout(() => {
+            isScrolling.current = false
+          }, 100)
+        }
+      }
+      
+      lastScrollY.current = currentScrollY
+      
+      // Reset inactivity timer on scroll
+      startInactivityTimer()
+    }
+
+    // Only reset timer on click/touch, not every mouse move
+    const handleInteraction = () => {
+      startInactivityTimer()
+    }
+
+    // Add event listeners
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    window.addEventListener('click', handleInteraction)
+    window.addEventListener('touchstart', handleInteraction)
+    
+    // Start initial timer
+    startInactivityTimer()
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+      window.removeEventListener('click', handleInteraction)
+      window.removeEventListener('touchstart', handleInteraction)
+      if (inactivityTimer.current) clearTimeout(inactivityTimer.current)
+    }
+  }, [startInactivityTimer, isNavHovered])
+
   return (
     <BrowserRouter>
-      <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
+      <div 
+        className={`
+          fixed top-0 left-0 right-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60
+          transition-transform duration-500 ease-in-out
+          ${isNavVisible ? 'translate-y-0' : '-translate-y-full'}
+        `}
+        onMouseEnter={() => {
+          setIsNavHovered(true)
+          setIsNavVisible(true)
+          // Clear timer when hovering
+          if (inactivityTimer.current) clearTimeout(inactivityTimer.current)
+        }}
+        onMouseLeave={() => {
+          setIsNavHovered(false)
+          // Start timer when leaving
+          startInactivityTimer()
+        }}
+      >
         <nav className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 sm:px-6 py-4 gap-4 max-w-screen mx-auto">
           {/* Left side - Navigation */}
           <div className="flex items-center gap-6 sm:gap-8">
@@ -76,6 +168,9 @@ function App() {
           </label>
         </nav>
       </div>
+
+      {/* Spacer for fixed navbar */}
+      <div className="h-[72px] sm:h-[80px]" />
 
       <main className="min-h-screen bg-background transition-colors">
         <Routes>
