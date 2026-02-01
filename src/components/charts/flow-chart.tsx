@@ -35,15 +35,23 @@ interface FlowChartProps {
 }
 
 /**
- * Custom Node component with Value and Percent on a new line for better UX
+ * FIXED: Added coordinate validation to prevent "corner stacking"
  */
 const renderCustomNode = (props: any) => {
   const { x, y, width, height, index, payload, containerWidth, totalValue } = props;
-  const isOut = x + width + 6 > containerWidth;
+  
+  // FIX 1: If coordinates are invalid, returning null prevents the "top-left stack" bug
+  if (!isFinite(x) || !isFinite(y) || !isFinite(width) || !isFinite(height)) {
+    return null;
+  }
+
+  // FIX 2: Better boundary detection for the right edge
+  const isOut = x + width + 100 > containerWidth; 
   const percentage = totalValue > 0 ? ((payload.value / totalValue) * 100).toFixed(0) : 0;
 
   return (
-    <Layer key={`sankey-node-${index}`}>
+    // FIX 3: Unique keys using payload name to prevent re-render ghosting
+    <Layer key={`sankey-node-${payload.name}-${index}`}>
       <Rectangle
         x={x}
         y={y}
@@ -58,13 +66,11 @@ const renderCustomNode = (props: any) => {
         y={y + height / 2}
         textAnchor={isOut ? "end" : "start"}
         fontSize="12"
-        className="fill-foreground"
+        className="fill-foreground select-none"
       >
-        {/* ชื่อหมวดหมู่ */}
         <tspan x={isOut ? x - 10 : x + width + 10} fontWeight="600" dy="-0.2em">
           {payload.name}
         </tspan>
-        {/* ค่าตัวเลขและเปอร์เซ็นต์ในบรรทัดใหม่ */}
         <tspan 
           x={isOut ? x - 10 : x + width + 10} 
           dy="1.4em" 
@@ -87,16 +93,26 @@ export function FlowChart({
   links = DEFAULT_LINKS, 
   height = 400, 
   nodeWidth = 20, 
-  nodePadding = 16 // Increased padding for better separation
+  nodePadding = 16 
 }: FlowChartProps) {
   
-  const safeNodes = Array.isArray(nodes) ? nodes : DEFAULT_NODES;
-  const safeLinks = Array.isArray(links)
-    ? links.filter((l) => typeof l.source === "number" && typeof l.target === "number" && isFinite(l.value))
-    : DEFAULT_LINKS;
+  const safeNodes = React.useMemo(() => 
+    Array.isArray(nodes) ? nodes : DEFAULT_NODES, 
+  [nodes]);
 
-  const coloredNodes = safeNodes.map((n, i) => ({ ...n, color: PALETTE[i % PALETTE.length] }));
-  const sankeyData = { nodes: coloredNodes, links: safeLinks };
+  const safeLinks = React.useMemo(() => 
+    Array.isArray(links)
+      ? links.filter((l) => typeof l.source === "number" && typeof l.target === "number" && isFinite(l.value) && l.value > 0)
+      : DEFAULT_LINKS,
+  [links]);
+
+  const coloredNodes = React.useMemo(() => 
+    safeNodes.map((n, i) => ({ ...n, color: PALETTE[i % PALETTE.length] })),
+  [safeNodes]);
+
+  const sankeyData = React.useMemo(() => 
+    ({ nodes: coloredNodes, links: safeLinks }),
+  [coloredNodes, safeLinks]);
 
   const totalValue = React.useMemo(() => 
     safeLinks.reduce((acc, link) => acc + (link.value || 0), 0), 
@@ -107,13 +123,13 @@ export function FlowChart({
   }
 
   const sankeyTooltip = (props: any) => {
-    const { payload } = props;
-    if (!payload || !payload.length) return null;
+    const { active, payload } = props;
+    if (!active || !payload || !payload.length) return null;
     const item = payload[0].payload;
 
-    const isNode = item.name && item.value !== undefined && !item.source && item.source !== 0;
-    const from = coloredNodes[item.source]?.name;
-    const to = coloredNodes[item.target]?.name;
+    const isNode = item.name && item.value !== undefined && item.source === undefined;
+    const from = isNode ? null : coloredNodes[item.source]?.name;
+    const to = isNode ? null : coloredNodes[item.target]?.name;
     const val = item.value;
     const perc = totalValue > 0 ? ((val / totalValue) * 100).toFixed(1) : 0;
 
@@ -152,9 +168,13 @@ export function FlowChart({
           data={sankeyData}
           nodeWidth={nodeWidth}
           nodePadding={nodePadding}
+          // Pass containerWidth inside the closure
           node={(nodeProps: any) => renderCustomNode({ ...nodeProps, totalValue })}
-          link={{ stroke: "#94a3b8", strokeOpacity: 0.2 }} // Softer links
-          margin={{ top: 20, left: 20, bottom: 20, right: 180 }} // Wide margin for labels
+          link={{ stroke: "#94a3b8", strokeOpacity: 0.2 }}
+          margin={{ top: 20, left: 20, bottom: 20, right: 120 }}
+          // FIX 4: Optimization to prevent coordinate jumping
+          sort={false} 
+          iterations={64}
         >
           <Tooltip content={sankeyTooltip} />
         </Sankey>
