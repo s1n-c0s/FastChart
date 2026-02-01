@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { generateId } from "@/lib/utils/data-parser";
 import { PRESET_COLORS, INITIAL_DATA, INITIAL_MARKDOWN } from "@/config/constants";
 import type { Datum } from "@/types";
@@ -459,7 +459,7 @@ export default function DataVisualizer() {
         </div>
       </div>
 
-      {/* --- Toast Notifications --- */}
+      {/* --- Toast Notifications ---
       <Toaster
         position="bottom-center"
         toastOptions={{
@@ -468,7 +468,7 @@ export default function DataVisualizer() {
           iconTheme: { primary: "white", secondary: "black" },
           error: { iconTheme: { primary: "#ef4444", secondary: "black" } },
         }}
-      />
+      /> */}
 
       {/* --- Fullscreen Modals --- */}
       <FullscreenModal

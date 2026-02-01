@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
 import DataVisualizer from '@/components/DataVisualizer'
 import MoneyFlow from '@/pages/MoneyFlow'
+import { Toaster } from 'react-hot-toast'  // Add this import
 
 function App() {
   return (
@@ -16,6 +17,17 @@ function App() {
         <Route path="/" element={<DataVisualizer />} />
         <Route path="/money-flow" element={<MoneyFlow />} />
       </Routes>
+      
+      {/* Move Toaster here - outside Routes so it persists */}
+      <Toaster
+        position="bottom-center"
+        toastOptions={{
+          duration: 900,
+          style: { background: "black", color: "#fff" },
+          iconTheme: { primary: "white", secondary: "black" },
+          error: { iconTheme: { primary: "#ef4444", secondary: "black" } },
+        }}
+      />
     </BrowserRouter>
   )
 }
