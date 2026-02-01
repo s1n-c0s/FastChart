@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { FlowChart } from "@/components/charts";
 import toast from "react-hot-toast";
-import { PanelLeftClose, PanelLeftOpen, Trash2, Plus } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, Trash2, Plus, Wallet, Tag } from "lucide-react";
 
 // --- Interfaces ---
 interface BlockItem {
@@ -130,19 +130,22 @@ export default function MoneyFlowPage() {
           {/* --- MERGED CARD: Source & Total Configuration --- */}
           <div className="rounded-2xl border bg-background shadow-sm overflow-hidden ring-1 ring-black/5">
             <div className="p-4 space-y-4">
-              {/* Source Name */}
-              <div className="space-y-1">
-                <label htmlFor="main-source-input" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
-                  Source Name
-                </label>
-                <input 
-                  id="main-source-input"
-                  className="w-full bg-transparent text-lg font-bold outline-none placeholder:text-muted-foreground/30 focus:text-primary transition-colors" 
-                  value={sourceName} 
-                  onChange={(e) => setSourceName(e.target.value)} 
-                  placeholder="Enter Name..."
-                />
-              </div>
+              {/* Main Source Name */}
+<div className="space-y-2">
+  <label htmlFor="main-source-input" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+    Source Name
+  </label>
+  <div className="relative">
+    <Wallet className="absolute top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+    <input 
+      id="main-source-input"
+      className="w-full bg-transparent text-2xl font-bold outline-none pl-6 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+      value={sourceName} 
+      onChange={(e) => setSourceName(e.target.value)} 
+      placeholder="e.g. Income, Budget"
+    />
+  </div>
+</div>
 
               <div className="h-px bg-border/60" />
 
