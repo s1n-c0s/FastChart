@@ -174,7 +174,7 @@ export const StackedChart = React.memo(function StackedChart({
 
     data.forEach((item: Datum) => {
       const percentage = totalValue > 0 ? Math.round((Math.max(0, item.value || 0) / totalValue) * 100) : 0;
-      const labelText = `${item.label}: ${percentage}%`;
+      const labelText = `${item.label}: ${item.value.toLocaleString()} (${percentage}%)`;
       const textWidth = labelText.length * (isFullscreen ? 8.5 : 7.5); 
       const itemWidth = rectSize + gap + textWidth + itemMargin;
 
@@ -239,7 +239,7 @@ export const StackedChart = React.memo(function StackedChart({
                   fontFamily="sans-serif"
                   style={{ pointerEvents: 'none' }}
                 >
-                  {item.label}: {totalValue > 0 ? Math.round((Math.max(0, item.value || 0) / totalValue) * 100) : 0}%
+                  {item.label}: {item.value.toLocaleString()} ({totalValue > 0 ? Math.round((Math.max(0, item.value || 0) / totalValue) * 100) : 0}%)
                 </text>
               </g>
             );
