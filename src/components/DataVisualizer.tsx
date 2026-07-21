@@ -56,7 +56,7 @@ export default function DataVisualizer() {
   // --- 3. Local UI State ---
   const [markdownInput, setMarkdownInput] = useState(INITIAL_MARKDOWN);
   const [showLabels, setShowLabels] = useState(false);
-  const [showGradientArea, setShowGradientArea] = useState(false);
+  const [showGradientArea, setShowGradientArea] = useState(true);
   const [isDockOpen, setIsDockOpen] = useState(false);
 
   // --- 6. Handlers for data transformation ---
