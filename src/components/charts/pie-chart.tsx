@@ -133,9 +133,9 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
               dataKey="value"
               nameKey="label"
               cx="50%"
-              cy="40%"
-              innerRadius={isFullscreen ? size * 0.24 : (showLabels ? 45 : 60)}
-              outerRadius={isFullscreen ? size * 0.4 : (showLabels ? 75 : 100)}
+              cy="50%"
+              innerRadius={isFullscreen ? (showLabels ? size * 0.18 : size * 0.24) : (showLabels ? 45 : 60)}
+              outerRadius={isFullscreen ? (showLabels ? size * 0.28 : size * 0.4) : (showLabels ? 75 : 100)}
               paddingAngle={2}
               cornerRadius={6}
             isAnimationActive={true}
@@ -149,7 +149,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
                     <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
                       <tspan
                         x={viewBox.cx}
-                        y={(viewBox.cy || 0) - (isFullscreen ? 50 : 30)}
+                        y={(viewBox.cy || 0) - (isFullscreen ? 25 : 15)}
                         fill={textColor} // กำหนดสี Muted
                         fontSize={isFullscreen ? 18 : 14}
                       >
@@ -157,7 +157,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
                       </tspan>
                       <tspan
                         x={viewBox.cx}
-                        y={(viewBox.cy || 0) + (isFullscreen ? 10 : 5)}
+                        y={(viewBox.cy || 0) + (isFullscreen ? 20 : 12)}
                         fill={textMainColor}
                         fontSize={isFullscreen ? 48 : 24}
                         fontWeight="bold" // กำหนดความหนา Bold ชัดเจน
