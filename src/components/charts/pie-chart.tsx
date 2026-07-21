@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Pie, PieChart as RechartsPieChart, Cell, Tooltip, Label } from "recharts";
+import { Pie, PieChart as RechartsPieChart, Cell, Tooltip, Label, ResponsiveContainer, Legend } from "recharts";
 import type { TooltipProps } from "recharts";
 import type { Datum } from "@/types";
 
@@ -8,6 +8,7 @@ export interface PieChartProps {
   total: number;
   containerRef?: React.RefObject<HTMLDivElement>;
   isFullscreen?: boolean;
+  showLabels?: boolean;
 }
 
 const CustomTooltip = React.memo(({ active, payload }: TooltipProps<number, string>) => {
@@ -28,10 +29,78 @@ const CustomTooltip = React.memo(({ active, payload }: TooltipProps<number, stri
   return null;
 });
 
-export const PieChart = React.memo(function PieChart({ data, total, containerRef, isFullscreen = false }: PieChartProps) {
+export const PieChart = React.memo(function PieChart({ data, total, containerRef, isFullscreen = false, showLabels = false }: PieChartProps) {
   // กำหนดสีตัวอักษรให้คงที่ (หรือใช้การเช็ค Dark Mode จากตัวแปรอื่นถ้าต้องการ)
   const textColor = "#71717a"; // muted-foreground
   const textMainColor = "currentColor"; // จะใช้สีปัจจุบันของระบบ หรือระบุเป็น #000000 / #ffffff
+
+  const renderCustomLabel = React.useCallback((props: any) => {
+    const { x, y, cx, name, value, fill, percent } = props;
+    const isLeft = x < cx;
+    
+    const boxWidth = isFullscreen ? 160 : 110;
+    const boxHeight = isFullscreen ? 56 : 52;
+    
+    const fx = isLeft ? x - boxWidth : x;
+    const fy = y - boxHeight / 2;
+
+    const safeName = String(name || '');
+    const maxLen = isFullscreen ? 18 : 12;
+    const displayName = safeName.length > maxLen ? safeName.substring(0, maxLen) + "..." : safeName;
+
+    return (
+      <g style={{ overflow: 'visible' }}>
+        <rect 
+          x={fx} 
+          y={fy} 
+          width={boxWidth} 
+          height={boxHeight} 
+          rx={6} 
+          style={{ fill: 'var(--color-popover)', stroke: 'var(--color-border)' }}
+          strokeWidth={1}
+        />
+        <rect
+          x={fx}
+          y={fy}
+          width={4}
+          height={boxHeight}
+          rx={2}
+          fill={fill}
+        />
+        <text 
+          x={fx + 10} 
+          y={fy + 20} 
+          style={{ fill: 'var(--color-popover-foreground)' }}
+          fontSize={isFullscreen ? 13 : 11} 
+          fontWeight="600"
+          fontFamily="sans-serif"
+        >
+          {displayName}
+        </text>
+        <text 
+          x={fx + 10} 
+          y={fy + 40} 
+          style={{ fill: 'var(--color-popover-foreground)' }}
+          fontSize={isFullscreen ? 14 : 11} 
+          fontWeight="700"
+          fontFamily="sans-serif"
+        >
+          {Number(value || 0).toLocaleString()}
+        </text>
+        <text 
+          x={fx + boxWidth - 8} 
+          y={fy + 40} 
+          textAnchor="end"
+          style={{ fill: 'var(--color-muted-foreground)' }}
+          fontSize={isFullscreen ? 13 : 11} 
+          fontWeight="500"
+          fontFamily="sans-serif"
+        >
+          {((percent || 0) * 100).toFixed(0)}%
+        </text>
+      </g>
+    );
+  }, [isFullscreen]);
   // 1. เพิ่มความสูง (height) เพื่อเผื่อพื้นที่ให้ Legend ด้านล่างภายใน SVG
   const [size, setSize] = React.useState(() => {
     if (isFullscreen) {
@@ -51,86 +120,27 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     return () => window.removeEventListener('resize', handleResize);
   }, [isFullscreen]);
 
-  // 2. ฟังก์ชันวาด Legend ภายใน SVG ให้จัดวางตรงกลาง
-  // ฟังก์ชันวาด Legend ภายใน SVG โดยกำหนดให้มี 5 รายการต่อแถว
-  const renderSvgLegend = () => {
-    const spacingY = 25;
-    const rectSize = 12;
-    const gap = 8;
-    const itemMargin = 20;
-    
-    const rows: { items: Datum[]; width: number; itemWidths: number[] }[] = [];
-    let currentRow: Datum[] = [];
-    let currentRowWidth = 0;
-    let currentRowItemWidths: number[] = [];
-
-    data.forEach((item) => {
-      // ปรับการคำนวณความกว้างให้แม่นยำขึ้นตาม Font Size จริง
-      const textWidth = item.label.length * (isFullscreen ? 8 : 7); 
-      const itemWidth = rectSize + gap + textWidth + itemMargin;
-
-      if (currentRowWidth + itemWidth - itemMargin > size && currentRow.length > 0) {
-        rows.push({ items: currentRow, width: currentRowWidth - itemMargin, itemWidths: currentRowItemWidths });
-        currentRow = [item];
-        currentRowWidth = itemWidth;
-        currentRowItemWidths = [itemWidth];
-      } else {
-        currentRow.push(item);
-        currentRowWidth += itemWidth;
-        currentRowItemWidths.push(itemWidth);
-      }
-    });
-
-    if (currentRow.length > 0) {
-      rows.push({ items: currentRow, width: currentRowWidth - itemMargin, itemWidths: currentRowItemWidths });
-    }
-
-    const startY = size - (rows.length * spacingY) + 5;
-
-    return rows.flatMap((row, rowIndex) => {
-      let currentX = (size - row.width) / 2;
-
-      return row.items.map((item, colIndex) => {
-        const x = currentX;
-        const y = startY + (rowIndex * spacingY);
-        currentX += row.itemWidths[colIndex];
-
-        return (
-          <g key={`svg-leg-${item.id}`}>
-            <rect x={x} y={y - 10} width={rectSize} height={rectSize} fill={item.color} rx={2} />
-            <text
-              x={x + rectSize + gap}
-              y={y}
-              fill={textMainColor} // ใช้ Inline Attribute แทน Class
-              fontSize={isFullscreen ? 14 : 11} // ระบุ Size ชัดเจน
-              fontWeight="500" // กำหนดความหนา (Medium)
-              fontFamily="sans-serif"
-              style={{ pointerEvents: 'none' }}
-            >
-              {item.label}
-            </text>
-          </g>
-        );
-      });
-    });
-  };
+  // Removed manual legend calculation in favor of Recharts Legend
 
   return (
     <div ref={containerRef} className="flex h-full w-full items-center justify-center flex-col">
-      <div className="flex-shrink-0" style={{ width: size, height: size }}>
-        <RechartsPieChart width={size} height={size}>
-          <Tooltip content={<CustomTooltip />} />
-          <Pie
-            data={data}
-            dataKey="value"
-            nameKey="label"
-            cx="50%"
-            cy="40%"
-            innerRadius={isFullscreen ? size * 0.24 : 60}
-            outerRadius={isFullscreen ? size * 0.4 : 100}
-            paddingAngle={2}
-            cornerRadius={6}
+      <div className="flex-shrink-0 w-full" style={{ height: size }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <RechartsPieChart style={{ overflow: 'visible' }}>
+            <Tooltip content={<CustomTooltip />} />
+            <Pie
+              data={data}
+              dataKey="value"
+              nameKey="label"
+              cx="50%"
+              cy="40%"
+              innerRadius={isFullscreen ? size * 0.24 : (showLabels ? 45 : 60)}
+              outerRadius={isFullscreen ? size * 0.4 : (showLabels ? 75 : 100)}
+              paddingAngle={2}
+              cornerRadius={6}
             isAnimationActive={true}
+            label={showLabels ? renderCustomLabel : false}
+            labelLine={showLabels ? { stroke: textColor, strokeWidth: 1, opacity: 0.5 } : false}
           >
             <Label
               content={({ viewBox }) => {
@@ -164,8 +174,20 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
               <Cell key={item.id} fill={item.color} stroke="none" />
             ))}
           </Pie>
-          {renderSvgLegend()}
-        </RechartsPieChart>
+          <Legend
+            verticalAlign="bottom"
+            align="center"
+            iconType="rect"
+            iconSize={12}
+            formatter={(value: any) => (
+              <span style={{ color: textMainColor, fontSize: isFullscreen ? 14 : 12, fontWeight: 500, paddingLeft: 4 }}>
+                {value}
+              </span>
+            )}
+            wrapperStyle={{ paddingTop: 20 }}
+          />
+          </RechartsPieChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );
@@ -179,6 +201,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
       item.id === nextProps.data[idx]?.id &&
       item.value === nextProps.data[idx]?.value &&
       item.color === nextProps.data[idx]?.color
-    )
+    ) &&
+    prevProps.showLabels === nextProps.showLabels
   );
 });
