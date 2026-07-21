@@ -33,6 +33,7 @@ import {
   LineChart,
   StackedChart
 } from "../components/charts";
+import { Database, X, ChevronDown } from "lucide-react";
 
 export default function DataVisualizer() {
   // --- 1. จัดการข้อมูล (Data Layer) ---
@@ -56,6 +57,7 @@ export default function DataVisualizer() {
   const [markdownInput, setMarkdownInput] = useState(INITIAL_MARKDOWN);
   const [showLabels, setShowLabels] = useState(false);
   const [showGradientArea, setShowGradientArea] = useState(false);
+  const [isDockOpen, setIsDockOpen] = useState(false);
 
   // --- 6. Handlers for data transformation ---
   const parseMarkdownTable = useCallback((md: string): Datum[] => {
@@ -223,108 +225,145 @@ export default function DataVisualizer() {
           </div>
         </div>
 
-        {/* --- Data Input Section --- */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Data Table */}
-          <div className="rounded-lg border p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-medium">
-                Data Table {sortConfig && <span className="text-sm text-primary">(Sorted)</span>}
+        {/* --- Data Input Section (Float Dock) --- */}
+        <div 
+          className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center transition-all duration-300 pointer-events-none`}
+        >
+          {/* Paper Panel */}
+          <div 
+            className={`pointer-events-auto bg-background/95 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-border/50 rounded-2xl overflow-hidden transition-all duration-300 origin-bottom flex flex-col ${
+              isDockOpen ? "w-[95vw] sm:w-[85vw] md:w-[800px] h-[75vh] max-h-[750px] opacity-100 mb-4 scale-100" : "w-0 h-0 opacity-0 mb-0 scale-95"
+            }`}
+          >
+            <div className="flex items-center justify-between p-4 border-b bg-muted/40">
+              <h2 className="font-semibold text-lg flex items-center gap-2">
+                <Database className="w-5 h-5 text-primary" /> Data Manager
               </h2>
-              <div className="flex items-center gap-2">
-                <div className="text-sm text-muted-foreground">Total: {total.toLocaleString()}</div>
-                <Button variant="outline" size="sm" onClick={exportToCSV}>Export CSV</Button>
-                <Button variant="outline" size="sm" onClick={exportToMarkdown}>Export MD</Button>
-                <Button variant="secondary" onClick={addRow}>Add Row</Button>
-              </div>
+              <Button variant="ghost" size="icon" onClick={() => setIsDockOpen(false)} className="rounded-full h-8 w-8 hover:bg-muted">
+                <X className="w-4 h-4" />
+              </Button>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-2 pr-2 min-w-[160px]">
-                      <button
-                        className="inline-flex items-center gap-1 font-semibold hover:text-foreground/80 transition-colors"
-                        onClick={() => requestSort("label")}
-                      >
-                        Label
-                        {sortConfig?.key === "label" && (
-                          <span>{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
-                        )}
-                        {!sortConfig && <span className="text-xs text-muted-foreground ml-1">(Drag)</span>}
-                      </button>
-                    </th>
-                    <th className="text-left py-2 pr-2 min-w-[120px]">
-                      <button
-                        className="inline-flex items-center gap-1 font-semibold hover:text-foreground/80 transition-colors"
-                        onClick={() => requestSort("value")}
-                      >
-                        Value
-                        {sortConfig?.key === "value" && (
-                          <span>{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
-                        )}
-                      </button>
-                    </th>
-                    <th className="text-left py-2 pr-2 min-w-[120px]">Color</th>
-                    <th className="text-left py-2 pr-2">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                    <SortableContext items={data.map((d) => d.id)} strategy={verticalListSortingStrategy}>
-                      {sortedData.map((row) => (
-                        <SortableRow
-                          key={row.id}
-                          row={row}
-                          onUpdateLabel={updateLabel}
-                          onUpdateValue={updateValue}
-                          onUpdateColor={updateColor}
-                          onRemove={removeRow}
-                          presetColors={PRESET_COLORS}
-                        />
-                      ))}
-                    </SortableContext>
-                  </DndContext>
-                </tbody>
-              </table>
+            
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-6">
+              {/* Data Table */}
+              <div className="rounded-xl border bg-card p-4 sm:p-5 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+                  <h3 className="text-base font-medium flex items-center gap-2">
+                    Data Table {sortConfig && <span className="text-xs text-primary font-normal bg-primary/10 px-2 py-0.5 rounded-full">Sorted</span>}
+                  </h3>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="text-sm font-medium text-muted-foreground mr-1">Total: {total.toLocaleString()}</div>
+                    <Button variant="outline" size="sm" className="h-8" onClick={exportToCSV}>CSV</Button>
+                    <Button variant="outline" size="sm" className="h-8" onClick={exportToMarkdown}>MD</Button>
+                    <Button variant="default" size="sm" className="h-8 shadow-sm" onClick={addRow}>Add Row</Button>
+                  </div>
+                </div>
+                <div className="overflow-x-auto rounded-lg border bg-background/50">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b bg-muted/50">
+                        <th className="text-left py-3 px-3 min-w-[160px] font-medium text-muted-foreground">
+                          <button
+                            className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+                            onClick={() => requestSort("label")}
+                          >
+                            Label
+                            {sortConfig?.key === "label" && (
+                              <span className="text-primary">{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
+                            )}
+                            {!sortConfig && <span className="text-[10px] uppercase tracking-wider ml-1 opacity-60">(Drag)</span>}
+                          </button>
+                        </th>
+                        <th className="text-left py-3 px-3 min-w-[120px] font-medium text-muted-foreground">
+                          <button
+                            className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+                            onClick={() => requestSort("value")}
+                          >
+                            Value
+                            {sortConfig?.key === "value" && (
+                              <span className="text-primary">{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
+                            )}
+                          </button>
+                        </th>
+                        <th className="text-left py-3 px-3 min-w-[120px] font-medium text-muted-foreground">Color</th>
+                        <th className="text-left py-3 px-3 w-[100px] font-medium text-muted-foreground">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                        <SortableContext items={data.map((d) => d.id)} strategy={verticalListSortingStrategy}>
+                          {sortedData.map((row) => (
+                            <SortableRow
+                              key={row.id}
+                              row={row}
+                              onUpdateLabel={updateLabel}
+                              onUpdateValue={updateValue}
+                              onUpdateColor={updateColor}
+                              onRemove={removeRow}
+                              presetColors={PRESET_COLORS}
+                            />
+                          ))}
+                        </SortableContext>
+                      </DndContext>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Markdown Input */}
+              <div className="rounded-xl border bg-card p-4 sm:p-5 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-base font-medium">Paste Data</h3>
+                  <div className="flex items-center gap-2 bg-muted/30 border border-border/50 px-3 py-1.5 rounded-full">
+                    <label htmlFor="show-labels" className="text-xs font-medium cursor-pointer select-none">
+                      Show labels on charts
+                    </label>
+                    <Switch
+                      id="show-labels"
+                      checked={showLabels}
+                      onCheckedChange={setShowLabels}
+                      className="scale-90"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 gap-4">
+                  <textarea
+                    className="min-h-[140px] w-full rounded-xl border bg-background/50 px-4 py-3 font-mono text-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary focus-visible:outline-none resize-y placeholder:text-muted-foreground/50 transition-shadow"
+                    aria-label="Paste CSV or Markdown data"
+                    placeholder="Paste your data here (CSV or Markdown Table)..."
+                    value={markdownInput}
+                    onChange={(e) => setMarkdownInput(e.target.value)}
+                  />
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <Button onClick={transformData} className="w-full sm:w-auto shadow-sm">Transform to Table</Button>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                      <Button variant="secondary" size="sm" className="flex-1 sm:flex-none" onClick={() => loadExample("csv")}>CSV Example</Button>
+                      <Button variant="secondary" size="sm" className="flex-1 sm:flex-none" onClick={() => loadExample("markdown")}>MD Example</Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Markdown Input */}
-          <div className="rounded-lg border p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-medium">Paste Data</h2>
-              <div className="flex items-center gap-2">
-                <label htmlFor="show-labels" className="text-sm text-muted-foreground cursor-pointer">
-                  Show labels
-                </label>
-                <Switch
-                  id="show-labels"
-                  checked={showLabels}
-                  onCheckedChange={setShowLabels}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 gap-3">
-              <textarea
-                className="min-h-[160px] w-full rounded-md border bg-background px-3 py-2 font-mono text-xs"
-                aria-label="Paste CSV or Markdown data"
-                placeholder="Paste your data here..."
-                value={markdownInput}
-                onChange={(e) => setMarkdownInput(e.target.value)}
-              />
-              <div className="flex items-center justify-between gap-2">
-                <Button onClick={transformData}>Transform to Table</Button>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => loadExample("csv")}>CSV Example</Button>
-                  <Button variant="outline" onClick={() => loadExample("markdown")}>Markdown Example</Button>
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Accepts Markdown Table (Label | Value | Color) or CSV (Label,Value,Color).
-              </p>
-            </div>
-          </div>
+          {/* Toggle Button */}
+          <Button 
+            size="lg" 
+            className={`pointer-events-auto rounded-full shadow-xl h-14 px-6 gap-2 font-medium text-base transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 active:scale-95 ${
+              isDockOpen ? "bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-secondary/20" : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/20"
+            }`}
+            onClick={() => setIsDockOpen(!isDockOpen)}
+          >
+            {isDockOpen ? (
+              <>
+                <ChevronDown className="w-5 h-5" /> Hide Data
+              </>
+            ) : (
+              <>
+                <Database className="w-5 h-5" /> Edit Data
+              </>
+            )}
+          </Button>
         </div>
 
         {/* --- Charts Section --- */}
