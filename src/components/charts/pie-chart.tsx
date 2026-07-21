@@ -52,19 +52,35 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
   });
 
   const [chartWidth, setChartWidth] = React.useState(size);
+  const localRef = React.useRef<HTMLDivElement | null>(null);
+
+  const setRefs = React.useCallback(
+    (node: HTMLDivElement | null) => {
+      localRef.current = node;
+      if (containerRef) {
+        if (typeof containerRef === "function") {
+          containerRef(node);
+        } else {
+          (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+        }
+      }
+    },
+    [containerRef]
+  );
 
   React.useEffect(() => {
-    if (containerRef && 'current' in containerRef && containerRef.current) {
-      setChartWidth(containerRef.current.clientWidth);
+    const node = localRef.current;
+    if (node) {
+      setChartWidth(node.clientWidth);
       const observer = new ResizeObserver((entries) => {
         if (entries[0]) {
           setChartWidth(entries[0].contentRect.width);
         }
       });
-      observer.observe(containerRef.current);
+      observer.observe(node);
       return () => observer.disconnect();
     }
-  }, [containerRef]);
+  }, []);
 
   const textColor = "#71717a"; // muted-foreground
   const textMainColor = isDark ? "#fafafa" : "#09090b"; // foreground hex
@@ -223,7 +239,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
   };
 
   return (
-    <div ref={containerRef} className="flex h-full w-full items-center justify-center flex-col">
+    <div ref={setRefs} className="flex h-full w-full items-center justify-center flex-col">
       <div className="flex-shrink-0 w-full" style={{ height: size }}>
         <ResponsiveContainer width="100%" height="100%">
           <RechartsPieChart style={{ overflow: 'visible' }}>
