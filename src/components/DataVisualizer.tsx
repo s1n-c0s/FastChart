@@ -33,7 +33,7 @@ import {
   LineChart,
   StackedChart
 } from "../components/charts";
-import { Database, X, ChevronDown, Copy, ArrowUpDown } from "lucide-react";
+import { Database, X, ChevronDown, Copy, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -361,8 +361,25 @@ export default function DataVisualizer() {
             <div className="flex items-center gap-4 bg-background/95 backdrop-blur-xl shadow-xl border border-border/50 px-5 h-14 rounded-full transition-all duration-300 hover:shadow-2xl">
               {/* Sort Dropdown */}
               <div className="flex items-center gap-2">
-                <ArrowUpDown className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm font-medium select-none hidden sm:inline">Sort:</span>
+                <button
+                  onClick={() => {
+                    if (sortConfig) {
+                      setSortConfig({ ...sortConfig, direction: sortConfig.direction === "asc" ? "desc" : "asc" });
+                    }
+                  }}
+                  disabled={!sortConfig}
+                  className={`flex items-center justify-center w-7 h-7 rounded-full transition-colors ${
+                    sortConfig 
+                      ? "hover:bg-muted/80 text-foreground cursor-pointer shadow-sm border border-border/40" 
+                      : "text-muted-foreground opacity-50 cursor-default"
+                  }`}
+                  title={sortConfig ? `Switch to ${sortConfig.direction === 'asc' ? 'descending' : 'ascending'}` : "Select a sort method first"}
+                >
+                  {!sortConfig && <ArrowUpDown className="w-3.5 h-3.5" />}
+                  {sortConfig?.direction === "asc" && <ArrowUp className="w-3.5 h-3.5" />}
+                  {sortConfig?.direction === "desc" && <ArrowDown className="w-3.5 h-3.5" />}
+                </button>
+                <span className="text-sm font-medium select-none hidden sm:inline ml-1">Sort:</span>
                 <Select
                   value={sortConfig === null ? "none" : sortConfig.key}
                   onValueChange={(val) => {
@@ -371,13 +388,13 @@ export default function DataVisualizer() {
                     if (val === "label") setSortConfig({ key: "label", direction: "asc" });
                   }}
                 >
-                  <SelectTrigger className="h-8 w-[90px] rounded-full text-xs font-medium border-border/50 bg-background/50 shadow-sm hover:bg-muted/50 transition-colors focus:ring-0 focus:ring-offset-0">
+                  <SelectTrigger className="h-8 w-[80px] rounded-full text-xs font-medium border-border/50 bg-background/50 shadow-sm hover:bg-muted/50 transition-colors focus:ring-0 focus:ring-offset-0">
                     <SelectValue placeholder="None" />
                   </SelectTrigger>
-                  <SelectContent className="rounded-xl shadow-xl border-border/50 min-w-[120px]">
+                  <SelectContent className="rounded-xl shadow-xl border-border/50 min-w-[100px]">
                     <SelectItem value="none" className="text-sm cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-2">None</SelectItem>
-                    <SelectItem value="value" className="text-sm cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-2">Value (High to Low)</SelectItem>
-                    <SelectItem value="label" className="text-sm cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-2">Name (A to Z)</SelectItem>
+                    <SelectItem value="value" className="text-sm cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-2">Value</SelectItem>
+                    <SelectItem value="label" className="text-sm cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-2">Name</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
