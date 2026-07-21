@@ -1,6 +1,6 @@
 import React, { type ReactNode, useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Maximize2, ImageIcon } from "lucide-react";
+import { ImageIcon } from "lucide-react";
 
 interface ChartCardProps {
   title: string;
@@ -71,10 +71,9 @@ export function ChartCard({
 
   return (
     <div 
-      className="rounded-lg border bg-card p-6 shadow-sm relative cursor-pointer hover:shadow-md transition-shadow"
+      className="rounded-lg border bg-card p-6 shadow-sm relative hover:shadow-md transition-shadow"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      onClick={handleChartClick}
     >
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold">{title}</h3>
@@ -110,17 +109,13 @@ export function ChartCard({
           >
             <ImageIcon className="w-4 h-4" />
           </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={onFullscreen}
-            title="View fullscreen"
-          >
-            <Maximize2 className="w-4 h-4" />
-          </Button>
         </div>
       </div>
-      <div ref={chartRef} className="w-full h-96 relative">
+      <div 
+        ref={chartRef} 
+        className="w-full h-96 relative cursor-pointer"
+        onClick={handleChartClick}
+      >
         {showTooltip && (
           <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
             <div className="bg-black/50 text-white px-3 py-1 rounded-md text-xs font-medium">
