@@ -12,6 +12,7 @@ import {
   RadialBarChart,
   PolarRadiusAxis,
   Label as RechartsLabel,
+  Legend,
 } from "recharts"
 import {
   ChartContainer,
@@ -73,6 +74,49 @@ export const StackedChart = React.memo(function StackedChart({
   showRadial = false,
   isFullscreen = false,
 }: StackedChartProps) {
+  const [isDark, setIsDark] = React.useState(false);
+  React.useEffect(() => {
+    const checkDark = () => setIsDark(document.documentElement.classList.contains('dark'));
+    checkDark();
+    const observer = new MutationObserver(checkDark);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
+
+  const localRef = React.useRef<HTMLDivElement | null>(null);
+  const [dimensions, setDimensions] = React.useState({ width: 0, height: 0 });
+
+  const setRefs = React.useCallback(
+    (node: HTMLDivElement | null) => {
+      localRef.current = node;
+      if (containerRef) {
+        if (typeof containerRef === "function") {
+          containerRef(node);
+        } else {
+          (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+        }
+      }
+    },
+    [containerRef]
+  );
+
+  React.useEffect(() => {
+    const node = localRef.current;
+    if (node) {
+      setDimensions({ width: node.clientWidth, height: node.clientHeight });
+      const observer = new ResizeObserver((entries) => {
+        if (entries[0]) {
+          setDimensions({
+            width: entries[0].contentRect.width,
+            height: entries[0].contentRect.height,
+          });
+        }
+      });
+      observer.observe(node);
+      return () => observer.disconnect();
+    }
+  }, []);
+
   // Transform data for stacked chart
   const stackedData = React.useMemo(() => {
     const total = data.reduce((sum, d) => sum + Math.max(0, d.value || 0), 0)
@@ -114,20 +158,112 @@ export const StackedChart = React.memo(function StackedChart({
     return data.reduce((sum, d) => sum + Math.max(0, d.value || 0), 0)
   }, [data])
 
+  const { legendRows, legendHeight } = React.useMemo(() => {
+    const { width } = dimensions;
+    if (!width) return { legendRows: [], legendHeight: 0 };
+    
+    const spacingY = 25;
+    const rectSize = 14; 
+    const gap = 8;
+    const itemMargin = 20;
+    
+    const rows: { items: Datum[]; width: number; itemWidths: number[] }[] = [];
+    let currentRow: Datum[] = [];
+    let currentRowWidth = 0;
+    let currentRowItemWidths: number[] = [];
+
+    data.forEach((item: Datum) => {
+      const percentage = totalValue > 0 ? Math.round((Math.max(0, item.value || 0) / totalValue) * 100) : 0;
+      const labelText = `${item.label}: ${percentage}%`;
+      const textWidth = labelText.length * (isFullscreen ? 8.5 : 7.5); 
+      const itemWidth = rectSize + gap + textWidth + itemMargin;
+
+      if (currentRowWidth + itemWidth - itemMargin > width && currentRow.length > 0) {
+        rows.push({ items: currentRow, width: currentRowWidth - itemMargin, itemWidths: currentRowItemWidths });
+        currentRow = [item];
+        currentRowWidth = itemWidth;
+        currentRowItemWidths = [itemWidth];
+      } else {
+        currentRow.push(item);
+        currentRowWidth += itemWidth;
+        currentRowItemWidths.push(itemWidth);
+      }
+    });
+
+    if (currentRow.length > 0) {
+      rows.push({ items: currentRow, width: currentRowWidth - itemMargin, itemWidths: currentRowItemWidths });
+    }
+
+    return { 
+      legendRows: rows, 
+      legendHeight: rows.length * spacingY 
+    };
+  }, [data, dimensions, isFullscreen]);
+
+  const renderSvgLegend = () => {
+    if (!dimensions.width || !dimensions.height || legendRows.length === 0) return null;
+
+    const spacingY = 25;
+    const rectSize = 14; 
+    const gap = 8;
+    const textColor = isDark ? "#e4e4e7" : "#3f3f46"; 
+    
+    const startY = dimensions.height - legendHeight;
+
+    return (
+      <g className="svg-legend">
+        {legendRows.flatMap((row, rowIndex) => {
+          let currentX = (dimensions.width - row.width) / 2;
+
+          return row.items.map((item, colIndex) => {
+            const x = currentX;
+            const y = startY + (rowIndex * spacingY);
+            currentX += row.itemWidths[colIndex];
+
+            return (
+              <g key={`legend-${item.id}`}>
+                <rect 
+                  x={x} 
+                  y={y - 12} 
+                  width={rectSize} 
+                  height={rectSize} 
+                  fill={item.color} 
+                  rx={3}
+                />
+                <text
+                  x={x + rectSize + gap}
+                  y={y}
+                  fill={textColor}
+                  fontSize={isFullscreen ? 14 : 12}
+                  fontWeight="500"
+                  fontFamily="sans-serif"
+                  style={{ pointerEvents: 'none' }}
+                >
+                  {item.label}: {totalValue > 0 ? Math.round((Math.max(0, item.value || 0) / totalValue) * 100) : 0}%
+                </text>
+              </g>
+            );
+          });
+        })}
+      </g>
+    );
+  };
+
   // Render radial chart
   if (showRadial) {
     const innerRadius = isFullscreen ? 300 : 150
     const outerRadius = isFullscreen ? 600 : 350
     
     return (
-      <div ref={containerRef} className="h-full w-full flex items-center justify-center overflow-hidden">
-        <div className="flex items-center justify-center w-full h-full max-w-full max-h-full">
+      <div ref={setRefs} className="h-full w-full flex flex-col items-center justify-center overflow-hidden">
+        <div className="w-full" style={{ height: dimensions.height ? dimensions.height - legendHeight : '100%' }}>
           <ChartContainer config={chartConfig} className="w-full h-full">
             <RadialBarChart
               data={radialData}
               endAngle={180}
               innerRadius={innerRadius}
               outerRadius={outerRadius}
+              style={{ overflow: 'visible' }}
             >
             <ChartTooltip
               cursor={false}
@@ -167,6 +303,7 @@ export const StackedChart = React.memo(function StackedChart({
               <RadialBar
                 key={d.id}
                 dataKey={d.label}
+                name={d.label}
                 stackId="a"
                 cornerRadius={5}
                 fill={d.color}
@@ -176,6 +313,9 @@ export const StackedChart = React.memo(function StackedChart({
           </RadialBarChart>
           </ChartContainer>
         </div>
+        <svg width={dimensions.width} height={legendHeight} style={{ overflow: 'visible', flexShrink: 0 }}>
+          {renderSvgLegend()}
+        </svg>
       </div>
     )
   }
@@ -183,13 +323,13 @@ export const StackedChart = React.memo(function StackedChart({
   // Horizontal mode: bars grow to the right
   if (isHorizontal) {
     return (
-      <div ref={containerRef} className="h-full w-full">
+      <div ref={setRefs} className="h-full w-full">
         <ResponsiveContainer width="100%" height="100%">
           <RechartsBarChart
             data={stackedData}
             stackOffset="expand"
             layout="vertical"
-            margin={{ top: 5, right: 15, bottom: 5, left: 5 }}
+            margin={{ top: 5, right: 15, bottom: legendHeight + 10, left: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
             <YAxis
@@ -230,6 +370,7 @@ export const StackedChart = React.memo(function StackedChart({
                 )}
               </Bar>
             ))}
+            {renderSvgLegend()}
           </RechartsBarChart>
         </ResponsiveContainer>
       </div>
@@ -238,13 +379,13 @@ export const StackedChart = React.memo(function StackedChart({
 
   // Vertical mode: bars grow upward
   return (
-    <div ref={containerRef} className="h-full w-full">
+    <div ref={setRefs} className="h-full w-full">
       <ResponsiveContainer width="100%" height="100%">
         <RechartsBarChart
           data={stackedData}
           stackOffset="expand"
           layout="horizontal"
-          margin={{ top: 5, right: 15, bottom: 5, left: 5 }}
+          margin={{ top: 5, right: 15, bottom: legendHeight + 10, left: 5 }}
         >
           <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
           <XAxis
@@ -286,6 +427,7 @@ export const StackedChart = React.memo(function StackedChart({
               )}
             </Bar>
           ))}
+          {renderSvgLegend()}
         </RechartsBarChart>
       </ResponsiveContainer>
     </div>

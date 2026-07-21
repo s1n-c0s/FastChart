@@ -219,6 +219,25 @@ export default function DataVisualizer() {
     }
   }, [fullscreenChart, closeFullscreen]);
 
+  // --- 9. Click outside dock handler ---
+  const dockRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (isDockOpen && dockRef.current && !dockRef.current.contains(target)) {
+        setIsDockOpen(false);
+      }
+    };
+
+    if (isDockOpen) {
+      document.addEventListener("mousedown", handleClickOutside, true);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside, true);
+    };
+  }, [isDockOpen]);
+
   const chartRefs = { bar: barCardRef, pie: pieCardRef, stacked: stackedCardRef, line: lineCardRef };
 
   return (
@@ -236,6 +255,7 @@ export default function DataVisualizer() {
 
         {/* --- Data Input Section (Float Dock) --- */}
         <div 
+          ref={dockRef}
           className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center transition-all duration-300 pointer-events-none`}
         >
           {/* Paper Panel */}
