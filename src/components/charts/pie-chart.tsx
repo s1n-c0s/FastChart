@@ -29,10 +29,47 @@ const CustomTooltip = React.memo(({ active, payload }: TooltipProps<number, stri
   return null;
 });
 
+
+
 export const PieChart = React.memo(function PieChart({ data, total, containerRef, isFullscreen = false, showLabels = false }: PieChartProps) {
-  // กำหนดสีตัวอักษรให้คงที่ (หรือใช้การเช็ค Dark Mode จากตัวแปรอื่นถ้าต้องการ)
+  const [isDark, setIsDark] = React.useState(false);
+  
+  React.useEffect(() => {
+    setIsDark(document.documentElement.classList.contains("dark"));
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.classList.contains("dark"));
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
+
+  const [size, setSize] = React.useState(() => {
+    if (isFullscreen) {
+      const minDimension = Math.min(window.innerWidth * 0.7, window.innerHeight * 0.7);
+      return Math.max(450, minDimension);
+    }
+    return 320; 
+  });
+
+  const [chartWidth, setChartWidth] = React.useState(size);
+
+  React.useEffect(() => {
+    if (containerRef && 'current' in containerRef && containerRef.current) {
+      setChartWidth(containerRef.current.clientWidth);
+      const observer = new ResizeObserver((entries) => {
+        if (entries[0]) {
+          setChartWidth(entries[0].contentRect.width);
+        }
+      });
+      observer.observe(containerRef.current);
+      return () => observer.disconnect();
+    }
+  }, [containerRef]);
+
   const textColor = "#71717a"; // muted-foreground
-  const textMainColor = "currentColor"; // จะใช้สีปัจจุบันของระบบ หรือระบุเป็น #000000 / #ffffff
+  const textMainColor = isDark ? "#fafafa" : "#09090b"; // foreground hex
+  const bgColor = isDark ? "#18181b" : "#ffffff"; // popover hex
+  const borderColor = isDark ? "#27272a" : "#e4e4e7"; // border hex
 
   const renderCustomLabel = React.useCallback((props: any) => {
     const { x, y, cx, name, value, fill, percent } = props;
@@ -56,7 +93,8 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
           width={boxWidth} 
           height={boxHeight} 
           rx={6} 
-          style={{ fill: 'var(--color-popover)', stroke: 'var(--color-border)' }}
+          fill={bgColor}
+          stroke={borderColor}
           strokeWidth={1}
         />
         <rect
@@ -70,7 +108,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
         <text 
           x={fx + 10} 
           y={fy + 20} 
-          style={{ fill: 'var(--color-popover-foreground)' }}
+          fill={textMainColor}
           fontSize={isFullscreen ? 13 : 11} 
           fontWeight="600"
           fontFamily="sans-serif"
@@ -80,7 +118,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
         <text 
           x={fx + 10} 
           y={fy + 40} 
-          style={{ fill: 'var(--color-popover-foreground)' }}
+          fill={textMainColor}
           fontSize={isFullscreen ? 14 : 11} 
           fontWeight="700"
           fontFamily="sans-serif"
@@ -91,7 +129,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
           x={fx + boxWidth - 8} 
           y={fy + 40} 
           textAnchor="end"
-          style={{ fill: 'var(--color-muted-foreground)' }}
+          fill={textColor}
           fontSize={isFullscreen ? 13 : 11} 
           fontWeight="500"
           fontFamily="sans-serif"
@@ -100,15 +138,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
         </text>
       </g>
     );
-  }, [isFullscreen]);
-  // 1. เพิ่มความสูง (height) เพื่อเผื่อพื้นที่ให้ Legend ด้านล่างภายใน SVG
-  const [size, setSize] = React.useState(() => {
-    if (isFullscreen) {
-      const minDimension = Math.min(window.innerWidth * 0.7, window.innerHeight * 0.7);
-      return Math.max(450, minDimension);
-    }
-    return 320; // เพิ่มจาก 250 เพื่อให้มีที่วาง Legend
-  });
+  }, [isFullscreen, isDark, bgColor, borderColor, textMainColor, textColor]);
 
   React.useEffect(() => {
     if (!isFullscreen) return;
@@ -121,6 +151,76 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
   }, [isFullscreen]);
 
   // Removed manual legend calculation in favor of Recharts Legend
+
+  const renderSvgLegend = () => {
+    const width = chartWidth;
+    const height = size;
+    if (!width || !height) return null;
+
+    const spacingY = 25;
+    const rectSize = 14; 
+    const gap = 8;
+    const itemMargin = 20;
+    
+    const rows: { items: Datum[]; width: number; itemWidths: number[] }[] = [];
+    let currentRow: Datum[] = [];
+    let currentRowWidth = 0;
+    let currentRowItemWidths: number[] = [];
+
+    data.forEach((item: Datum) => {
+      const labelText = `${item.label}: ${item.value.toLocaleString()}`;
+      const textWidth = labelText.length * (isFullscreen ? 8.5 : 7.5); 
+      const itemWidth = rectSize + gap + textWidth + itemMargin;
+
+      if (currentRowWidth + itemWidth - itemMargin > width && currentRow.length > 0) {
+        rows.push({ items: currentRow, width: currentRowWidth - itemMargin, itemWidths: currentRowItemWidths });
+        currentRow = [item];
+        currentRowWidth = itemWidth;
+        currentRowItemWidths = [itemWidth];
+      } else {
+        currentRow.push(item);
+        currentRowWidth += itemWidth;
+        currentRowItemWidths.push(itemWidth);
+      }
+    });
+
+    if (currentRow.length > 0) {
+      rows.push({ items: currentRow, width: currentRowWidth - itemMargin, itemWidths: currentRowItemWidths });
+    }
+
+    const startY = height - (rows.length * spacingY) + 5;
+
+    return (
+      <g className="svg-legend">
+        {rows.flatMap((row, rowIndex) => {
+          let currentX = (width - row.width) / 2;
+
+          return row.items.map((item, colIndex) => {
+            const x = currentX;
+            const y = startY + (rowIndex * spacingY);
+            currentX += row.itemWidths[colIndex];
+
+            return (
+              <g key={`svg-leg-${item.id}`}>
+                <rect x={x} y={y - 12} width={rectSize} height={rectSize} fill={item.color} rx={4} />
+                <text
+                  x={x + rectSize + gap}
+                  y={y}
+                  fill={textMainColor}
+                  fontSize={isFullscreen ? 14 : 12}
+                  fontWeight="500"
+                  fontFamily="sans-serif"
+                  style={{ pointerEvents: 'none' }}
+                >
+                  {item.label}: {item.value.toLocaleString()}
+                </text>
+              </g>
+            );
+          });
+        })}
+      </g>
+    );
+  };
 
   return (
     <div ref={containerRef} className="flex h-full w-full items-center justify-center flex-col">
@@ -174,18 +274,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
               <Cell key={item.id} fill={item.color} stroke="none" />
             ))}
           </Pie>
-          <Legend
-            verticalAlign="bottom"
-            align="center"
-            iconType="rect"
-            iconSize={12}
-            formatter={(value: any) => (
-              <span style={{ color: textMainColor, fontSize: isFullscreen ? 14 : 12, fontWeight: 500, paddingLeft: 4 }}>
-                {value}
-              </span>
-            )}
-            wrapperStyle={{ paddingTop: 20 }}
-          />
+          {renderSvgLegend()}
           </RechartsPieChart>
         </ResponsiveContainer>
       </div>
