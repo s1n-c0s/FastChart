@@ -89,16 +89,34 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
   const bgColor = isDark ? "#18181b" : "#ffffff"; // popover hex
   const borderColor = isDark ? "#27272a" : "#e4e4e7"; // border hex
 
-  const top4Labels = React.useMemo(() => {
+  const top4Ids = React.useMemo(() => {
     if (data.length <= 5) return null;
-    return [...data].sort((a, b) => b.value - a.value).slice(0, 4).map(d => d.label);
+    return [...data].sort((a, b) => b.value - a.value).slice(0, 4).map(d => d.id);
   }, [data]);
 
+  const otherSum = React.useMemo(() => {
+    if (!top4Ids) return 0;
+    return data.filter(d => !top4Ids.includes(d.id)).reduce((sum, d) => sum + d.value, 0);
+  }, [data, top4Ids]);
+
+  const lastOtherId = React.useMemo(() => {
+    if (!top4Ids) return null;
+    const others = data.filter(d => !top4Ids.includes(d.id));
+    return others.length > 0 ? others[others.length - 1].id : null;
+  }, [data, top4Ids]);
+
   const renderCustomLabel = React.useCallback((props: any) => {
-    const { x, y, cx, name, value, fill, percent } = props;
+    let { x, y, cx, name, value, percent, payload } = props;
+    let color = payload?.color || "#a1a1aa";
     
-    if (top4Labels && !top4Labels.includes(name)) {
-      return null;
+    if (top4Ids && !top4Ids.includes(payload.id)) {
+      if (payload.id !== lastOtherId) return null;
+      
+      // Override for the 'Other' label box
+      name = "Other";
+      value = otherSum;
+      percent = otherSum / total;
+      color = isDark ? "#52525b" : "#a1a1aa";
     }
     const isLeft = x < cx;
     
@@ -130,7 +148,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
           width={4}
           height={boxHeight}
           rx={2}
-          fill={fill}
+          fill={color}
         />
         <text 
           x={fx + 10} 
@@ -165,7 +183,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
         </text>
       </g>
     );
-  }, [isFullscreen, isDark, bgColor, borderColor, textMainColor, textColor, top4Labels]);
+  }, [isFullscreen, isDark, bgColor, borderColor, textMainColor, textColor, top4Ids, lastOtherId, otherSum, total]);
 
   React.useEffect(() => {
     if (!isFullscreen) return;
@@ -265,43 +283,45 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
               outerRadius={isFullscreen ? (showLabels ? size * 0.28 : size * 0.4) : (showLabels ? 75 : 100)}
               paddingAngle={2}
               cornerRadius={6}
-            isAnimationActive={true}
-            label={showLabels ? renderCustomLabel : false}
-            labelLine={showLabels ? { stroke: textColor, strokeWidth: 1, opacity: 0.5 } : false}
-          >
-            <Label
-              content={({ viewBox }) => {
-                if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                  return (
-                    <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
-                      <tspan
-                        x={viewBox.cx}
-                        y={(viewBox.cy || 0) - (isFullscreen ? 25 : 15)}
-                        fill={textColor} // กำหนดสี Muted
-                        fontSize={isFullscreen ? 18 : 14}
-                      >
-                        Total
-                      </tspan>
-                      <tspan
-                        x={viewBox.cx}
-                        y={(viewBox.cy || 0) + (isFullscreen ? 20 : 12)}
-                        fill={textMainColor}
-                        fontSize={isFullscreen ? 48 : 24}
-                        fontWeight="bold" // กำหนดความหนา Bold ชัดเจน
-                      >
-                        {total.toLocaleString()}
-                      </tspan>
-                    </text>
-                  );
-                }
-                return null;
-              }}
-            />
-            {data.map((item: Datum) => (
-              <Cell key={item.id} fill={item.color} stroke="none" />
-            ))}
-          </Pie>
-          {renderSvgLegend()}
+              isAnimationActive={true}
+              stroke="none"
+              label={showLabels ? renderCustomLabel : undefined}
+              labelLine={showLabels ? { stroke: textColor, strokeWidth: 1, opacity: 0.5 } : false}
+            >
+              <Label
+                content={({ viewBox }) => {
+                  if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                    return (
+                      <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
+                        <tspan
+                          x={viewBox.cx}
+                          y={(viewBox.cy || 0) - (isFullscreen ? 25 : 15)}
+                          fill={textColor} 
+                          fontSize={isFullscreen ? 18 : 14}
+                        >
+                          Total
+                        </tspan>
+                        <tspan
+                          x={viewBox.cx}
+                          y={(viewBox.cy || 0) + (isFullscreen ? 20 : 12)}
+                          fill={textMainColor}
+                          fontSize={isFullscreen ? 48 : 24}
+                          fontWeight="bold" 
+                        >
+                          {total.toLocaleString()}
+                        </tspan>
+                      </text>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              {data.map((item: Datum) => (
+                <Cell key={item.id} fill={item.color} stroke="none" />
+              ))}
+            </Pie>
+            
+            {renderSvgLegend()}
           </RechartsPieChart>
         </ResponsiveContainer>
       </div>
