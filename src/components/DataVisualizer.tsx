@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import toast from "react-hot-toast";
@@ -33,7 +33,7 @@ import {
   LineChart,
   StackedChart
 } from "../components/charts";
-import { Database, X, ChevronDown } from "lucide-react";
+import { Database, X, ChevronDown, Copy } from "lucide-react";
 
 export default function DataVisualizer() {
   // --- 1. จัดการข้อมูล (Data Layer) ---
@@ -58,6 +58,8 @@ export default function DataVisualizer() {
   const [showLabels, setShowLabels] = useState(false);
   const [showGradientArea, setShowGradientArea] = useState(true);
   const [isDockOpen, setIsDockOpen] = useState(false);
+  
+  const fsRef = useRef<HTMLDivElement>(null);
 
   // --- 6. Handlers for data transformation ---
   const parseMarkdownTable = useCallback((md: string): Datum[] => {
@@ -314,6 +316,18 @@ export default function DataVisualizer() {
               <div className="rounded-xl border bg-card p-4 sm:p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-base font-medium">Paste Data</h3>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 gap-1.5 shadow-sm hover:bg-muted/50"
+                    onClick={() => {
+                      navigator.clipboard.writeText(markdownInput);
+                      toast.success("Data copied to clipboard!", { duration: 900 });
+                    }}
+                  >
+                    <Copy className="w-3.5 h-3.5" /> 
+                    <span className="hidden sm:inline">Copy Data</span>
+                  </Button>
                 </div>
                 <div className="grid grid-cols-1 gap-4">
                   <textarea
@@ -400,6 +414,7 @@ export default function DataVisualizer() {
                 data={sortedData} 
                 total={total} 
                 containerRef={pieCardRef as React.RefObject<HTMLDivElement>}
+                showLabels={showLabels}
               />
             </ChartCard>
           </div>
@@ -471,31 +486,31 @@ export default function DataVisualizer() {
         isOpen={fullscreenChart === "bar"}
         onClose={closeFullscreen}
         chartType="bar"
-        onCopySvg={() => copyChartSvg(chartRefs.bar.current)}
-        onCopyPng={() => copyChartPng(chartRefs.bar.current)}
+        onCopySvg={() => copyChartSvg(fsRef.current)}
+        onCopyPng={() => copyChartPng(fsRef.current)}
         showOrientation
         isHorizontal={barHorizontal}
         onToggleOrientation={() => setBarHorizontal(!barHorizontal)}
       >
-        <BarChart data={sortedData} isHorizontal={barHorizontal} showLabels={showLabels} />
+        <BarChart containerRef={fsRef} data={sortedData} isHorizontal={barHorizontal} showLabels={showLabels} />
       </FullscreenModal>
 
       <FullscreenModal
         isOpen={fullscreenChart === "pie"}
         onClose={closeFullscreen}
         chartType="pie"
-        onCopySvg={() => copyChartSvg(chartRefs.pie.current)}
-        onCopyPng={() => copyChartPng(chartRefs.pie.current)}
+        onCopySvg={() => copyChartSvg(fsRef.current)}
+        onCopyPng={() => copyChartPng(fsRef.current)}
       >
-        <PieChart data={sortedData} total={total} isFullscreen={true} />
+        <PieChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} total={total} isFullscreen={true} showLabels={showLabels} />
       </FullscreenModal>
 
       <FullscreenModal
         isOpen={fullscreenChart === "stacked"}
         onClose={closeFullscreen}
         chartType="stacked"
-        onCopySvg={() => copyChartSvg(chartRefs.stacked.current)}
-        onCopyPng={() => copyChartPng(chartRefs.stacked.current)}
+        onCopySvg={() => copyChartSvg(fsRef.current)}
+        onCopyPng={() => copyChartPng(fsRef.current)}
         showOrientation={!stackedRadial}
         isHorizontal={stackedHorizontal}
         onToggleOrientation={() => setStackedHorizontal(!stackedHorizontal)}
@@ -512,15 +527,15 @@ export default function DataVisualizer() {
           </div>
         }
       >
-        <StackedChart data={sortedData} isHorizontal={stackedHorizontal} showLabels={showLabels} showRadial={stackedRadial} isFullscreen={fullscreenChart === "stacked"} />
+        <StackedChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} isHorizontal={stackedHorizontal} showLabels={showLabels} showRadial={stackedRadial} isFullscreen={fullscreenChart === "stacked"} />
       </FullscreenModal>
 
       <FullscreenModal
         isOpen={fullscreenChart === "line"}
         onClose={closeFullscreen}
         chartType="line"
-        onCopySvg={() => copyChartSvg(chartRefs.line.current)}
-        onCopyPng={() => copyChartPng(chartRefs.line.current)}
+        onCopySvg={() => copyChartSvg(fsRef.current)}
+        onCopyPng={() => copyChartPng(fsRef.current)}
         customActions={
           <div className="flex items-center gap-2">
             <label htmlFor="fullscreen-show-gradient" className="text-xs text-muted-foreground cursor-pointer">
@@ -534,7 +549,7 @@ export default function DataVisualizer() {
           </div>
         }
       >
-        <LineChart data={sortedData} showLabels={showLabels} showGradientArea={showGradientArea} />
+        <LineChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} showLabels={showLabels} showGradientArea={showGradientArea} />
       </FullscreenModal>
     </>
   );
