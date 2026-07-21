@@ -45,7 +45,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
 
   const [size, setSize] = React.useState(() => {
     if (isFullscreen) {
-      const minDimension = Math.min(window.innerWidth * 0.7, window.innerHeight * 0.7);
+      const minDimension = Math.min(window.innerWidth * 0.85, (window.innerHeight * 0.9) - 120);
       return Math.max(450, minDimension);
     }
     return 320; 
@@ -219,20 +219,15 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
   React.useEffect(() => {
     if (!isFullscreen) return;
     const handleResize = () => {
-      const minDimension = Math.min(window.innerWidth * 0.7, window.innerHeight * 0.7);
+      const minDimension = Math.min(window.innerWidth * 0.85, (window.innerHeight * 0.9) - 120);
       setSize(Math.max(450, minDimension));
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [isFullscreen]);
 
-  // Removed manual legend calculation in favor of Recharts Legend
-
-  const renderSvgLegend = () => {
-    const width = chartWidth;
-    const height = size;
-    if (!width || !height) return null;
-
+  const { legendRows, legendHeight } = React.useMemo(() => {
+    const width = chartWidth || size;
     const spacingY = 25;
     const rectSize = 14; 
     const gap = 8;
@@ -264,12 +259,25 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
       rows.push({ items: currentRow, width: currentRowWidth - itemMargin, itemWidths: currentRowItemWidths });
     }
 
-    const startY = height - (rows.length * spacingY) + 5;
+    return { 
+      legendRows: rows, 
+      legendHeight: rows.length * spacingY 
+    };
+  }, [data, chartWidth, size, isFullscreen]);
+
+  const renderSvgLegend = () => {
+    if (!chartWidth || !size || legendRows.length === 0) return null;
+
+    const spacingY = 25;
+    const rectSize = 14; 
+    const gap = 8;
+    
+    const startY = size - legendHeight + 5;
 
     return (
       <g className="svg-legend">
-        {rows.flatMap((row, rowIndex) => {
-          let currentX = (width - row.width) / 2;
+        {legendRows.flatMap((row, rowIndex) => {
+          let currentX = (chartWidth - row.width) / 2;
 
           return row.items.map((item, colIndex) => {
             const x = currentX;
@@ -309,9 +317,9 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
               dataKey="value"
               nameKey="label"
               cx="50%"
-              cy="50%"
-              innerRadius={isFullscreen ? (showLabels ? size * 0.18 : size * 0.24) : (showLabels ? 45 : 60)}
-              outerRadius={isFullscreen ? (showLabels ? size * 0.28 : size * 0.4) : (showLabels ? 75 : 100)}
+              cy={size / 2 - (legendHeight / 2)}
+              innerRadius={showLabels ? size * 0.22 : size * 0.28}
+              outerRadius={showLabels ? size * 0.32 : size * 0.42}
               paddingAngle={2}
               cornerRadius={6}
               isAnimationActive={true}
@@ -336,7 +344,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
                           x={viewBox.cx}
                           y={(viewBox.cy || 0) + (isFullscreen ? 20 : 12)}
                           fill={textMainColor}
-                          fontSize={isFullscreen ? 48 : 24}
+                          fontSize={isFullscreen ? 44 : 26}
                           fontWeight="bold" 
                         >
                           {total.toLocaleString()}
@@ -358,9 +366,9 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
               dataKey="value"
               nameKey="label"
               cx="50%"
-              cy="50%"
-              innerRadius={isFullscreen ? (showLabels ? size * 0.18 : size * 0.24) : (showLabels ? 45 : 60)}
-              outerRadius={isFullscreen ? (showLabels ? size * 0.28 : size * 0.4) : (showLabels ? 75 : 100)}
+              cy={size / 2 - (legendHeight / 2)}
+              innerRadius={showLabels ? size * 0.22 : size * 0.28}
+              outerRadius={showLabels ? size * 0.32 : size * 0.42}
               paddingAngle={2}
               cornerRadius={6}
               isAnimationActive={true}
