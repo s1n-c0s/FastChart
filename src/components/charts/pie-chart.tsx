@@ -54,6 +54,8 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
   const [chartWidth, setChartWidth] = React.useState(size);
   const localRef = React.useRef<HTMLDivElement | null>(null);
 
+
+
   const setRefs = React.useCallback(
     (node: HTMLDivElement | null) => {
       localRef.current = node;
@@ -87,8 +89,17 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
   const bgColor = isDark ? "#18181b" : "#ffffff"; // popover hex
   const borderColor = isDark ? "#27272a" : "#e4e4e7"; // border hex
 
+  const top4Labels = React.useMemo(() => {
+    if (data.length <= 5) return null;
+    return [...data].sort((a, b) => b.value - a.value).slice(0, 4).map(d => d.label);
+  }, [data]);
+
   const renderCustomLabel = React.useCallback((props: any) => {
     const { x, y, cx, name, value, fill, percent } = props;
+    
+    if (top4Labels && !top4Labels.includes(name)) {
+      return null;
+    }
     const isLeft = x < cx;
     
     const boxWidth = isFullscreen ? 160 : 110;
@@ -154,7 +165,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
         </text>
       </g>
     );
-  }, [isFullscreen, isDark, bgColor, borderColor, textMainColor, textColor]);
+  }, [isFullscreen, isDark, bgColor, borderColor, textMainColor, textColor, top4Labels]);
 
   React.useEffect(() => {
     if (!isFullscreen) return;
