@@ -314,17 +314,6 @@ export default function DataVisualizer() {
               <div className="rounded-xl border bg-card p-4 sm:p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-base font-medium">Paste Data</h3>
-                  <div className="flex items-center gap-2 bg-muted/30 border border-border/50 px-3 py-1.5 rounded-full">
-                    <label htmlFor="show-labels" className="text-xs font-medium cursor-pointer select-none">
-                      Show labels on charts
-                    </label>
-                    <Switch
-                      id="show-labels"
-                      checked={showLabels}
-                      onCheckedChange={setShowLabels}
-                      className="scale-90"
-                    />
-                  </div>
                 </div>
                 <div className="grid grid-cols-1 gap-4">
                   <textarea
@@ -346,24 +335,37 @@ export default function DataVisualizer() {
             </div>
           </div>
 
-          {/* Toggle Button */}
-          <Button 
-            size="lg" 
-            className={`pointer-events-auto rounded-full shadow-xl h-14 px-6 gap-2 font-medium text-base transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 active:scale-95 ${
-              isDockOpen ? "bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-secondary/20" : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/20"
-            }`}
-            onClick={() => setIsDockOpen(!isDockOpen)}
-          >
-            {isDockOpen ? (
-              <>
-                <ChevronDown className="w-5 h-5" /> Hide Data
-              </>
-            ) : (
-              <>
-                <Database className="w-5 h-5" /> Edit Data
-              </>
-            )}
-          </Button>
+          {/* Toggle Buttons */}
+          <div className="pointer-events-auto flex items-center gap-3">
+            <div className="flex items-center gap-3 bg-background/95 backdrop-blur-xl shadow-xl border border-border/50 px-5 h-14 rounded-full transition-all duration-300 hover:shadow-2xl">
+              <label htmlFor="show-labels-dock" className="text-sm font-medium cursor-pointer select-none">
+                Show Labels
+              </label>
+              <Switch
+                id="show-labels-dock"
+                checked={showLabels}
+                onCheckedChange={setShowLabels}
+              />
+            </div>
+            
+            <Button 
+              size="lg" 
+              className={`rounded-full shadow-xl h-14 px-6 gap-2 font-medium text-base transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 active:scale-95 ${
+                isDockOpen ? "bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-secondary/20" : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/20"
+              }`}
+              onClick={() => setIsDockOpen(!isDockOpen)}
+            >
+              {isDockOpen ? (
+                <>
+                  <ChevronDown className="w-5 h-5" /> Hide Data
+                </>
+              ) : (
+                <>
+                  <Database className="w-5 h-5" /> Edit Data
+                </>
+              )}
+            </Button>
+          </div>
         </div>
 
         {/* --- Charts Section --- */}
