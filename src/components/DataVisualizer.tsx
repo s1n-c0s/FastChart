@@ -33,7 +33,14 @@ import {
   LineChart,
   StackedChart
 } from "../components/charts";
-import { Database, X, ChevronDown, Copy } from "lucide-react";
+import { Database, X, ChevronDown, Copy, ArrowUpDown } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function DataVisualizer() {
   // --- 1. จัดการข้อมูล (Data Layer) ---
@@ -41,7 +48,7 @@ export default function DataVisualizer() {
     data, setData, total, updateLabel, updateValue, updateColor, removeRow 
   } = useDataManipulation(INITIAL_DATA);
   
-  const { sortedData, sortConfig, requestSort } = useSort(data);
+  const { sortedData, sortConfig, requestSort, setSortConfig } = useSort(data);
 
   // --- 2. จัดการแผนภูมิ (Chart Layer) ---
   const {
@@ -351,15 +358,43 @@ export default function DataVisualizer() {
 
           {/* Toggle Buttons */}
           <div className="pointer-events-auto flex items-center gap-3">
-            <div className="flex items-center gap-3 bg-background/95 backdrop-blur-xl shadow-xl border border-border/50 px-5 h-14 rounded-full transition-all duration-300 hover:shadow-2xl">
-              <label htmlFor="show-labels-dock" className="text-sm font-medium cursor-pointer select-none">
-                Show Labels
-              </label>
-              <Switch
-                id="show-labels-dock"
-                checked={showLabels}
-                onCheckedChange={setShowLabels}
-              />
+            <div className="flex items-center gap-4 bg-background/95 backdrop-blur-xl shadow-xl border border-border/50 px-5 h-14 rounded-full transition-all duration-300 hover:shadow-2xl">
+              {/* Sort Dropdown */}
+              <div className="flex items-center gap-2">
+                <ArrowUpDown className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm font-medium select-none hidden sm:inline">Sort:</span>
+                <Select
+                  value={sortConfig === null ? "none" : sortConfig.key}
+                  onValueChange={(val) => {
+                    if (val === "none") setSortConfig(null);
+                    if (val === "value") setSortConfig({ key: "value", direction: "desc" });
+                    if (val === "label") setSortConfig({ key: "label", direction: "asc" });
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-[90px] rounded-full text-xs font-medium border-border/50 bg-background/50 shadow-sm hover:bg-muted/50 transition-colors focus:ring-0 focus:ring-offset-0">
+                    <SelectValue placeholder="None" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl shadow-xl border-border/50 min-w-[120px]">
+                    <SelectItem value="none" className="text-sm cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-2">None</SelectItem>
+                    <SelectItem value="value" className="text-sm cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-2">Value (High to Low)</SelectItem>
+                    <SelectItem value="label" className="text-sm cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-2">Name (A to Z)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="w-px h-6 bg-border/50" />
+
+              {/* Show Labels Toggle */}
+              <div className="flex items-center gap-2.5">
+                <label htmlFor="show-labels-dock" className="text-sm font-medium cursor-pointer select-none">
+                  Labels
+                </label>
+                <Switch
+                  id="show-labels-dock"
+                  checked={showLabels}
+                  onCheckedChange={setShowLabels}
+                />
+              </div>
             </div>
             
             <Button 
