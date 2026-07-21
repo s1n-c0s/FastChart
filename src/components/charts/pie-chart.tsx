@@ -105,8 +105,39 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     return others.length > 0 ? others[others.length - 1].id : null;
   }, [data, top4Ids]);
 
+  const firstOtherId = React.useMemo(() => {
+    if (!top4Ids) return null;
+    const others = data.filter(d => !top4Ids.includes(d.id));
+    return others.length > 0 ? others[0].id : null;
+  }, [data, top4Ids]);
+
+  const prevDataRef = React.useRef(data);
+  if (prevDataRef.current !== data) {
+    prevDataRef.current = data;
+  }
+
+  const renderCustomLabelLine = React.useCallback((props: any) => {
+    const { payload, points } = props;
+    
+    if (top4Ids && !top4Ids.includes(payload.id)) {
+      return null;
+    }
+    
+    if (!points) return null;
+    
+    return (
+      <polyline
+        points={points.map((p: any) => `${p.x},${p.y}`).join(' ')}
+        stroke={textColor}
+        strokeWidth={1}
+        fill="none"
+        opacity={0.5}
+      />
+    );
+  }, [top4Ids, textColor]);
+
   const renderCustomLabel = React.useCallback((props: any) => {
-    let { x, y, cx, name, value, percent, payload } = props;
+    let { x, y, cx, cy, name, value, percent, payload, midAngle, outerRadius } = props;
     let color = payload?.color || "#a1a1aa";
     
     if (top4Ids && !top4Ids.includes(payload.id)) {
@@ -286,7 +317,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
               isAnimationActive={true}
               stroke="none"
               label={showLabels ? renderCustomLabel : undefined}
-              labelLine={showLabels ? { stroke: textColor, strokeWidth: 1, opacity: 0.5 } : false}
+              labelLine={showLabels ? renderCustomLabelLine : false}
             >
               <Label
                 content={({ viewBox }) => {
@@ -319,6 +350,33 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
               {data.map((item: Datum) => (
                 <Cell key={item.id} fill={item.color} stroke="none" />
               ))}
+            </Pie>
+            
+            {/* Black Overlay Pie for 'Other' slices */}
+            <Pie
+              data={data}
+              dataKey="value"
+              nameKey="label"
+              cx="50%"
+              cy="50%"
+              innerRadius={isFullscreen ? (showLabels ? size * 0.18 : size * 0.24) : (showLabels ? 45 : 60)}
+              outerRadius={isFullscreen ? (showLabels ? size * 0.28 : size * 0.4) : (showLabels ? 75 : 100)}
+              paddingAngle={2}
+              cornerRadius={6}
+              isAnimationActive={true}
+              stroke="none"
+              style={{ pointerEvents: 'none' }}
+            >
+              {data.map((item: Datum) => {
+                const isOther = top4Ids && !top4Ids.includes(item.id);
+                return (
+                  <Cell 
+                    key={`overlay-${item.id}`} 
+                    fill={isOther ? "rgba(0,0,0,0.3)" : "transparent"} 
+                    stroke="none" 
+                  />
+                );
+              })}
             </Pie>
             
             {renderSvgLegend()}
