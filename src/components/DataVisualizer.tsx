@@ -245,15 +245,6 @@ export default function DataVisualizer() {
   return (
     <>
       <div className="p-4 space-y-6" data-testid="data-visualizer">
-        {/* --- Header --- */}
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between border-b pb-6">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Data Visualizer</h1>
-            <p className="text-base text-muted-foreground">
-              Edit values in either panel to update the charts live.
-            </p>
-          </div>
-        </div>
 
         {/* --- Data Input Section (Float Dock) --- */}
         <div 
