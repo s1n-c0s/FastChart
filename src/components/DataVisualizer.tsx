@@ -64,6 +64,7 @@ export default function DataVisualizer() {
   const [markdownInput, setMarkdownInput] = useState(INITIAL_MARKDOWN);
   const [showLabels, setShowLabels] = useState(true);
   const [showLegend, setShowLegend] = useState(true);
+  const [showFactText, setShowFactText] = useState(true);
   const [showGradientArea, setShowGradientArea] = useState(true);
   const [lineColor, setLineColor] = useState<string | undefined>(undefined);
   const [isDockOpen, setIsDockOpen] = useState(false);
@@ -485,13 +486,25 @@ export default function DataVisualizer() {
             </ChartCard>
 
             <ChartCard
-              title="Pie Chart - Donut with Total"
+              title="Donut Chart"
               chartRef={pieCardRef}
+              customActions={
+                <div className="flex items-center gap-2">
+                  <label htmlFor="show-fact-text" className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap">
+                    Fact Text
+                  </label>
+                  <Switch
+                    id="show-fact-text"
+                    checked={showFactText}
+                    onCheckedChange={setShowFactText}
+                  />
+                </div>
+              }
               onCopySvg={() => copyChartSvg(pieCardRef.current)}
               onCopyPng={() => copyChartPng(pieCardRef.current)}
               onFullscreen={() => openFullscreen("pie")}
             >
-              <PieChart data={sortedData} total={total} containerRef={pieCardRef as React.RefObject<HTMLDivElement>} showLabels={showLabels} showLegend={showLegend} />
+              <PieChart data={sortedData} total={total} containerRef={pieCardRef as React.RefObject<HTMLDivElement>} showLabels={showLabels} showLegend={showLegend} showFactText={showFactText} />
             </ChartCard>
           </div>
 
@@ -586,8 +599,20 @@ export default function DataVisualizer() {
         chartType="pie"
         onCopySvg={() => copyChartSvg(fsRef.current)}
         onCopyPng={() => copyChartPng(fsRef.current)}
+        customActions={
+          <div className="flex items-center gap-2">
+            <label htmlFor="fs-show-fact-text" className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap">
+              Fact Text
+            </label>
+            <Switch
+              id="fs-show-fact-text"
+              checked={showFactText}
+              onCheckedChange={setShowFactText}
+            />
+          </div>
+        }
       >
-        <PieChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} total={total} showLabels={showLabels} showLegend={showLegend} isFullscreen={fullscreenChart === "pie"} />
+        <PieChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} total={total} showLabels={showLabels} showLegend={showLegend} showFactText={showFactText} isFullscreen={fullscreenChart === "pie"} />
       </FullscreenModal>
 
       <FullscreenModal

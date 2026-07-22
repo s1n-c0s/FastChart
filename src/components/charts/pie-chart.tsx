@@ -10,6 +10,7 @@ export interface PieChartProps {
   isFullscreen?: boolean;
   showLabels?: boolean;
   showLegend?: boolean;
+  showFactText?: boolean;
 }
 
 const CustomTooltip = React.memo(({ active, payload }: TooltipProps<number, string>) => {
@@ -32,7 +33,7 @@ const CustomTooltip = React.memo(({ active, payload }: TooltipProps<number, stri
 
 
 
-export const PieChart = React.memo(function PieChart({ data, total, containerRef, isFullscreen = false, showLabels = false, showLegend = true }: PieChartProps) {
+export const PieChart = React.memo(function PieChart({ data, total, containerRef, isFullscreen = false, showLabels = false, showLegend = true, showFactText = true }: PieChartProps) {
   const [isDark, setIsDark] = React.useState(false);
   
   React.useEffect(() => {
@@ -322,7 +323,8 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
               label={showLabels ? renderCustomLabel : undefined}
               labelLine={showLabels ? (renderCustomLabelLine as any) : false}
             >
-              <Label
+              {showFactText && (
+                <Label
                 content={({ viewBox }) => {
                   if (viewBox && "cx" in viewBox && "cy" in viewBox) {
                     return (
@@ -350,6 +352,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
                   return null;
                 }}
               />
+              )}
               {data.map((item: Datum) => (
                 <Cell key={item.id} fill={item.color} stroke="none" />
               ))}
@@ -400,6 +403,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
       item.color === nextProps.data[idx]?.color
     ) &&
     prevProps.showLabels === nextProps.showLabels &&
-    prevProps.showLegend === nextProps.showLegend
+    prevProps.showLegend === nextProps.showLegend &&
+    prevProps.showFactText === nextProps.showFactText
   );
 });
