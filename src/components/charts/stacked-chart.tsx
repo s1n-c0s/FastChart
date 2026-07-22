@@ -286,7 +286,7 @@ export const StackedChart = React.memo(function StackedChart({
     
     return (
       <div ref={setRefs} className="h-full w-full flex flex-col items-center justify-center overflow-hidden">
-        <div className="w-full" style={{ height: dimensions.height ? dimensions.height - legendHeight : '100%' }}>
+        <ResponsiveContainer width="100%" height="100%">
           <ChartContainer config={chartConfig} className="w-full h-full">
             <RadialBarChart
               data={radialData}
@@ -343,12 +343,10 @@ export const StackedChart = React.memo(function StackedChart({
                 className="stroke-transparent stroke-2"
               />
             ))}
+            {showLegend && renderSvgLegend(true)}
           </RadialBarChart>
           </ChartContainer>
-        </div>
-        <svg width={dimensions.width} height={legendHeight} style={{ overflow: 'visible', flexShrink: 0 }}>
-            {showLegend && renderSvgLegend(true)}
-        </svg>
+        </ResponsiveContainer>
       </div>
     )
   }

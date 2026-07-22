@@ -330,7 +330,6 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
                   content={({ viewBox }) => {
                     if (viewBox && "cx" in viewBox && "cy" in viewBox) {
                       const innerR = showLabels ? size * 0.22 : size * 0.28;
-                      const side = innerR * 1.414; // Largest inscribed square
                       
                       const maxItem = data.length > 0 ? data.reduce((prev, current) => (prev.value > current.value) ? prev : current) : null;
                       const minItem = data.length > 0 ? data.reduce((prev, current) => (prev.value < current.value) ? prev : current) : null;
@@ -353,28 +352,54 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
                       const handleNext = (e: React.MouseEvent) => { e.stopPropagation(); setFactIndex((prev) => (prev + 1) % 3); };
 
                       return (
-                        <foreignObject 
-                          x={(viewBox.cx || 0) - side / 2} 
-                          y={(viewBox.cy || 0) - side / 2} 
-                          width={side} 
-                          height={side}
-                          style={{ overflow: 'visible' }}
-                        >
-                          <div className="group w-full h-full flex items-center justify-between select-none">
-                            <button onClick={handlePrev} className="opacity-0 group-hover:opacity-100 p-1 hover:bg-muted/80 rounded-full transition-all cursor-pointer pointer-events-auto -ml-3 sm:-ml-2">
-                              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
-                            </button>
-                            <div className="flex flex-col items-center justify-center pointer-events-none px-1 text-center truncate">
-                              <span className="text-[10px] sm:text-xs md:text-sm text-muted-foreground font-medium mb-0.5">{factTitle}</span>
-                              <span className="text-lg sm:text-2xl md:text-3xl font-bold truncate w-full" style={{ color: factColor }}>
-                                {factValue}
-                              </span>
-                            </div>
-                            <button onClick={handleNext} className="opacity-0 group-hover:opacity-100 p-1 hover:bg-muted/80 rounded-full transition-all cursor-pointer pointer-events-auto -mr-3 sm:-mr-2">
-                              <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
-                            </button>
-                          </div>
-                        </foreignObject>
+                        <g className="group">
+                          <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle" className="pointer-events-none select-none">
+                            <tspan
+                              x={viewBox.cx}
+                              y={(viewBox.cy || 0) - (isFullscreen ? 25 : 15)}
+                              fill={textColor} 
+                              fontSize={isFullscreen ? 16 : 12}
+                              fontWeight="500"
+                            >
+                              {factTitle}
+                            </tspan>
+                            <tspan
+                              x={viewBox.cx}
+                              y={(viewBox.cy || 0) + (isFullscreen ? 18 : 10)}
+                              fill={factColor}
+                              fontSize={isFullscreen ? 36 : 22}
+                              fontWeight="bold" 
+                            >
+                              {factValue}
+                            </tspan>
+                          </text>
+                          
+                          {/* Prev Button */}
+                          <svg 
+                            x={(viewBox.cx || 0) - innerR + (isFullscreen ? 10 : 5)} 
+                            y={(viewBox.cy || 0) - 16} 
+                            width={32} height={32} 
+                            onClick={handlePrev} 
+                            className="opacity-0 group-hover:opacity-100 cursor-pointer pointer-events-auto text-muted-foreground transition-opacity"
+                            color="currentColor"
+                          >
+                            <rect width="32" height="32" fill="transparent" />
+                            <ChevronLeft x={4} y={4} width={24} height={24} strokeWidth={2.5} />
+                          </svg>
+
+                          {/* Next Button */}
+                          <svg 
+                            x={(viewBox.cx || 0) + innerR - (isFullscreen ? 42 : 37)} 
+                            y={(viewBox.cy || 0) - 16} 
+                            width={32} height={32} 
+                            onClick={handleNext} 
+                            className="opacity-0 group-hover:opacity-100 cursor-pointer pointer-events-auto text-muted-foreground transition-opacity"
+                            color="currentColor"
+                          >
+                            <rect width="32" height="32" fill="transparent" />
+                            <ChevronRight x={4} y={4} width={24} height={24} strokeWidth={2.5} />
+                          </svg>
+                        </g>
                       );
                     }
                     return null;
