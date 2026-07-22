@@ -230,7 +230,7 @@ export const StackedChart = React.memo(function StackedChart({
     };
   }, [data, dimensions, isFullscreen]);
 
-  const renderSvgLegend = (isRadial: boolean = false) => {
+  const renderSvgLegend = () => {
     if (!dimensions.width || !dimensions.height || legendRows.length === 0) return null;
 
     const spacingY = 25;
@@ -238,7 +238,7 @@ export const StackedChart = React.memo(function StackedChart({
     const gap = 8;
     const textColor = isDark ? "#e4e4e7" : "#3f3f46"; 
     
-    const startY = isRadial ? 0 : dimensions.height - legendHeight;
+    const startY = dimensions.height ? dimensions.height - legendHeight : 0;
 
     return (
       <g className="svg-legend">
@@ -343,7 +343,7 @@ export const StackedChart = React.memo(function StackedChart({
                 className="stroke-transparent stroke-2"
               />
             ))}
-            {showLegend && renderSvgLegend(true)}
+            {showLegend && renderSvgLegend()}
           </RadialBarChart>
           </ChartContainer>
         </ResponsiveContainer>
