@@ -62,8 +62,9 @@ export default function DataVisualizer() {
 
   // --- 3. Local UI State ---
   const [markdownInput, setMarkdownInput] = useState(INITIAL_MARKDOWN);
-  const [showLabels, setShowLabels] = useState(false);
+  const [showLabels, setShowLabels] = useState(true);
   const [showGradientArea, setShowGradientArea] = useState(true);
+  const [lineColor, setLineColor] = useState<string | undefined>(undefined);
   const [isDockOpen, setIsDockOpen] = useState(false);
   
   const fsRef = useRef<HTMLDivElement>(null);
@@ -530,23 +531,38 @@ export default function DataVisualizer() {
               onCopyPng={() => copyChartPng(lineCardRef.current)}
               onFullscreen={() => openFullscreen("line")}
               customActions={
-                <div className="flex items-center gap-2">
-                  <label htmlFor="show-gradient" className="text-xs text-muted-foreground cursor-pointer">
-                    Gradient area
-                  </label>
-                  <Switch
-                    id="show-gradient"
-                    checked={showGradientArea}
-                    onCheckedChange={setShowGradientArea}
-                  />
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="line-color" className="text-xs text-muted-foreground cursor-pointer">
+                      Line Color
+                    </label>
+                    <input
+                      id="line-color"
+                      type="color"
+                      value={lineColor || sortedData[0]?.color || "#3b82f6"}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLineColor(e.target.value)}
+                      className="w-5 h-5 p-0 cursor-pointer rounded-md border-border/50"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="show-gradient" className="text-xs text-muted-foreground cursor-pointer">
+                      Gradient area
+                    </label>
+                    <Switch
+                      id="show-gradient"
+                      checked={showGradientArea}
+                      onCheckedChange={setShowGradientArea}
+                    />
+                  </div>
                 </div>
               }
             >
               <LineChart 
                 data={sortedData} 
-                containerRef={lineCardRef as React.RefObject<HTMLDivElement>}
+                containerRef={lineCardRef as React.Ref<HTMLDivElement>}
                 showLabels={showLabels}
                 showGradientArea={showGradientArea}
+                lineColor={lineColor}
               />
             </ChartCard>
           </div>

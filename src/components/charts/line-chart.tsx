@@ -20,15 +20,17 @@ export interface LineChartProps {
   containerRef?: React.Ref<HTMLDivElement>
   showLabels?: boolean
   showGradientArea?: boolean
+  lineColor?: string
 }
 
 interface LineChartTooltipProps {
   active?: boolean;
   payload?: any[];
   label?: string;
+  lineColor?: string;
 }
 
-const LineChartTooltip = ({ active, payload, label }: LineChartTooltipProps) => {
+const LineChartTooltip = ({ active, payload, label, lineColor }: LineChartTooltipProps) => {
   if (!active || !payload || payload.length === 0) return null;
 
   const item = payload[0];
@@ -36,7 +38,7 @@ const LineChartTooltip = ({ active, payload, label }: LineChartTooltipProps) => 
   
   const data = item.payload || {};
   const displayLabel = data.label || label || 'Item';
-  const displayColor = data.color || item.color || item.stroke || '#8884d8';
+  const displayColor = lineColor || data.color || item.color || item.stroke || '#8884d8';
   const displayValue = data.value !== undefined ? data.value : (item.value || 0);
 
   return (
@@ -60,7 +62,8 @@ export const LineChart = React.memo(function LineChart({
   data, 
   containerRef, 
   showLabels = false, 
-  showGradientArea = false 
+  showGradientArea = false,
+  lineColor: customLineColor
 }: LineChartProps) {
   
   const chartConfig = React.useMemo(() => {
@@ -76,7 +79,7 @@ export const LineChart = React.memo(function LineChart({
   }, [data])
 
   const seriesId = data[0]?.id || "value"
-  const lineColor = data[0]?.color || "#3b82f6"
+  const lineColor = customLineColor || data[0]?.color || "#3b82f6"
   const gradientId = React.useMemo(() => `gradient-${seriesId}`, [seriesId])
 
   return (
@@ -116,8 +119,8 @@ export const LineChart = React.memo(function LineChart({
                 width={35}
               />
               <Tooltip
-                cursor={{ stroke: 'var(--muted)', strokeWidth: 1, strokeDasharray: '4 4' }}
-                content={<LineChartTooltip />}
+                cursor={{ stroke: lineColor, strokeWidth: 1, strokeDasharray: "4 4", opacity: 0.5 }}
+                content={<LineChartTooltip lineColor={lineColor} />}
               />
               {showGradientArea && (
                 <Area
@@ -158,6 +161,7 @@ export const LineChart = React.memo(function LineChart({
   return (
     prevProps.showLabels === nextProps.showLabels &&
     prevProps.showGradientArea === nextProps.showGradientArea &&
+    prevProps.lineColor === nextProps.lineColor &&
     prevProps.data === nextProps.data
   )
 })
