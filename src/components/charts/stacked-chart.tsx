@@ -66,12 +66,12 @@ const StackedTooltip = React.memo(function StackedTooltip({ active, payload }: S
 StackedTooltip.displayName = "StackedTooltip";
 
 const CustomStackedLabel = (props: any) => {
-  const { x, y, width, height, value, rawData, dataKey, isFullscreen, isHorizontal } = props;
+  const { x, y, width, height, value, rawData, barDataKey, isFullscreen, isHorizontal } = props;
   
   if (width < 15 || height < 15) return null;
 
   const percent = Math.round((value || 0) * 100);
-  const rawItem = rawData.find((d: any) => d.label === dataKey);
+  const rawItem = rawData.find((d: any) => d.label === barDataKey);
   const rawValue = rawItem ? rawItem.value : 0;
   
   const cx = x + width / 2;
@@ -389,7 +389,7 @@ export const StackedChart = React.memo(function StackedChart({
                 {showLabels && (
                   <LabelList
                     dataKey={d.label}
-                    content={<CustomStackedLabel rawData={data} isFullscreen={isFullscreen} isHorizontal={isHorizontal} />}
+                    content={<CustomStackedLabel rawData={data} isFullscreen={isFullscreen} isHorizontal={isHorizontal} barDataKey={d.label} />}
                   />
                 )}
               </Bar>
@@ -442,7 +442,7 @@ export const StackedChart = React.memo(function StackedChart({
               {showLabels && (
                 <LabelList
                   dataKey={d.label}
-                  content={<CustomStackedLabel rawData={data} isFullscreen={isFullscreen} isHorizontal={isHorizontal} />}
+                  content={<CustomStackedLabel rawData={data} isFullscreen={isFullscreen} isHorizontal={isHorizontal} barDataKey={d.label} />}
                 />
               )}
             </Bar>
