@@ -238,7 +238,7 @@ export default function DataVisualizer() {
     };
   }, [isDockOpen]);
 
-  const chartRefs = { bar: barCardRef, pie: pieCardRef, stacked: stackedCardRef, line: lineCardRef };
+
 
   return (
     <>

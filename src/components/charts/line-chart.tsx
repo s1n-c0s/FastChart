@@ -7,21 +7,54 @@ import {
   YAxis,
   LabelList,
   Area,
-  ResponsiveContainer
+  ResponsiveContainer,
+  Tooltip
 } from "recharts"
 import type { Datum } from "@/types"
 import {
   ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
 } from "@/components/ui/chart"
 
 export interface LineChartProps {
   data: Datum[]
-  containerRef?: React.RefObject<HTMLDivElement>
+  containerRef?: React.Ref<HTMLDivElement>
   showLabels?: boolean
   showGradientArea?: boolean
 }
+
+interface LineChartTooltipProps {
+  active?: boolean;
+  payload?: any[];
+  label?: string;
+}
+
+const LineChartTooltip = ({ active, payload, label }: LineChartTooltipProps) => {
+  if (!active || !payload || payload.length === 0) return null;
+
+  const item = payload[0];
+  if (!item) return null;
+  
+  const data = item.payload || {};
+  const displayLabel = data.label || label || 'Item';
+  const displayColor = data.color || item.color || item.stroke || '#8884d8';
+  const displayValue = data.value !== undefined ? data.value : (item.value || 0);
+
+  return (
+    <div className="bg-background border border-border rounded-lg p-3 text-sm shadow-xl flex flex-col gap-1 min-w-[140px]">
+      <div className="font-semibold text-muted-foreground text-xs uppercase tracking-wider">{displayLabel}</div>
+      <div className="flex items-center justify-between gap-4 mt-1.5">
+        <div className="flex items-center gap-2">
+          <div
+            className="w-3 h-3 rounded-full"
+            style={{ backgroundColor: displayColor }}
+          />
+          <span className="font-medium">Value</span>
+        </div>
+        <span className="font-mono font-bold text-base">{Number(displayValue).toLocaleString()}</span>
+      </div>
+    </div>
+  );
+};
 
 export const LineChart = React.memo(function LineChart({ 
   data, 
@@ -82,9 +115,9 @@ export const LineChart = React.memo(function LineChart({
                 axisLine={false}
                 width={35}
               />
-              <ChartTooltip
-                cursor={false}
-                content={<ChartTooltipContent hideLabel />}
+              <Tooltip
+                cursor={{ stroke: 'var(--muted)', strokeWidth: 1, strokeDasharray: '4 4' }}
+                content={<LineChartTooltip />}
               />
               {showGradientArea && (
                 <Area
@@ -100,7 +133,8 @@ export const LineChart = React.memo(function LineChart({
                 dataKey="value"
                 stroke={lineColor}
                 strokeWidth={2}
-                dot={false}
+                dot={{ r: 4, strokeWidth: 2 }}
+                activeDot={{ r: 6 }}
                 isAnimationActive={false}
               >
                 {showLabels && (
@@ -110,7 +144,7 @@ export const LineChart = React.memo(function LineChart({
                     offset={8}
                     className="fill-foreground"
                     fontSize={12}
-                    formatter={(value: number) => value.toLocaleString()}
+                    formatter={(value: number) => (value || 0).toLocaleString()}
                   />
                 )}
               </Line>

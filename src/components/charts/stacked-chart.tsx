@@ -11,8 +11,7 @@ import {
   RadialBar,
   RadialBarChart,
   PolarRadiusAxis,
-  Label as RechartsLabel,
-  Legend,
+  Label as RechartsLabel
 } from "recharts"
 import {
   ChartContainer,
@@ -25,7 +24,7 @@ import type { Datum } from "@/types"
 export interface StackedChartProps {
   data: Datum[]
   isHorizontal?: boolean
-  containerRef?: React.RefObject<HTMLDivElement>
+  containerRef?: React.Ref<HTMLDivElement>
   showLabels?: boolean
   showRadial?: boolean
   isFullscreen?: boolean
@@ -174,7 +173,7 @@ export const StackedChart = React.memo(function StackedChart({
 
     data.forEach((item: Datum) => {
       const percentage = totalValue > 0 ? Math.round((Math.max(0, item.value || 0) / totalValue) * 100) : 0;
-      const labelText = `${item.label}: ${item.value.toLocaleString()} (${percentage}%)`;
+      const labelText = `${item.label}: ${Number(item.value || 0).toLocaleString()} (${percentage}%)`;
       const textWidth = labelText.length * (isFullscreen ? 8.5 : 7.5); 
       const itemWidth = rectSize + gap + textWidth + itemMargin;
 
@@ -239,7 +238,7 @@ export const StackedChart = React.memo(function StackedChart({
                   fontFamily="sans-serif"
                   style={{ pointerEvents: 'none' }}
                 >
-                  {item.label}: {item.value.toLocaleString()} ({totalValue > 0 ? Math.round((Math.max(0, item.value || 0) / totalValue) * 100) : 0}%)
+                  {item.label}: {Number(item.value || 0).toLocaleString()} ({totalValue > 0 ? Math.round((Math.max(0, item.value || 0) / totalValue) * 100) : 0}%)
                 </text>
               </g>
             );
@@ -365,7 +364,7 @@ export const StackedChart = React.memo(function StackedChart({
                     offset={8}
                     className="fill-foreground"
                     fontSize={12}
-                    formatter={(value: number) => `${(value * 100).toFixed(0)}%`}
+                    formatter={(value: number) => `${((value || 0) * 100).toFixed(0)}%`}
                   />
                 )}
               </Bar>
@@ -422,7 +421,7 @@ export const StackedChart = React.memo(function StackedChart({
                   offset={8}
                   className="fill-foreground"
                   fontSize={12}
-                  formatter={(value: number) => `${(value * 100).toFixed(0)}%`}
+                  formatter={(value: number) => `${((value || 0) * 100).toFixed(0)}%`}
                 />
               )}
             </Bar>

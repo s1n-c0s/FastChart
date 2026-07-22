@@ -1,12 +1,12 @@
 import * as React from "react";
-import { Pie, PieChart as RechartsPieChart, Cell, Tooltip, Label, ResponsiveContainer, Legend } from "recharts";
+import { Pie, PieChart as RechartsPieChart, Cell, Tooltip, Label, ResponsiveContainer } from "recharts";
 import type { TooltipProps } from "recharts";
 import type { Datum } from "@/types";
 
 export interface PieChartProps {
   data: Datum[];
   total: number;
-  containerRef?: React.RefObject<HTMLDivElement>;
+  containerRef?: React.Ref<HTMLDivElement>;
   isFullscreen?: boolean;
   showLabels?: boolean;
 }
@@ -20,7 +20,7 @@ const CustomTooltip = React.memo(({ active, payload }: TooltipProps<number, stri
           <div className="h-3 w-3 rounded-sm" style={{ backgroundColor: item.color }} />
           <span className="font-medium text-popover-foreground">{item.label}:</span>
           <span className="text-right font-bold text-popover-foreground">
-            {item.value.toLocaleString()}
+            {Number(item.value || 0).toLocaleString()}
           </span>
         </div>
       </div>
@@ -105,12 +105,6 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     return others.length > 0 ? others[others.length - 1].id : null;
   }, [data, top4Ids]);
 
-  const firstOtherId = React.useMemo(() => {
-    if (!top4Ids) return null;
-    const others = data.filter(d => !top4Ids.includes(d.id));
-    return others.length > 0 ? others[0].id : null;
-  }, [data, top4Ids]);
-
   const prevDataRef = React.useRef(data);
   if (prevDataRef.current !== data) {
     prevDataRef.current = data;
@@ -137,7 +131,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
   }, [top4Ids, textColor]);
 
   const renderCustomLabel = React.useCallback((props: any) => {
-    let { x, y, cx, cy, name, value, percent, payload, midAngle, outerRadius } = props;
+    let { x, y, cx, name, value, percent, payload } = props;
     let color = payload?.color || "#a1a1aa";
     
     if (top4Ids && !top4Ids.includes(payload.id)) {
@@ -239,7 +233,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     let currentRowItemWidths: number[] = [];
 
     data.forEach((item: Datum) => {
-      const labelText = `${item.label}: ${item.value.toLocaleString()}`;
+      const labelText = `${item.label}: ${Number(item.value || 0).toLocaleString()}`;
       const textWidth = labelText.length * (isFullscreen ? 8.5 : 7.5); 
       const itemWidth = rectSize + gap + textWidth + itemMargin;
 
@@ -296,7 +290,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
                   fontFamily="sans-serif"
                   style={{ pointerEvents: 'none' }}
                 >
-                  {item.label}: {item.value.toLocaleString()}
+                  {item.label}: {Number(item.value || 0).toLocaleString()}
                 </text>
               </g>
             );
@@ -325,7 +319,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
               isAnimationActive={true}
               stroke="none"
               label={showLabels ? renderCustomLabel : undefined}
-              labelLine={showLabels ? renderCustomLabelLine : false}
+              labelLine={showLabels ? (renderCustomLabelLine as any) : false}
             >
               <Label
                 content={({ viewBox }) => {

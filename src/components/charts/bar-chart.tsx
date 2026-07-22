@@ -18,7 +18,7 @@ import {
 export interface BarChartProps {
   data: Datum[]
   isHorizontal?: boolean
-  containerRef?: React.RefObject<HTMLDivElement>
+  containerRef?: React.Ref<HTMLDivElement>
   children?: React.ReactNode
   showLabels?: boolean
 }
@@ -95,7 +95,7 @@ export const BarChart = React.memo(function BarChart({
                   offset={8}
                   className="fill-foreground"
                   fontSize={12}
-                  formatter={(value: number) => value.toLocaleString()}
+                  formatter={(value: number) => (value || 0).toLocaleString()}
                 />
               )}
             </Bar>
@@ -159,7 +159,7 @@ export const BarChart = React.memo(function BarChart({
                 offset={8}
                 className="fill-foreground"
                 fontSize={12}
-                formatter={(value: number) => value.toLocaleString()}
+                formatter={(value: number) => (value || 0).toLocaleString()}
               />
             )}
           </Bar>
