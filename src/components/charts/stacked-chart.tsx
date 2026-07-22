@@ -65,6 +65,37 @@ const StackedTooltip = React.memo(function StackedTooltip({ active, payload }: S
 
 StackedTooltip.displayName = "StackedTooltip";
 
+const CustomStackedLabel = (props: any) => {
+  const { x, y, width, height, value, rawData, dataKey, isFullscreen, isHorizontal } = props;
+  
+  if (width < 30 || height < 30) return null;
+
+  const percent = Math.round((value || 0) * 100);
+  const rawItem = rawData.find((d: any) => d.label === dataKey);
+  const rawValue = rawItem ? rawItem.value : 0;
+  
+  const cx = x + width / 2;
+  const cy = y + height / 2;
+  
+  const fontSizePercent = isFullscreen ? 64 : (isHorizontal ? 32 : 24);
+  const fontSizeRaw = isFullscreen ? 24 : (isHorizontal ? 16 : 12);
+  
+  return (
+    <g>
+      <text x={cx} y={cy} fill="#ffffff" textAnchor="middle" dominantBaseline="central">
+        <tspan fontSize={fontSizePercent} fontWeight="500">
+          {percent}%
+        </tspan>
+        {((width > 80 && height > 40) || isFullscreen) && (
+          <tspan fontSize={fontSizeRaw} fontWeight="500" dx={isFullscreen ? 8 : 4} dy={isFullscreen ? -8 : -4}>
+            ({Number(rawValue || 0).toLocaleString()})
+          </tspan>
+        )}
+      </text>
+    </g>
+  );
+};
+
 export const StackedChart = React.memo(function StackedChart({
   data,
   isHorizontal = true,
@@ -360,11 +391,7 @@ export const StackedChart = React.memo(function StackedChart({
                 {showLabels && (
                   <LabelList
                     dataKey={d.label}
-                    position="right"
-                    offset={8}
-                    className="fill-foreground"
-                    fontSize={12}
-                    formatter={(value: number) => `${((value || 0) * 100).toFixed(0)}%`}
+                    content={<CustomStackedLabel rawData={data} isFullscreen={isFullscreen} isHorizontal={isHorizontal} />}
                   />
                 )}
               </Bar>
@@ -417,11 +444,7 @@ export const StackedChart = React.memo(function StackedChart({
               {showLabels && (
                 <LabelList
                   dataKey={d.label}
-                  position="top"
-                  offset={8}
-                  className="fill-foreground"
-                  fontSize={12}
-                  formatter={(value: number) => `${((value || 0) * 100).toFixed(0)}%`}
+                  content={<CustomStackedLabel rawData={data} isFullscreen={isFullscreen} isHorizontal={isHorizontal} />}
                 />
               )}
             </Bar>
