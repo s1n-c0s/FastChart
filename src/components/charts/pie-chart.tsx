@@ -382,6 +382,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
                             onClick={handlePrev} 
                             className="opacity-0 group-hover:opacity-100 cursor-pointer pointer-events-auto text-muted-foreground transition-opacity"
                             color="currentColor"
+                            data-hide-on-copy="true"
                           >
                             <rect width="32" height="32" fill="transparent" />
                             <ChevronLeft x={4} y={4} width={24} height={24} strokeWidth={2.5} />
@@ -395,6 +396,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
                             onClick={handleNext} 
                             className="opacity-0 group-hover:opacity-100 cursor-pointer pointer-events-auto text-muted-foreground transition-opacity"
                             color="currentColor"
+                            data-hide-on-copy="true"
                           >
                             <rect width="32" height="32" fill="transparent" />
                             <ChevronRight x={4} y={4} width={24} height={24} strokeWidth={2.5} />

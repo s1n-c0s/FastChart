@@ -20,11 +20,24 @@ export function useCharts() {
       if (!svg) return;
       const clone = svg.cloneNode(true) as SVGSVGElement;
       
+      // Remove elements that should not be copied
+      const hiddenElements = clone.querySelectorAll('[data-hide-on-copy="true"]');
+      hiddenElements.forEach(el => el.remove());
+
       // Apply computed styles to preserve text colors and other styling
-      const allElements = clone.querySelectorAll('*');
-      const origAllElements = svg.querySelectorAll('*');
-      allElements.forEach((el, index) => {
-        const origEl = origAllElements[index] as Element;
+      
+      // We need to map cloned elements back to their original elements to get computed styles
+      // Since we removed some nodes, we must re-query the original DOM matching the remaining nodes
+      // However, iterating origAllElements index-to-index is dangerous if we removed nodes!
+      // Let's do it safely by checking the original structure.
+      
+      // To keep it simple, apply styles BEFORE removing nodes, then remove them.
+      const cloneTemp = svg.cloneNode(true) as SVGSVGElement;
+      const allTempElements = cloneTemp.querySelectorAll('*');
+      const origTempElements = svg.querySelectorAll('*');
+      
+      allTempElements.forEach((el, index) => {
+        const origEl = origTempElements[index] as Element;
         const computedStyle = window.getComputedStyle(origEl);
         
         // Apply important computed properties
@@ -52,7 +65,7 @@ export function useCharts() {
       });
 
       // Specifically handle text elements to preserve their colors and fonts
-      const textElements = clone.querySelectorAll('text, tspan');
+      const textElements = cloneTemp.querySelectorAll('text, tspan');
       const origTextElements = svg.querySelectorAll('text, tspan');
       textElements.forEach((el, index) => {
         const origEl = origTextElements[index] as Element;
@@ -79,11 +92,15 @@ export function useCharts() {
         }
       });
 
-      if (!clone.getAttribute("xmlns")) {
-        clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      // Now remove hidden elements AFTER styling
+      const hiddenElementsToRemove = cloneTemp.querySelectorAll('[data-hide-on-copy="true"]');
+      hiddenElementsToRemove.forEach(el => el.remove());
+
+      if (!cloneTemp.getAttribute("xmlns")) {
+        cloneTemp.setAttribute("xmlns", "http://www.w3.org/2000/svg");
       }
 
-      const xml = new XMLSerializer().serializeToString(clone);
+      const xml = new XMLSerializer().serializeToString(cloneTemp);
       await navigator.clipboard.writeText(xml);
       toast.success("SVG Copied to Clipboard!", {
         duration: 850,
@@ -102,7 +119,10 @@ export function useCharts() {
     try {
       const dataUrl = await htmlToImage.toPng(containerEl, {
         backgroundColor: 'transparent',
-        pixelRatio: 2 // High resolution
+        pixelRatio: 2, // High resolution
+        filter: (node) => {
+          return node.getAttribute ? node.getAttribute("data-hide-on-copy") !== "true" : true;
+        }
       });
       
       const response = await fetch(dataUrl);
