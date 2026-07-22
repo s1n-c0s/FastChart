@@ -1,4 +1,5 @@
 import * as React from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Pie, PieChart as RechartsPieChart, Cell, Tooltip, Label, ResponsiveContainer } from "recharts";
 import type { TooltipProps } from "recharts";
 import type { Datum } from "@/types";
@@ -55,6 +56,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
 
   const [chartWidth, setChartWidth] = React.useState(size);
   const localRef = React.useRef<HTMLDivElement | null>(null);
+  const [factIndex, setFactIndex] = React.useState(0);
 
 
 
@@ -325,33 +327,59 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
             >
               {showFactText && (
                 <Label
-                content={({ viewBox }) => {
-                  if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                    return (
-                      <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
-                        <tspan
-                          x={viewBox.cx}
-                          y={(viewBox.cy || 0) - (isFullscreen ? 25 : 15)}
-                          fill={textColor} 
-                          fontSize={isFullscreen ? 18 : 14}
+                  content={({ viewBox }) => {
+                    if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                      const innerR = showLabels ? size * 0.22 : size * 0.28;
+                      const side = innerR * 1.414; // Largest inscribed square
+                      
+                      const maxItem = data.length > 0 ? data.reduce((prev, current) => (prev.value > current.value) ? prev : current) : null;
+                      const minItem = data.length > 0 ? data.reduce((prev, current) => (prev.value < current.value) ? prev : current) : null;
+                      
+                      let factTitle = "Total";
+                      let factValue = total.toLocaleString();
+                      let factColor = textMainColor;
+                      
+                      if (factIndex === 1 && maxItem) {
+                        factTitle = "The most";
+                        factValue = maxItem.value.toLocaleString();
+                        factColor = maxItem.color;
+                      } else if (factIndex === 2 && minItem) {
+                        factTitle = "The Lowest";
+                        factValue = minItem.value.toLocaleString();
+                        factColor = minItem.color;
+                      }
+                      
+                      const handlePrev = (e: React.MouseEvent) => { e.stopPropagation(); setFactIndex((prev) => (prev - 1 + 3) % 3); };
+                      const handleNext = (e: React.MouseEvent) => { e.stopPropagation(); setFactIndex((prev) => (prev + 1) % 3); };
+
+                      return (
+                        <foreignObject 
+                          x={(viewBox.cx || 0) - side / 2} 
+                          y={(viewBox.cy || 0) - side / 2} 
+                          width={side} 
+                          height={side}
+                          style={{ overflow: 'visible' }}
                         >
-                          Total
-                        </tspan>
-                        <tspan
-                          x={viewBox.cx}
-                          y={(viewBox.cy || 0) + (isFullscreen ? 20 : 12)}
-                          fill={textMainColor}
-                          fontSize={isFullscreen ? 44 : 26}
-                          fontWeight="bold" 
-                        >
-                          {total.toLocaleString()}
-                        </tspan>
-                      </text>
-                    );
-                  }
-                  return null;
-                }}
-              />
+                          <div className="group w-full h-full flex items-center justify-between select-none">
+                            <button onClick={handlePrev} className="opacity-0 group-hover:opacity-100 p-1 hover:bg-muted/80 rounded-full transition-all cursor-pointer pointer-events-auto -ml-3 sm:-ml-2">
+                              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
+                            </button>
+                            <div className="flex flex-col items-center justify-center pointer-events-none px-1 text-center truncate">
+                              <span className="text-[10px] sm:text-xs md:text-sm text-muted-foreground font-medium mb-0.5">{factTitle}</span>
+                              <span className="text-lg sm:text-2xl md:text-3xl font-bold truncate w-full" style={{ color: factColor }}>
+                                {factValue}
+                              </span>
+                            </div>
+                            <button onClick={handleNext} className="opacity-0 group-hover:opacity-100 p-1 hover:bg-muted/80 rounded-full transition-all cursor-pointer pointer-events-auto -mr-3 sm:-mr-2">
+                              <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
+                            </button>
+                          </div>
+                        </foreignObject>
+                      );
+                    }
+                    return null;
+                  }}
+                />
               )}
               {data.map((item: Datum) => (
                 <Cell key={item.id} fill={item.color} stroke="none" />
