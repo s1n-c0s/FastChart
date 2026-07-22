@@ -68,7 +68,7 @@ StackedTooltip.displayName = "StackedTooltip";
 const CustomStackedLabel = (props: any) => {
   const { x, y, width, height, value, rawData, dataKey, isFullscreen, isHorizontal } = props;
   
-  if (width < 30 || height < 30) return null;
+  if (width < 15 || height < 15) return null;
 
   const percent = Math.round((value || 0) * 100);
   const rawItem = rawData.find((d: any) => d.label === dataKey);
@@ -86,11 +86,9 @@ const CustomStackedLabel = (props: any) => {
         <tspan fontSize={fontSizePercent} fontWeight="500">
           {percent}%
         </tspan>
-        {((width > 80 && height > 40) || isFullscreen) && (
-          <tspan fontSize={fontSizeRaw} fontWeight="500" dx={isFullscreen ? 8 : 4} dy={isFullscreen ? -8 : -4}>
-            ({Number(rawValue || 0).toLocaleString()})
-          </tspan>
-        )}
+        <tspan fontSize={fontSizeRaw} fontWeight="500" dx={isFullscreen ? 8 : 4} dy={isFullscreen ? -8 : -4}>
+          ({Number(rawValue || 0).toLocaleString()})
+        </tspan>
       </text>
     </g>
   );
