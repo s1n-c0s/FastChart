@@ -290,7 +290,10 @@ export const StackedChart = React.memo(function StackedChart({
           <ChartContainer config={chartConfig} className="w-full h-full">
             <RadialBarChart
               data={radialData}
-              endAngle={180}
+              startAngle={180}
+              endAngle={0}
+              cx="50%"
+              cy="75%"
               innerRadius={innerRadius}
               outerRadius={outerRadius}
               style={{ overflow: 'visible' }}
