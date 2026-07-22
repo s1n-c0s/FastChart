@@ -625,19 +625,33 @@ export default function DataVisualizer() {
         onCopySvg={() => copyChartSvg(fsRef.current)}
         onCopyPng={() => copyChartPng(fsRef.current)}
         customActions={
-          <div className="flex items-center gap-2">
-            <label htmlFor="fullscreen-show-gradient" className="text-xs text-muted-foreground cursor-pointer">
-              Gradient area
-            </label>
-            <Switch
-              id="fullscreen-show-gradient"
-              checked={showGradientArea}
-              onCheckedChange={setShowGradientArea}
-            />
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <label htmlFor="fullscreen-line-color" className="text-xs text-muted-foreground cursor-pointer">
+                Line Color
+              </label>
+              <input
+                id="fullscreen-line-color"
+                type="color"
+                value={lineColor || sortedData[0]?.color || "#3b82f6"}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLineColor(e.target.value)}
+                className="w-5 h-5 p-0 cursor-pointer rounded-md border-border/50"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label htmlFor="fullscreen-show-gradient" className="text-xs text-muted-foreground cursor-pointer">
+                Gradient area
+              </label>
+              <Switch
+                id="fullscreen-show-gradient"
+                checked={showGradientArea}
+                onCheckedChange={setShowGradientArea}
+              />
+            </div>
           </div>
         }
       >
-        <LineChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} showLabels={showLabels} showGradientArea={showGradientArea} />
+        <LineChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} showLabels={showLabels} showGradientArea={showGradientArea} lineColor={lineColor} />
       </FullscreenModal>
     </>
   );
