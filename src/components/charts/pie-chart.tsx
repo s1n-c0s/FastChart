@@ -9,6 +9,7 @@ export interface PieChartProps {
   containerRef?: React.Ref<HTMLDivElement>;
   isFullscreen?: boolean;
   showLabels?: boolean;
+  showLegend?: boolean;
 }
 
 const CustomTooltip = React.memo(({ active, payload }: TooltipProps<number, string>) => {
@@ -31,7 +32,7 @@ const CustomTooltip = React.memo(({ active, payload }: TooltipProps<number, stri
 
 
 
-export const PieChart = React.memo(function PieChart({ data, total, containerRef, isFullscreen = false, showLabels = false }: PieChartProps) {
+export const PieChart = React.memo(function PieChart({ data, total, containerRef, isFullscreen = false, showLabels = false, showLegend = true }: PieChartProps) {
   const [isDark, setIsDark] = React.useState(false);
   
   React.useEffect(() => {
@@ -381,7 +382,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
               })}
             </Pie>
             
-            {renderSvgLegend()}
+            {showLegend && renderSvgLegend()}
           </RechartsPieChart>
         </ResponsiveContainer>
       </div>
@@ -398,6 +399,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
       item.value === nextProps.data[idx]?.value &&
       item.color === nextProps.data[idx]?.color
     ) &&
-    prevProps.showLabels === nextProps.showLabels
+    prevProps.showLabels === nextProps.showLabels &&
+    prevProps.showLegend === nextProps.showLegend
   );
 });

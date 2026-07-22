@@ -28,6 +28,7 @@ export interface StackedChartProps {
   showLabels?: boolean
   showRadial?: boolean
   isFullscreen?: boolean
+  showLegend?: boolean
 }
 
 interface StackedTooltipProps {
@@ -101,6 +102,7 @@ export const StackedChart = React.memo(function StackedChart({
   showLabels = false,
   showRadial = false,
   isFullscreen = false,
+  showLegend = true,
 }: StackedChartProps) {
   const [isDark, setIsDark] = React.useState(false);
   React.useEffect(() => {
@@ -342,7 +344,7 @@ export const StackedChart = React.memo(function StackedChart({
           </ChartContainer>
         </div>
         <svg width={dimensions.width} height={legendHeight} style={{ overflow: 'visible', flexShrink: 0 }}>
-          {renderSvgLegend()}
+            {showLegend && renderSvgLegend()}
         </svg>
       </div>
     )
@@ -394,7 +396,7 @@ export const StackedChart = React.memo(function StackedChart({
                 )}
               </Bar>
             ))}
-            {renderSvgLegend()}
+            {showLegend && renderSvgLegend()}
           </RechartsBarChart>
         </ResponsiveContainer>
       </div>
@@ -447,7 +449,7 @@ export const StackedChart = React.memo(function StackedChart({
               )}
             </Bar>
           ))}
-          {renderSvgLegend()}
+          {showLegend && renderSvgLegend()}
         </RechartsBarChart>
       </ResponsiveContainer>
     </div>
@@ -456,6 +458,7 @@ export const StackedChart = React.memo(function StackedChart({
   return (
     prevProps.isHorizontal === nextProps.isHorizontal &&
     prevProps.showLabels === nextProps.showLabels &&
+    prevProps.showLegend === nextProps.showLegend &&
     prevProps.showRadial === nextProps.showRadial &&
     prevProps.isFullscreen === nextProps.isFullscreen &&
     prevProps.data.length === nextProps.data.length &&

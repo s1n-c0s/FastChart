@@ -63,6 +63,7 @@ export default function DataVisualizer() {
   // --- 3. Local UI State ---
   const [markdownInput, setMarkdownInput] = useState(INITIAL_MARKDOWN);
   const [showLabels, setShowLabels] = useState(true);
+  const [showLegend, setShowLegend] = useState(true);
   const [showGradientArea, setShowGradientArea] = useState(true);
   const [lineColor, setLineColor] = useState<string | undefined>(undefined);
   const [isDockOpen, setIsDockOpen] = useState(false);
@@ -431,6 +432,22 @@ export default function DataVisualizer() {
                   id="show-labels-dock"
                   checked={showLabels}
                   onCheckedChange={setShowLabels}
+                  className="data-[state=checked]:bg-primary shadow-sm"
+                />
+              </div>
+
+              <div className="w-px h-6 bg-border/50" />
+
+              {/* Show Legend Toggle */}
+              <div className="flex items-center gap-2.5">
+                <label htmlFor="show-legend-dock" className="text-sm font-medium cursor-pointer select-none">
+                  Legend
+                </label>
+                <Switch
+                  id="show-legend-dock"
+                  checked={showLegend}
+                  onCheckedChange={setShowLegend}
+                  className="data-[state=checked]:bg-primary shadow-sm"
                 />
               </div>
             </div>
@@ -483,12 +500,7 @@ export default function DataVisualizer() {
               onCopyPng={() => copyChartPng(pieCardRef.current)}
               onFullscreen={() => openFullscreen("pie")}
             >
-              <PieChart 
-                data={sortedData} 
-                total={total} 
-                containerRef={pieCardRef as React.RefObject<HTMLDivElement>}
-                showLabels={showLabels}
-              />
+              <PieChart data={sortedData} total={total} containerRef={pieCardRef as React.RefObject<HTMLDivElement>} showLabels={showLabels} showLegend={showLegend} />
             </ChartCard>
           </div>
 
@@ -515,13 +527,7 @@ export default function DataVisualizer() {
                 </div>
               }
             >
-              <StackedChart 
-                data={sortedData} 
-                containerRef={stackedCardRef as React.RefObject<HTMLDivElement>}
-                isHorizontal={stackedHorizontal}
-                showLabels={showLabels}
-                showRadial={stackedRadial}
-              />
+              <StackedChart data={sortedData} isHorizontal={stackedHorizontal} containerRef={stackedCardRef as React.Ref<HTMLDivElement>} showLabels={showLabels} showRadial={stackedRadial} showLegend={showLegend} />
             </ChartCard>
 
             <ChartCard
@@ -590,7 +596,7 @@ export default function DataVisualizer() {
         onCopySvg={() => copyChartSvg(fsRef.current)}
         onCopyPng={() => copyChartPng(fsRef.current)}
       >
-        <PieChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} total={total} isFullscreen={true} showLabels={showLabels} />
+        <PieChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} total={total} showLabels={showLabels} showLegend={showLegend} isFullscreen={fullscreenChart === "pie"} />
       </FullscreenModal>
 
       <FullscreenModal
@@ -615,7 +621,7 @@ export default function DataVisualizer() {
           </div>
         }
       >
-        <StackedChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} isHorizontal={stackedHorizontal} showLabels={showLabels} showRadial={stackedRadial} isFullscreen={fullscreenChart === "stacked"} />
+        <StackedChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} isHorizontal={stackedHorizontal} showLabels={showLabels} showRadial={stackedRadial} showLegend={showLegend} isFullscreen={fullscreenChart === "stacked"} />
       </FullscreenModal>
 
       <FullscreenModal
