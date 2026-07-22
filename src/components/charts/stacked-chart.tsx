@@ -230,7 +230,7 @@ export const StackedChart = React.memo(function StackedChart({
     };
   }, [data, dimensions, isFullscreen]);
 
-  const renderSvgLegend = () => {
+  const renderSvgLegend = (isRadial: boolean = false) => {
     if (!dimensions.width || !dimensions.height || legendRows.length === 0) return null;
 
     const spacingY = 25;
@@ -238,7 +238,7 @@ export const StackedChart = React.memo(function StackedChart({
     const gap = 8;
     const textColor = isDark ? "#e4e4e7" : "#3f3f46"; 
     
-    const startY = dimensions.height - legendHeight;
+    const startY = isRadial ? 0 : dimensions.height - legendHeight;
 
     return (
       <g className="svg-legend">
@@ -344,7 +344,7 @@ export const StackedChart = React.memo(function StackedChart({
           </ChartContainer>
         </div>
         <svg width={dimensions.width} height={legendHeight} style={{ overflow: 'visible', flexShrink: 0 }}>
-            {showLegend && renderSvgLegend()}
+            {showLegend && renderSvgLegend(true)}
         </svg>
       </div>
     )
