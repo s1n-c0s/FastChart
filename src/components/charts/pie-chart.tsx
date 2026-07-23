@@ -130,8 +130,8 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     
     const isLeft = points[2].x < points[0].x;
     const isTop = points[2].y < points[0].y;
-    const basePushX = isFullscreen ? 45 : 25; // cleanly extends the horizontal line
-    const basePushY = isFullscreen ? 30 : 15; // vertically push away from pie edge
+    const basePushX = isFullscreen ? 45 : 15; // cleanly extends the horizontal line
+    const basePushY = isFullscreen ? 30 : 5; // vertically push away from pie edge
     
     const newPoints = [
       points[0],
@@ -165,8 +165,8 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     }
     const boxWidth = isFullscreen ? 160 : 110;
     const boxHeight = isFullscreen ? 56 : 52;
-    const basePushX = isFullscreen ? 45 : 25;
-    const basePushY = isFullscreen ? 30 : 15;
+    const basePushX = isFullscreen ? 45 : 15;
+    const basePushY = isFullscreen ? 30 : 5;
     const isLeft = x < cx;
     const isTop = y < cy;
     
@@ -340,8 +340,8 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
                 nameKey="label"
                 cx="50%"
                 cy={pieCy}
-              innerRadius={showLabels ? size * 0.18 : size * 0.28}
-              outerRadius={showLabels ? size * 0.26 : size * 0.42}
+              innerRadius={showLabels ? size * 0.22 : size * 0.28}
+              outerRadius={showLabels ? size * 0.32 : size * 0.42}
               paddingAngle={2}
               cornerRadius={6}
               isAnimationActive={true}
@@ -465,8 +465,8 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
               nameKey="label"
               cx="50%"
               cy={pieCy}
-              innerRadius={showLabels ? size * 0.18 : size * 0.28}
-              outerRadius={showLabels ? size * 0.26 : size * 0.42}
+              innerRadius={showLabels ? size * 0.22 : size * 0.28}
+              outerRadius={showLabels ? size * 0.32 : size * 0.42}
               paddingAngle={2}
               cornerRadius={6}
               isAnimationActive={true}
