@@ -146,7 +146,7 @@ export const LineChart = React.memo(function LineChart({
                     className="fill-foreground font-semibold"
                     fontSize={15}
                     fontWeight={600}
-                    formatter={(value: number) => (value || 0).toLocaleString()}
+                    formatter={(value: any) => (Number(value) || 0).toLocaleString()}
                   />
                 )}
               </Line>

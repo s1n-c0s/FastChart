@@ -14,10 +14,16 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          react: ['react', 'react-dom'],
-          recharts: ['recharts'],
-          ui: ['lucide-react', '@radix-ui/react-select', '@radix-ui/react-slot', '@radix-ui/react-switch']
+        manualChunks(id) {
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+            return 'react';
+          }
+          if (id.includes('node_modules/recharts')) {
+            return 'recharts';
+          }
+          if (id.includes('node_modules/lucide-react') || id.includes('node_modules/@radix-ui')) {
+            return 'ui';
+          }
         }
       }
     }

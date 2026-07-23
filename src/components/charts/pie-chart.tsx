@@ -1,7 +1,7 @@
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Pie, PieChart as RechartsPieChart, Cell, Tooltip, Label, ResponsiveContainer } from "recharts";
-import type { TooltipProps } from "recharts";
+
 import type { Datum } from "@/types";
 
 export interface PieChartProps {
@@ -16,7 +16,7 @@ export interface PieChartProps {
   onFactIndexChange?: (index: number) => void;
 }
 
-const CustomTooltip = React.memo(({ active, payload }: TooltipProps<number, string>) => {
+const CustomTooltip = React.memo(({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const item = payload[0].payload as Datum;
     return (

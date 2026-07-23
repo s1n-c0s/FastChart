@@ -106,7 +106,7 @@ export const BarChart = React.memo(function BarChart({
                   className="fill-foreground font-semibold"
                   fontSize={15}
                   fontWeight={600}
-                  formatter={(value: number) => (value || 0).toLocaleString()}
+                  formatter={(value: any) => (Number(value) || 0).toLocaleString()}
                 />
               )}
             </Bar>
@@ -182,7 +182,7 @@ export const BarChart = React.memo(function BarChart({
                 className="fill-foreground font-semibold"
                 fontSize={15}
                 fontWeight={600}
-                formatter={(value: number) => (value || 0).toLocaleString()}
+                formatter={(value: any) => (Number(value) || 0).toLocaleString()}
               />
             )}
           </Bar>
