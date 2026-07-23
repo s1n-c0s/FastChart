@@ -74,7 +74,7 @@ export const BarChart = React.memo(function BarChart({
               style={{ fontSize: '14px' }}
             />
             <ChartTooltip
-              cursor={{ fill: 'var(--muted)', opacity: 0.1 }}
+              cursor={{ fill: 'var(--muted)', opacity: 0.65 }}
               isAnimationActive={false}
               content={({ active, payload }) => {
                 if (active && payload && payload.length) {
@@ -146,7 +146,7 @@ export const BarChart = React.memo(function BarChart({
             style={{ fontSize: '14px' }}
           />
           <ChartTooltip
-            cursor={{ fill: 'var(--muted)', opacity: 0.1 }}
+            cursor={{ fill: 'var(--muted)', opacity: 0.65 }}
             isAnimationActive={false}
             content={({ active, payload }) => {
               if (active && payload && payload.length) {

@@ -42,17 +42,13 @@ const LineChartTooltip = ({ active, payload, label, lineColor }: LineChartToolti
   const displayValue = data.value !== undefined ? data.value : (item.value || 0);
 
   return (
-    <div className="bg-background border border-border rounded-lg p-3 text-sm shadow-xl flex flex-col gap-1 min-w-[140px]">
-      <div className="font-semibold text-muted-foreground text-xs uppercase tracking-wider">{displayLabel}</div>
-      <div className="flex items-center justify-between gap-4 mt-1.5">
+    <div className="rounded-xl border border-border/50 bg-background/95 backdrop-blur-md p-3 shadow-xl animate-in fade-in zoom-in-95 duration-200 min-w-[140px]">
+      <div className="flex flex-col gap-1.5">
+        <span className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">{displayLabel}</span>
         <div className="flex items-center gap-2">
-          <div
-            className="w-3 h-3 rounded-full"
-            style={{ backgroundColor: displayColor }}
-          />
-          <span className="font-medium">Value</span>
+          <div className="h-3 w-3 rounded-full" style={{ backgroundColor: displayColor }} />
+          <span className="font-bold text-sm text-foreground">{Number(displayValue).toLocaleString()}</span>
         </div>
-        <span className="font-mono font-bold text-sm">{Number(displayValue).toLocaleString()}</span>
       </div>
     </div>
   );

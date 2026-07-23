@@ -44,21 +44,20 @@ const StackedTooltip = React.memo(function StackedTooltip({ active, payload }: S
   if (!active || !payload || payload.length === 0) return null
 
   return (
-    <div className="bg-background border border-border rounded-lg p-2 text-xs shadow-xl">
-      <div className="font-medium mb-1">Details</div>
-      <div className="flex flex-col gap-0.5">
-        {payload.map((entry, idx) => (
-          <div key={idx} className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div
-                className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: entry.fill }}
-              />
-              <span>{entry.name}</span>
+    <div className="rounded-xl border border-border/50 bg-background/95 backdrop-blur-md p-3 shadow-xl animate-in fade-in zoom-in-95 duration-200 min-w-[140px]">
+      <div className="flex flex-col gap-1.5">
+        <span className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">Details</span>
+        <div className="flex flex-col gap-2 mt-1">
+          {payload.map((entry, idx) => (
+            <div key={idx} className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.fill }} />
+                <span className="font-medium text-sm text-foreground">{entry.name}</span>
+              </div>
+              <span className="font-bold text-sm text-foreground">{Math.round(entry.value * 100)}%</span>
             </div>
-            <span className="font-mono">{Math.round(entry.value * 100)}%</span>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   )
@@ -389,7 +388,7 @@ export const StackedChart = React.memo(function StackedChart({
               axisLine={false}
               style={{ fontSize: '12px' }}
             />
-            <Tooltip content={<StackedTooltip />} />
+            <Tooltip cursor={{ fill: 'var(--muted)', opacity: 0.65 }} content={<StackedTooltip />} />
             {data.map((d) => (
               <Bar 
                 key={d.id} 
@@ -443,7 +442,7 @@ export const StackedChart = React.memo(function StackedChart({
             width={50}
             style={{ fontSize: '12px' }}
           />
-          <Tooltip content={<StackedTooltip />} />
+          <Tooltip cursor={{ fill: 'var(--muted)', opacity: 0.65 }} content={<StackedTooltip />} />
           {data.map((d) => (
             <Bar 
               key={d.id} 

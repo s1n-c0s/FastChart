@@ -20,13 +20,13 @@ const CustomTooltip = React.memo(({ active, payload }: TooltipProps<number, stri
   if (active && payload && payload.length) {
     const item = payload[0].payload as Datum;
     return (
-      <div className="rounded-lg border bg-popover p-2 text-sm shadow-md">
-        <div className="flex items-center gap-2">
-          <div className="h-3 w-3 rounded-sm" style={{ backgroundColor: item.color }} />
-          <span className="font-medium text-popover-foreground">{item.label}:</span>
-          <span className="text-right font-bold text-popover-foreground">
-            {Number(item.value || 0).toLocaleString()}
-          </span>
+      <div key={item.id || item.label} className="rounded-xl border border-border/50 bg-background/95 backdrop-blur-md p-3 shadow-xl animate-in fade-in zoom-in-95 duration-200 min-w-[140px]">
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">{item.label}</span>
+          <div className="flex items-center gap-2">
+            <div className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
+            <span className="font-bold text-sm text-foreground">{Number(item.value || 0).toLocaleString()}</span>
+          </div>
         </div>
       </div>
     );
