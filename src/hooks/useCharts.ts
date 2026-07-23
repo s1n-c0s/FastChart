@@ -197,17 +197,13 @@ export function useCharts() {
       clone.style.height = rootStyle.height;
 
       const htmlString = clone.outerHTML;
-      const blobHtml = new Blob([htmlString], { type: "text/html" });
-      const blobText = new Blob([htmlString], { type: "text/plain" });
       
-      await navigator.clipboard.write([
-        new ClipboardItem({
-          "text/html": blobHtml,
-          "text/plain": blobText,
-        })
-      ]);
+      // We write as plain text so that website builders (like WordPress) 
+      // don't try to parse and strip the SVG/styles during a rich-text paste.
+      // The user can then paste this raw code into a 'Custom HTML' block.
+      await navigator.clipboard.writeText(htmlString);
       
-      toast.success("HTML Copied to Clipboard!", {
+      toast.success("HTML Code Copied!", {
         duration: 850,
       });
     } catch {
