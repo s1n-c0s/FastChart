@@ -292,7 +292,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     const rectSize = 14; 
     const gap = 8;
     
-    const startY = size - legendHeight + 22;
+    const startY = size - legendHeight + (isFullscreen ? -60 : 22);
 
     return (
       <g className="svg-legend">
@@ -421,7 +421,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
                           
                           {/* Prev Button */}
                           <svg 
-                            x={(viewBox.cx || 0) - (innerR * 0.65) + (isFullscreen ? 10 : 5)} 
+                            x={(viewBox.cx || 0) - innerR + (isFullscreen ? 30 : 10)} 
                             y={(viewBox.cy || 0) - 16} 
                             width={32} height={32} 
                             onClick={handlePrev} 
@@ -435,7 +435,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
 
                           {/* Next Button */}
                           <svg 
-                            x={(viewBox.cx || 0) + (innerR * 0.65) - (isFullscreen ? 42 : 37)} 
+                            x={(viewBox.cx || 0) + innerR - 32 - (isFullscreen ? 30 : 10)} 
                             y={(viewBox.cy || 0) - 16} 
                             width={32} height={32} 
                             onClick={handleNext} 
