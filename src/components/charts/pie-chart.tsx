@@ -126,21 +126,32 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
       return null;
     }
     
-    if (!points) return null;
+    if (!points || points.length < 3) return null;
+    
+    const isLeft = points[2].x < points[0].x;
+    const isTop = points[2].y < points[0].y;
+    const basePushX = isFullscreen ? 45 : 25; // cleanly extends the horizontal line
+    const basePushY = isFullscreen ? 30 : 15; // vertically push away from pie edge
+    
+    const newPoints = [
+      points[0],
+      { x: points[1].x, y: points[1].y + (isTop ? -basePushY : basePushY) },
+      { x: points[2].x + (isLeft ? -basePushX : basePushX), y: points[2].y + (isTop ? -basePushY : basePushY) }
+    ];
     
     return (
       <polyline
-        points={points.map((p: any) => `${p.x},${p.y}`).join(' ')}
+        points={newPoints.map((p: any) => `${p.x},${p.y}`).join(' ')}
         stroke={textColor}
         strokeWidth={1}
         fill="none"
         opacity={0.5}
       />
     );
-  }, [top4Ids, textColor]);
+  }, [top4Ids, textColor, isFullscreen]);
 
   const renderCustomLabel = React.useCallback((props: any) => {
-    let { x, y, cx, name, value, percent, payload } = props;
+    let { x, y, cx, cy, name, value, percent, payload } = props;
     let color = payload?.color || "#a1a1aa";
     
     if (top4Ids && !top4Ids.includes(payload.id)) {
@@ -152,13 +163,18 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
       percent = otherSum / total;
       color = isDark ? "#52525b" : "#a1a1aa";
     }
-    const isLeft = x < cx;
-    
     const boxWidth = isFullscreen ? 160 : 110;
     const boxHeight = isFullscreen ? 56 : 52;
+    const basePushX = isFullscreen ? 45 : 25;
+    const basePushY = isFullscreen ? 30 : 15;
+    const isLeft = x < cx;
+    const isTop = y < cy;
     
-    const fx = isLeft ? x - boxWidth : x;
-    const fy = y - boxHeight / 2;
+    const finalX = x + (isLeft ? -basePushX : basePushX);
+    const finalY = y + (isTop ? -basePushY : basePushY);
+    
+    const fx = isLeft ? finalX - boxWidth : finalX;
+    const fy = finalY - boxHeight / 2;
 
     const safeName = String(name || '');
     const maxLen = isFullscreen ? 18 : 12;
@@ -309,20 +325,22 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     );
   };
 
+  const pieCy = (size - legendHeight) / 2;
+
   return (
-    <div ref={setRefs} className="flex h-full w-full items-center justify-center flex-col">
-      <div className="flex-shrink-0 w-full" style={{ height: size }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <RechartsPieChart style={{ overflow: 'visible' }}>
-            <Tooltip content={<CustomTooltip />} />
-            <Pie
-              data={data}
-              dataKey="value"
-              nameKey="label"
-              cx="50%"
-              cy={size / 2 - (legendHeight / 2)}
-              innerRadius={showLabels ? size * 0.22 : size * 0.28}
-              outerRadius={showLabels ? size * 0.32 : size * 0.42}
+      <div ref={setRefs} className="flex h-full w-full items-center justify-center flex-col">
+        <div className="flex-shrink-0 w-full" style={{ height: size }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <RechartsPieChart style={{ overflow: 'visible' }}>
+              <Tooltip content={<CustomTooltip />} />
+              <Pie
+                data={data}
+                dataKey="value"
+                nameKey="label"
+                cx="50%"
+                cy={pieCy}
+              innerRadius={showLabels ? size * 0.18 : size * 0.28}
+              outerRadius={showLabels ? size * 0.26 : size * 0.42}
               paddingAngle={2}
               cornerRadius={6}
               isAnimationActive={true}
@@ -334,7 +352,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
                 <Label
                   content={({ viewBox }) => {
                     if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                      const innerR = showLabels ? size * 0.22 : size * 0.28;
+                      const innerR = showLabels ? size * 0.18 : size * 0.28;
                       
                       const maxItem = data.length > 0 ? data.reduce((prev, current) => (prev.value > current.value) ? prev : current) : null;
                       const minItem = data.length > 0 ? data.reduce((prev, current) => (prev.value < current.value) ? prev : current) : null;
@@ -445,9 +463,9 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
               dataKey="value"
               nameKey="label"
               cx="50%"
-              cy={size / 2 - (legendHeight / 2)}
-              innerRadius={showLabels ? size * 0.22 : size * 0.28}
-              outerRadius={showLabels ? size * 0.32 : size * 0.42}
+              cy={pieCy}
+              innerRadius={showLabels ? size * 0.18 : size * 0.28}
+              outerRadius={showLabels ? size * 0.26 : size * 0.42}
               paddingAngle={2}
               cornerRadius={6}
               isAnimationActive={true}
