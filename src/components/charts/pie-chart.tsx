@@ -145,9 +145,9 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
         stroke={textColor}
         strokeWidth={1}
         fill="none"
+        className={showLabels ? "animate-in fade-in duration-500" : "opacity-0"}
         style={{
-          opacity: showLabels ? 0.5 : 0,
-          transition: 'opacity 0.4s ease-in-out'
+          pointerEvents: showLabels ? 'auto' : 'none'
         }}
       />
     );
@@ -184,12 +184,14 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     const displayName = safeName.length > maxLen ? safeName.substring(0, maxLen) + "..." : safeName;
 
     return (
-      <g style={{ 
-        overflow: 'visible',
-        opacity: showLabels ? 1 : 0,
-        transition: 'opacity 0.4s ease-in-out',
-        pointerEvents: showLabels ? 'auto' : 'none'
-      }}>
+      <g 
+        className={showLabels ? "animate-in fade-in zoom-in-95 duration-500" : "opacity-0"}
+        style={{ 
+          overflow: 'visible',
+          pointerEvents: showLabels ? 'auto' : 'none',
+          transformOrigin: `${fx + boxWidth / 2}px ${fy + boxHeight / 2}px`
+        }}
+      >
         <rect 
           x={fx} 
           y={fy} 
@@ -266,7 +268,8 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     let currentRowItemWidths: number[] = [];
 
     data.forEach((item: Datum) => {
-      const labelText = `${item.label}: ${Number(item.value || 0).toLocaleString()}`;
+      const percentage = total > 0 ? Math.round((Math.max(0, item.value || 0) / total) * 100) : 0;
+      const labelText = `${item.label}: ${Number(item.value || 0).toLocaleString()} (${percentage}%)`;
       const textWidth = labelText.length * (isFullscreen ? 8.5 : 7.5); 
       const itemWidth = rectSize + gap + textWidth + itemMargin;
       const maxItemsPerRow = 4;
@@ -291,7 +294,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
       legendRows: rows, 
       legendHeight: rows.length * spacingY 
     };
-  }, [data, chartWidth, size, isFullscreen]);
+  }, [data, chartWidth, size, isFullscreen, total]);
 
   const renderSvgLegend = () => {
     if (!chartWidth || !size || legendRows.length === 0) return null;
@@ -324,7 +327,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
                   fontFamily="sans-serif"
                   style={{ pointerEvents: 'none' }}
                 >
-                  {item.label}: {Number(item.value || 0).toLocaleString()}
+                  {item.label}: {Number(item.value || 0).toLocaleString()} ({total > 0 ? Math.round((Math.max(0, item.value || 0) / total) * 100) : 0}%)
                 </text>
               </g>
             );

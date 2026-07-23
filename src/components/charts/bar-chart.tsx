@@ -80,7 +80,7 @@ export const BarChart = React.memo(function BarChart({
                 if (active && payload && payload.length) {
                   const data = payload[0].payload
                   return (
-                    <div className="rounded-xl border border-border/50 bg-background/95 backdrop-blur-md p-3 shadow-xl animate-in fade-in zoom-in-95 duration-200">
+                    <div key={data.id || data.label} className="rounded-xl border border-border/50 bg-background/95 backdrop-blur-md p-3 shadow-xl animate-in fade-in zoom-in-95 duration-200">
                       <div className="flex flex-col gap-1.5">
                         <span className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">{data.label}</span>
                         <div className="flex items-center gap-2">
@@ -152,7 +152,7 @@ export const BarChart = React.memo(function BarChart({
               if (active && payload && payload.length) {
                 const data = payload[0].payload
                 return (
-                  <div className="rounded-xl border border-border/50 bg-background/95 backdrop-blur-md p-3 shadow-xl animate-in fade-in zoom-in-95 duration-200">
+                  <div key={data.id || data.label} className="rounded-xl border border-border/50 bg-background/95 backdrop-blur-md p-3 shadow-xl animate-in fade-in zoom-in-95 duration-200">
                     <div className="flex flex-col gap-1.5">
                       <span className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">{data.label}</span>
                       <div className="flex items-center gap-2">
