@@ -204,7 +204,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
           x={fx + 10} 
           y={fy + 20} 
           fill={textMainColor}
-          fontSize={isFullscreen ? 13 : 11} 
+          fontSize={isFullscreen ? 15 : 13} 
           fontWeight="600"
           fontFamily="sans-serif"
         >
@@ -214,7 +214,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
           x={fx + 10} 
           y={fy + 40} 
           fill={textMainColor}
-          fontSize={isFullscreen ? 14 : 11} 
+          fontSize={isFullscreen ? 17 : 14} 
           fontWeight="700"
           fontFamily="sans-serif"
         >
@@ -225,7 +225,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
           y={fy + 40} 
           textAnchor="end"
           fill={textColor}
-          fontSize={isFullscreen ? 13 : 11} 
+          fontSize={isFullscreen ? 15 : 13} 
           fontWeight="500"
           fontFamily="sans-serif"
         >
