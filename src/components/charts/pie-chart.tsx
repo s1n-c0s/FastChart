@@ -43,14 +43,20 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
   onFactIndexChange,
 }: PieChartProps) {
   const [isDark, setIsDark] = React.useState(false);
+  const [isMounted, setIsMounted] = React.useState(false);
   
   React.useEffect(() => {
+    // Small delay ensures the CSS transition fires after initial render
+    const timer = setTimeout(() => setIsMounted(true), 50);
     setIsDark(document.documentElement.classList.contains("dark"));
     const observer = new MutationObserver(() => {
       setIsDark(document.documentElement.classList.contains("dark"));
     });
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-    return () => observer.disconnect();
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
+    };
   }, []);
 
   const [size, setSize] = React.useState(() => {
@@ -144,8 +150,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
         points={newPoints.map((p: any) => `${p.x},${p.y}`).join(' ')}
         stroke={textColor}
         strokeWidth={1}
-        fill="none"
-        className={showLabels ? "animate-in fade-in duration-500" : "opacity-0"}
+        className={showLabels ? "animate-in fade-in duration-300" : "opacity-0"}
         style={{
           pointerEvents: showLabels ? 'auto' : 'none'
         }}
@@ -185,7 +190,8 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
 
     return (
       <g 
-        className={showLabels ? "animate-in fade-in zoom-in-95 duration-500" : "opacity-0"}
+        key={showLabels ? "on" : "off"}
+        className={showLabels ? "animate-in fade-in zoom-in-95 duration-300" : "opacity-0"}
         style={{ 
           overflow: 'visible',
           pointerEvents: showLabels ? 'auto' : 'none',
@@ -337,7 +343,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     );
   };
 
-  const pieCy = (size - legendHeight) / 2 - (showLabels ? (isFullscreen ? 50 : 35) : 0);
+  const pieCy = (size - legendHeight) / 2 - (showLabels ? (isFullscreen ? 15 : 0) : 0);
 
   return (
       <div ref={setRefs} className="flex h-full w-full items-center justify-center flex-col">
@@ -351,11 +357,12 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
                 nameKey="label"
                 cx="50%"
                 cy={pieCy}
-              innerRadius={showLabels ? size * 0.22 : size * 0.28}
-              outerRadius={showLabels ? size * 0.32 : size * 0.42}
+              innerRadius={showLabels ? size * 0.20 : size * 0.28}
+              outerRadius={showLabels ? size * 0.30 : size * 0.42}
               paddingAngle={2}
               cornerRadius={6}
-              isAnimationActive={true}
+              isAnimationActive={!isMounted}
+              animationDuration={500}
               stroke="none"
               label={renderCustomLabel}
               labelLine={renderCustomLabelLine as any}
@@ -476,11 +483,12 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
               nameKey="label"
               cx="50%"
               cy={pieCy}
-              innerRadius={showLabels ? size * 0.22 : size * 0.28}
-              outerRadius={showLabels ? size * 0.32 : size * 0.42}
+              innerRadius={showLabels ? size * 0.20 : size * 0.28}
+              outerRadius={showLabels ? size * 0.30 : size * 0.42}
               paddingAngle={2}
               cornerRadius={6}
-              isAnimationActive={true}
+              isAnimationActive={!isMounted}
+              animationDuration={500}
               stroke="none"
               style={{ pointerEvents: 'none' }}
             >
@@ -489,7 +497,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
                 return (
                   <Cell 
                     key={`overlay-${item.id}`} 
-                    fill={isOther ? "rgba(0,0,0,0.3)" : "transparent"} 
+                    fill={isOther ? "rgba(0,0,0,0.5)" : "transparent"} 
                     stroke="none" 
                   />
                 );
