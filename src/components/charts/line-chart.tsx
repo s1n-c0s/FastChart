@@ -128,7 +128,7 @@ export const LineChart = React.memo(function LineChart({
                   dataKey="value"
                   fill={`url(#${gradientId})`}
                   stroke="none"
-                  isAnimationActive={false}
+                  isAnimationActive={true}
                 />
               )}
               <Line
@@ -136,9 +136,9 @@ export const LineChart = React.memo(function LineChart({
                 dataKey="value"
                 stroke={lineColor}
                 strokeWidth={2}
-                dot={{ r: 4, strokeWidth: 2 }}
-                activeDot={{ r: 6 }}
-                isAnimationActive={false}
+                dot={{ r: 4, strokeWidth: 2, fill: lineColor }}
+                activeDot={{ r: 6, fill: lineColor }}
+                isAnimationActive={true}
               >
                 {showLabels && (
                   <LabelList

@@ -387,7 +387,7 @@ export const StackedChart = React.memo(function StackedChart({
                 stackId="stacked" 
                 fill={d.color} 
                 name={d.label}
-                isAnimationActive={false}
+                isAnimationActive={true}
               >
                 {showLabels && (
                   <LabelList
@@ -440,7 +440,7 @@ export const StackedChart = React.memo(function StackedChart({
               stackId="stacked" 
               fill={d.color} 
               name={d.label}
-              isAnimationActive={false}
+              isAnimationActive={true}
             >
               {showLabels && (
                 <LabelList

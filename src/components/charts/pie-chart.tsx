@@ -320,7 +320,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
               outerRadius={showLabels ? size * 0.32 : size * 0.42}
               paddingAngle={2}
               cornerRadius={6}
-              isAnimationActive={false}
+              isAnimationActive={true}
               stroke="none"
               label={showLabels ? renderCustomLabel : undefined}
               labelLine={showLabels ? (renderCustomLabelLine as any) : false}
@@ -424,7 +424,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
               outerRadius={showLabels ? size * 0.32 : size * 0.42}
               paddingAngle={2}
               cornerRadius={6}
-              isAnimationActive={false}
+              isAnimationActive={true}
               stroke="none"
               style={{ pointerEvents: 'none' }}
             >
