@@ -12,6 +12,8 @@ export interface PieChartProps {
   showLabels?: boolean;
   showLegend?: boolean;
   showFactText?: boolean;
+  factIndex?: number;
+  onFactIndexChange?: (index: number) => void;
 }
 
 const CustomTooltip = React.memo(({ active, payload }: TooltipProps<number, string>) => {
@@ -34,7 +36,12 @@ const CustomTooltip = React.memo(({ active, payload }: TooltipProps<number, stri
 
 
 
-export const PieChart = React.memo(function PieChart({ data, total, containerRef, isFullscreen = false, showLabels = false, showLegend = true, showFactText = true }: PieChartProps) {
+export const PieChart = React.memo(function PieChart({ data, total, containerRef, isFullscreen = false,  showLabels = false,
+  showLegend = false,
+  showFactText = false,
+  factIndex = 0,
+  onFactIndexChange,
+}: PieChartProps) {
   const [isDark, setIsDark] = React.useState(false);
   
   React.useEffect(() => {
@@ -56,8 +63,6 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
 
   const [chartWidth, setChartWidth] = React.useState(size);
   const localRef = React.useRef<HTMLDivElement | null>(null);
-  const [factIndex, setFactIndex] = React.useState(0);
-
 
 
   const setRefs = React.useCallback(
@@ -337,26 +342,35 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
                       let factTitle = "Total";
                       let factValue = total.toLocaleString();
                       let factColor = textMainColor;
+                      let factLabel = "";
                       
                       if (factIndex === 1 && maxItem) {
                         factTitle = "The most";
                         factValue = maxItem.value.toLocaleString();
                         factColor = maxItem.color;
+                        factLabel = maxItem.label;
                       } else if (factIndex === 2 && minItem) {
                         factTitle = "The Lowest";
                         factValue = minItem.value.toLocaleString();
                         factColor = minItem.color;
+                        factLabel = minItem.label;
                       }
                       
-                      const handlePrev = (e: React.MouseEvent) => { e.stopPropagation(); setFactIndex((prev) => (prev - 1 + 3) % 3); };
-                      const handleNext = (e: React.MouseEvent) => { e.stopPropagation(); setFactIndex((prev) => (prev + 1) % 3); };
+                      const handlePrev = (e: React.MouseEvent) => { 
+                        e.stopPropagation(); 
+                        if (onFactIndexChange) onFactIndexChange((factIndex - 1 + 3) % 3);
+                      };
+                      const handleNext = (e: React.MouseEvent) => { 
+                        e.stopPropagation(); 
+                        if (onFactIndexChange) onFactIndexChange((factIndex + 1) % 3);
+                      };
 
                       return (
                         <g className="group">
                           <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle" className="pointer-events-none select-none">
                             <tspan
                               x={viewBox.cx}
-                              y={(viewBox.cy || 0) - (isFullscreen ? 25 : 15)}
+                              y={(viewBox.cy || 0) - (isFullscreen ? 25 : 18)}
                               fill={textColor} 
                               fontSize={isFullscreen ? 16 : 12}
                               fontWeight="500"
@@ -365,18 +379,30 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
                             </tspan>
                             <tspan
                               x={viewBox.cx}
-                              y={(viewBox.cy || 0) + (isFullscreen ? 18 : 10)}
+                              y={(viewBox.cy || 0) + (isFullscreen ? 15 : 10)}
                               fill={factColor}
                               fontSize={isFullscreen ? 36 : 22}
                               fontWeight="bold" 
                             >
                               {factValue}
                             </tspan>
+                            {factLabel && (
+                              <tspan
+                                x={viewBox.cx}
+                                y={(viewBox.cy || 0) + (isFullscreen ? 45 : 28)}
+                                fill={factColor}
+                                fontSize={isFullscreen ? 14 : 11}
+                                fontWeight="500"
+                                opacity={0.8}
+                              >
+                                {factLabel}
+                              </tspan>
+                            )}
                           </text>
                           
                           {/* Prev Button */}
                           <svg 
-                            x={(viewBox.cx || 0) - innerR + (isFullscreen ? 10 : 5)} 
+                            x={(viewBox.cx || 0) - (innerR * 0.65) + (isFullscreen ? 10 : 5)} 
                             y={(viewBox.cy || 0) - 16} 
                             width={32} height={32} 
                             onClick={handlePrev} 
@@ -390,7 +416,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
 
                           {/* Next Button */}
                           <svg 
-                            x={(viewBox.cx || 0) + innerR - (isFullscreen ? 42 : 37)} 
+                            x={(viewBox.cx || 0) + (innerR * 0.65) - (isFullscreen ? 42 : 37)} 
                             y={(viewBox.cy || 0) - 16} 
                             width={32} height={32} 
                             onClick={handleNext} 
@@ -459,6 +485,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     ) &&
     prevProps.showLabels === nextProps.showLabels &&
     prevProps.showLegend === nextProps.showLegend &&
-    prevProps.showFactText === nextProps.showFactText
+    prevProps.showFactText === nextProps.showFactText &&
+    prevProps.factIndex === nextProps.factIndex
   );
 });

@@ -65,6 +65,7 @@ export default function DataVisualizer() {
   const [showLabels, setShowLabels] = useState(true);
   const [showLegend, setShowLegend] = useState(true);
   const [showFactText, setShowFactText] = useState(true);
+  const [pieFactIndex, setPieFactIndex] = useState(0);
   const [showGradientArea, setShowGradientArea] = useState(true);
   const [lineColor, setLineColor] = useState<string | undefined>(undefined);
   const [isDockOpen, setIsDockOpen] = useState(false);
@@ -490,6 +491,16 @@ export default function DataVisualizer() {
               chartRef={pieCardRef}
               customActions={
                 <div className="flex items-center gap-2">
+                  <Select value={pieFactIndex.toString()} onValueChange={(val) => setPieFactIndex(Number(val))}>
+                    <SelectTrigger className="h-8 w-32 bg-transparent text-xs" style={{ fontSize: 12 }}>
+                      <SelectValue placeholder="Fact Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">Total</SelectItem>
+                      <SelectItem value="1">The most</SelectItem>
+                      <SelectItem value="2">The Lowest</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <label htmlFor="show-fact-text" className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap">
                     Fact Text
                   </label>
@@ -504,7 +515,7 @@ export default function DataVisualizer() {
               onCopyPng={() => copyChartPng(pieCardRef.current)}
               onFullscreen={() => openFullscreen("pie")}
             >
-              <PieChart data={sortedData} total={total} containerRef={pieCardRef as React.RefObject<HTMLDivElement>} showLabels={showLabels} showLegend={showLegend} showFactText={showFactText} />
+              <PieChart data={sortedData} total={total} containerRef={pieCardRef as React.RefObject<HTMLDivElement>} showLabels={showLabels} showLegend={showLegend} showFactText={showFactText} factIndex={pieFactIndex} onFactIndexChange={setPieFactIndex} />
             </ChartCard>
           </div>
 
@@ -601,6 +612,16 @@ export default function DataVisualizer() {
         onCopyPng={() => copyChartPng(fsRef.current)}
         customActions={
           <div className="flex items-center gap-2">
+            <Select value={pieFactIndex.toString()} onValueChange={(val) => setPieFactIndex(Number(val))}>
+              <SelectTrigger className="h-8 w-32 bg-transparent text-xs" style={{ fontSize: 12 }}>
+                <SelectValue placeholder="Fact Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">Total</SelectItem>
+                <SelectItem value="1">The most</SelectItem>
+                <SelectItem value="2">The Lowest</SelectItem>
+              </SelectContent>
+            </Select>
             <label htmlFor="fs-show-fact-text" className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap">
               Fact Text
             </label>
@@ -612,7 +633,9 @@ export default function DataVisualizer() {
           </div>
         }
       >
-        <PieChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} total={total} showLabels={showLabels} showLegend={showLegend} showFactText={showFactText} isFullscreen={fullscreenChart === "pie"} />
+        {fullscreenChart === "pie" && (
+          <PieChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} total={total} showLabels={showLabels} showLegend={showLegend} showFactText={showFactText} isFullscreen={fullscreenChart === "pie"} factIndex={pieFactIndex} onFactIndexChange={setPieFactIndex} />
+        )}
       </FullscreenModal>
 
       <FullscreenModal
