@@ -53,6 +53,7 @@ export const BarChart = React.memo(function BarChart({
       <div ref={containerRef} className="h-full w-full">
         <ChartContainer config={chartConfig} className="h-full w-full">
           <RechartsBarChart
+            key="horizontal-chart"
             data={data}
             layout="vertical"
             margin={{ top: 5, right: 15, bottom: 5, left: 5 }}
@@ -113,6 +114,7 @@ export const BarChart = React.memo(function BarChart({
     <div ref={containerRef} className="h-full w-full">
       <ChartContainer config={chartConfig} className="h-full w-full">
         <RechartsBarChart
+          key="vertical-chart"
           data={data}
           layout="horizontal"
           margin={{ top: 5, right: 15, bottom: 5, left: 5 }}

@@ -357,6 +357,7 @@ export const StackedChart = React.memo(function StackedChart({
       <div ref={setRefs} className="h-full w-full">
         <ResponsiveContainer width="100%" height="100%">
           <RechartsBarChart
+            key="horizontal-stacked-chart"
             data={stackedData}
             stackOffset="expand"
             layout="vertical"
@@ -409,6 +410,7 @@ export const StackedChart = React.memo(function StackedChart({
     <div ref={setRefs} className="h-full w-full">
       <ResponsiveContainer width="100%" height="100%">
         <RechartsBarChart
+          key="vertical-stacked-chart"
           data={stackedData}
           stackOffset="expand"
           layout="horizontal"

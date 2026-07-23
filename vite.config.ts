@@ -10,5 +10,16 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, 'src')
     }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom'],
+          recharts: ['recharts'],
+          ui: ['lucide-react', '@radix-ui/react-select', '@radix-ui/react-slot', '@radix-ui/react-switch']
+        }
+      }
+    }
   }
 })
