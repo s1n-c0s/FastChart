@@ -52,7 +52,7 @@ const LineChartTooltip = ({ active, payload, label, lineColor }: LineChartToolti
           />
           <span className="font-medium">Value</span>
         </div>
-        <span className="font-mono font-bold text-base">{Number(displayValue).toLocaleString()}</span>
+        <span className="font-mono font-bold text-sm">{Number(displayValue).toLocaleString()}</span>
       </div>
     </div>
   );
@@ -112,11 +112,13 @@ export const LineChart = React.memo(function LineChart({
                 tickLine={false}
                 axisLine={false}
                 tickMargin={10}
+                style={{ fontSize: '14px' }}
               />
               <YAxis
                 tickLine={false}
                 axisLine={false}
                 width={35}
+                style={{ fontSize: '14px' }}
               />
               <Tooltip
                 cursor={{ stroke: lineColor, strokeWidth: 1, strokeDasharray: "4 4", opacity: 0.5 }}
@@ -145,8 +147,9 @@ export const LineChart = React.memo(function LineChart({
                     dataKey="value"
                     position="top"
                     offset={8}
-                    className="fill-foreground"
-                    fontSize={12}
+                    className="fill-foreground font-semibold"
+                    fontSize={15}
+                    fontWeight={600}
                     formatter={(value: number) => (value || 0).toLocaleString()}
                   />
                 )}

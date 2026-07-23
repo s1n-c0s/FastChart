@@ -63,7 +63,7 @@ export const BarChart = React.memo(function BarChart({
               type="number" 
               tickLine={false} 
               axisLine={false}
-              style={{ fontSize: '12px' }}
+              style={{ fontSize: '14px' }}
             />
             <YAxis
               dataKey="label"
@@ -71,7 +71,7 @@ export const BarChart = React.memo(function BarChart({
               tickLine={false}
               axisLine={false}
               width={yAxisWidth}
-              style={{ fontSize: '12px' }}
+              style={{ fontSize: '14px' }}
             />
             <ChartTooltip
               cursor={{ fill: 'var(--muted)', opacity: 0.1 }}
@@ -84,7 +84,7 @@ export const BarChart = React.memo(function BarChart({
                         <span className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">{data.label}</span>
                         <div className="flex items-center gap-2">
                           <div className="h-3 w-3 rounded-full" style={{ backgroundColor: data.color }} />
-                          <span className="font-bold text-base text-foreground">{Number(data.value).toLocaleString()}</span>
+                          <span className="font-bold text-sm text-foreground">{Number(data.value).toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
@@ -102,8 +102,9 @@ export const BarChart = React.memo(function BarChart({
                   dataKey="value"
                   position="right"
                   offset={8}
-                  className="fill-foreground"
-                  fontSize={12}
+                  className="fill-foreground font-semibold"
+                  fontSize={15}
+                  fontWeight={600}
                   formatter={(value: number) => (value || 0).toLocaleString()}
                 />
               )}
@@ -134,14 +135,14 @@ export const BarChart = React.memo(function BarChart({
             tickLine={false}
             axisLine={false}
             height={xAxisHeight}
-            style={{ fontSize: '12px' }}
+            style={{ fontSize: '14px' }}
           />
           <YAxis
             type="number"
             tickLine={false}
             axisLine={false}
             width={45}
-            style={{ fontSize: '12px' }}
+            style={{ fontSize: '14px' }}
           />
           <ChartTooltip
             cursor={{ fill: 'var(--muted)', opacity: 0.1 }}
@@ -154,7 +155,7 @@ export const BarChart = React.memo(function BarChart({
                       <span className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">{data.label}</span>
                       <div className="flex items-center gap-2">
                         <div className="h-3 w-3 rounded-full" style={{ backgroundColor: data.color }} />
-                        <span className="font-bold text-base text-foreground">{Number(data.value).toLocaleString()}</span>
+                        <span className="font-bold text-sm text-foreground">{Number(data.value).toLocaleString()}</span>
                       </div>
                     </div>
                   </div>
@@ -176,8 +177,9 @@ export const BarChart = React.memo(function BarChart({
                 dataKey="value"
                 position="top"
                 offset={8}
-                className="fill-foreground"
-                fontSize={12}
+                className="fill-foreground font-semibold"
+                fontSize={15}
+                fontWeight={600}
                 formatter={(value: number) => (value || 0).toLocaleString()}
               />
             )}

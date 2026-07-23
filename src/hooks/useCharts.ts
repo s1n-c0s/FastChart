@@ -117,11 +117,25 @@ export function useCharts() {
   const copyChartPng = useCallback(async (containerEl: HTMLElement | null) => {
     if (!containerEl) return;
     try {
+      // Temporarily remove elements from DOM to guarantee they aren't copied
+      const hiddenElements = Array.from(containerEl.querySelectorAll('[data-hide-on-copy="true"]'));
+      const parents = hiddenElements.map(el => el.parentNode);
+      const nextSiblings = hiddenElements.map(el => el.nextSibling);
+      
+      hiddenElements.forEach(el => el.remove());
+
       const dataUrl = await htmlToImage.toPng(containerEl, {
         backgroundColor: 'transparent',
         pixelRatio: 2, // High resolution
         filter: (node) => {
           return node.getAttribute ? node.getAttribute("data-hide-on-copy") !== "true" : true;
+        }
+      });
+      
+      // Restore elements to the DOM
+      hiddenElements.forEach((el, index) => {
+        if (parents[index]) {
+          parents[index]?.insertBefore(el, nextSiblings[index]);
         }
       });
       
