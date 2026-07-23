@@ -372,8 +372,8 @@ export default function DataVisualizer() {
           </div>
 
           {/* Toggle Buttons */}
-          <div className="pointer-events-auto flex items-center gap-3">
-            <div className="flex items-center gap-4 bg-background/95 backdrop-blur-xl shadow-xl border border-border/50 px-5 h-14 rounded-full transition-all duration-300 hover:shadow-2xl">
+          <div className="pointer-events-auto flex flex-wrap justify-center items-center gap-2 sm:gap-3 w-full px-2">
+            <div className="flex flex-wrap justify-center items-center gap-3 sm:gap-4 bg-background/95 backdrop-blur-xl shadow-xl border border-border/50 px-4 sm:px-5 py-2 sm:py-0 min-h-[56px] rounded-3xl sm:rounded-full transition-all duration-300 hover:shadow-2xl max-w-[95vw]">
               {/* Sort Dropdown */}
               <div className="flex items-center gap-2">
                 <button
@@ -491,7 +491,7 @@ export default function DataVisualizer() {
               title="Donut Chart"
               chartRef={pieCardRef}
               customActions={
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Select value={pieFactIndex.toString()} onValueChange={(val) => setPieFactIndex(Number(val))}>
                     <SelectTrigger className="h-8 w-32 bg-transparent text-xs" style={{ fontSize: 12 }}>
                       <SelectValue placeholder="Fact Type" />
@@ -533,7 +533,7 @@ export default function DataVisualizer() {
               isHorizontal={stackedHorizontal}
               onToggleOrientation={() => setStackedHorizontal(!stackedHorizontal)}
               customActions={
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <label htmlFor="show-radial" className="text-xs text-muted-foreground cursor-pointer">
                     Radial
                   </label>
@@ -556,7 +556,7 @@ export default function DataVisualizer() {
               onCopyHtml={() => copyChartHtml(lineCardRef.current)}
               onFullscreen={() => openFullscreen("line")}
               customActions={
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-4">
                   <div className="flex items-center gap-2">
                     <label htmlFor="line-color" className="text-xs text-muted-foreground cursor-pointer">
                       Line Color

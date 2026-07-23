@@ -77,7 +77,7 @@ export function ChartCard({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-2 mb-4">
         <div className="flex items-center gap-2">
           {onCopyHtml && (
             <Button
@@ -92,7 +92,7 @@ export function ChartCard({
           )}
           <h3 className="text-lg font-semibold">{title}</h3>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {customActions}
           {showOrientation && (
             <Button

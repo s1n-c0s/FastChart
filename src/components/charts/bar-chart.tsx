@@ -12,7 +12,6 @@ import type { Datum } from "@/types"
 import {
   ChartContainer,
   ChartTooltip,
-  ChartTooltipContent,
 } from "@/components/ui/chart"
 
 export interface BarChartProps {
@@ -75,15 +74,24 @@ export const BarChart = React.memo(function BarChart({
               style={{ fontSize: '12px' }}
             />
             <ChartTooltip
-              content={({ active, payload }) => (
-                <ChartTooltipContent
-                  active={active}
-                  payload={payload}
-                  formatter={(value) => (
-                    <span>{Number(value).toLocaleString()}</span>
-                  )}
-                />
-              )}
+              cursor={{ fill: 'var(--muted)', opacity: 0.1 }}
+              content={({ active, payload }) => {
+                if (active && payload && payload.length) {
+                  const data = payload[0].payload
+                  return (
+                    <div className="rounded-xl border border-border/50 bg-background/95 backdrop-blur-md p-3 shadow-xl">
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">{data.label}</span>
+                        <div className="flex items-center gap-2">
+                          <div className="h-3 w-3 rounded-full" style={{ backgroundColor: data.color }} />
+                          <span className="font-bold text-base text-foreground">{Number(data.value).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                }
+                return null
+              }}
             />
             <Bar dataKey="value" radius={[0, 6, 6, 0]} maxBarSize={50}>
               {data.map((item) => (
@@ -136,15 +144,24 @@ export const BarChart = React.memo(function BarChart({
             style={{ fontSize: '12px' }}
           />
           <ChartTooltip
-            content={({ active, payload }) => (
-              <ChartTooltipContent
-                active={active}
-                payload={payload}
-                formatter={(value) => (
-                  <span>{Number(value).toLocaleString()}</span>
-                )}
-              />
-            )}
+            cursor={{ fill: 'var(--muted)', opacity: 0.1 }}
+            content={({ active, payload }) => {
+              if (active && payload && payload.length) {
+                const data = payload[0].payload
+                return (
+                  <div className="rounded-xl border border-border/50 bg-background/95 backdrop-blur-md p-3 shadow-xl">
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">{data.label}</span>
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 rounded-full" style={{ backgroundColor: data.color }} />
+                        <span className="font-bold text-base text-foreground">{Number(data.value).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              }
+              return null
+            }}
           />
           <Bar 
             dataKey="value" 
