@@ -261,8 +261,9 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
       const labelText = `${item.label}: ${Number(item.value || 0).toLocaleString()}`;
       const textWidth = labelText.length * (isFullscreen ? 8.5 : 7.5); 
       const itemWidth = rectSize + gap + textWidth + itemMargin;
+      const maxItemsPerRow = 4;
 
-      if (currentRowWidth + itemWidth - itemMargin > width && currentRow.length > 0) {
+      if ((currentRowWidth + itemWidth - itemMargin > width && currentRow.length > 0) || currentRow.length >= maxItemsPerRow) {
         rows.push({ items: currentRow, width: currentRowWidth - itemMargin, itemWidths: currentRowItemWidths });
         currentRow = [item];
         currentRowWidth = itemWidth;
@@ -291,7 +292,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     const rectSize = 14; 
     const gap = 8;
     
-    const startY = size - legendHeight + 5;
+    const startY = size - legendHeight + 22;
 
     return (
       <g className="svg-legend">
@@ -325,7 +326,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     );
   };
 
-  const pieCy = (size - legendHeight) / 2;
+  const pieCy = (size - legendHeight) / 2 - (showLabels ? (isFullscreen ? 50 : 35) : 0);
 
   return (
       <div ref={setRefs} className="flex h-full w-full items-center justify-center flex-col">
