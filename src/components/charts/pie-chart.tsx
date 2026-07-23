@@ -145,10 +145,13 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
         stroke={textColor}
         strokeWidth={1}
         fill="none"
-        opacity={0.5}
+        style={{
+          opacity: showLabels ? 0.5 : 0,
+          transition: 'opacity 0.4s ease-in-out'
+        }}
       />
     );
-  }, [top4Ids, textColor, isFullscreen]);
+  }, [top4Ids, textColor, isFullscreen, showLabels]);
 
   const renderCustomLabel = React.useCallback((props: any) => {
     let { x, y, cx, cy, name, value, percent, payload } = props;
@@ -181,7 +184,12 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     const displayName = safeName.length > maxLen ? safeName.substring(0, maxLen) + "..." : safeName;
 
     return (
-      <g style={{ overflow: 'visible' }}>
+      <g style={{ 
+        overflow: 'visible',
+        opacity: showLabels ? 1 : 0,
+        transition: 'opacity 0.4s ease-in-out',
+        pointerEvents: showLabels ? 'auto' : 'none'
+      }}>
         <rect 
           x={fx} 
           y={fy} 
@@ -233,7 +241,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
         </text>
       </g>
     );
-  }, [isFullscreen, isDark, bgColor, borderColor, textMainColor, textColor, top4Ids, lastOtherId, otherSum, total]);
+  }, [isFullscreen, isDark, bgColor, borderColor, textMainColor, textColor, top4Ids, lastOtherId, otherSum, total, showLabels]);
 
   React.useEffect(() => {
     if (!isFullscreen) return;
@@ -346,8 +354,8 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
               cornerRadius={6}
               isAnimationActive={true}
               stroke="none"
-              label={showLabels ? renderCustomLabel : undefined}
-              labelLine={showLabels ? (renderCustomLabelLine as any) : false}
+              label={renderCustomLabel}
+              labelLine={renderCustomLabelLine as any}
             >
               {showFactText && (
                 <Label

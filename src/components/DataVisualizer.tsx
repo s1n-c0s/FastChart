@@ -233,12 +233,20 @@ export default function DataVisualizer() {
         setIsDockOpen(false);
       }
     };
+    
+    const handleEscapeDock = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isDockOpen) {
+        setIsDockOpen(false);
+      }
+    };
 
     if (isDockOpen) {
       document.addEventListener("mousedown", handleClickOutside, true);
+      document.addEventListener("keydown", handleEscapeDock);
     }
     return () => {
       document.removeEventListener("mousedown", handleClickOutside, true);
+      document.removeEventListener("keydown", handleEscapeDock);
     };
   }, [isDockOpen]);
 
