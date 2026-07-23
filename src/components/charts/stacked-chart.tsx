@@ -363,7 +363,7 @@ export const StackedChart = React.memo(function StackedChart({
             layout="vertical"
             margin={{ top: 5, right: 15, bottom: legendHeight + 10, left: 5 }}
           >
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+            <CartesianGrid className="stroke-border opacity-80" strokeDasharray="4 4" />
             <YAxis
               type="category"
               dataKey="name"
@@ -416,7 +416,7 @@ export const StackedChart = React.memo(function StackedChart({
           layout="horizontal"
           margin={{ top: 5, right: 15, bottom: legendHeight + 10, left: 5 }}
         >
-          <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+          <CartesianGrid className="stroke-border opacity-80" strokeDasharray="4 4" />
           <XAxis
             type="category"
             dataKey="name"

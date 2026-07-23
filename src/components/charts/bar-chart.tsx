@@ -59,7 +59,7 @@ export const BarChart = React.memo(function BarChart({
             margin={{ top: 5, right: 15, bottom: 5, left: 5 }}
             barCategoryGap="15%"
           >
-            <CartesianGrid strokeDasharray="3 3" />
+            <CartesianGrid className="stroke-border opacity-80" strokeDasharray="4 4" />
             <XAxis 
               type="number" 
               tickLine={false} 
@@ -120,7 +120,7 @@ export const BarChart = React.memo(function BarChart({
           margin={{ top: 5, right: 15, bottom: 5, left: 5 }}
           barCategoryGap="15%"
         >
-          <CartesianGrid strokeDasharray="3 3" />
+          <CartesianGrid className="stroke-border opacity-80" strokeDasharray="4 4" />
           <XAxis
             dataKey="label"
             tickLine={false}

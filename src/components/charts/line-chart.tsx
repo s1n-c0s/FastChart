@@ -106,7 +106,7 @@ export const LineChart = React.memo(function LineChart({
                   <stop offset="100%" stopColor={lineColor} stopOpacity={0.05} />
                 </linearGradient>
               </defs>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" />
+              <CartesianGrid className="stroke-border opacity-80" strokeDasharray="4 4" />
               <XAxis
                 dataKey="label"
                 tickLine={false}
