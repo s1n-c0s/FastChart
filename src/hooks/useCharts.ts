@@ -139,6 +139,82 @@ export function useCharts() {
     }
   }, []);
 
+  const copyChartHtml = useCallback(async (containerEl: HTMLElement | null) => {
+    if (!containerEl) return;
+    try {
+      const clone = containerEl.cloneNode(true) as HTMLElement;
+      const allTempElements = clone.querySelectorAll('*');
+      const origTempElements = containerEl.querySelectorAll('*');
+      
+      allTempElements.forEach((el, index) => {
+        const origEl = origTempElements[index] as Element;
+        if (!origEl) return;
+        const computedStyle = window.getComputedStyle(origEl);
+        
+        if (el instanceof HTMLElement) {
+          el.style.color = computedStyle.color;
+          el.style.backgroundColor = computedStyle.backgroundColor !== 'rgba(0, 0, 0, 0)' ? computedStyle.backgroundColor : 'transparent';
+          el.style.fontFamily = computedStyle.fontFamily;
+          el.style.fontSize = computedStyle.fontSize;
+          el.style.fontWeight = computedStyle.fontWeight;
+          el.style.display = computedStyle.display;
+          if (computedStyle.display === 'flex') {
+            el.style.flexDirection = computedStyle.flexDirection;
+            el.style.alignItems = computedStyle.alignItems;
+            el.style.justifyContent = computedStyle.justifyContent;
+            el.style.gap = computedStyle.gap;
+          }
+          el.style.padding = computedStyle.padding;
+          el.style.margin = computedStyle.margin;
+          el.style.border = computedStyle.border;
+          el.style.borderRadius = computedStyle.borderRadius;
+          el.style.position = computedStyle.position;
+          if (computedStyle.position === 'absolute') {
+            el.style.top = computedStyle.top;
+            el.style.left = computedStyle.left;
+            el.style.right = computedStyle.right;
+            el.style.bottom = computedStyle.bottom;
+          }
+        } else if (el instanceof SVGElement) {
+          if (computedStyle.fill) el.setAttribute('fill', computedStyle.fill);
+          if (computedStyle.stroke) el.setAttribute('stroke', computedStyle.stroke);
+          if (computedStyle.color) el.setAttribute('color', computedStyle.color);
+          if (computedStyle.fontFamily) el.setAttribute('font-family', computedStyle.fontFamily);
+          if (computedStyle.fontSize) el.setAttribute('font-size', computedStyle.fontSize);
+          if (computedStyle.fontWeight) el.setAttribute('font-weight', computedStyle.fontWeight);
+        }
+      });
+      
+      const hiddenElements = clone.querySelectorAll('[data-hide-on-copy="true"]');
+      hiddenElements.forEach(el => el.remove());
+
+      const rootStyle = window.getComputedStyle(containerEl);
+      clone.style.backgroundColor = rootStyle.backgroundColor !== 'rgba(0, 0, 0, 0)' ? rootStyle.backgroundColor : 'transparent';
+      clone.style.color = rootStyle.color;
+      clone.style.fontFamily = rootStyle.fontFamily;
+      clone.style.display = rootStyle.display;
+      clone.style.width = rootStyle.width;
+      clone.style.height = rootStyle.height;
+
+      const htmlString = clone.outerHTML;
+      const blobHtml = new Blob([htmlString], { type: "text/html" });
+      const blobText = new Blob([htmlString], { type: "text/plain" });
+      
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          "text/html": blobHtml,
+          "text/plain": blobText,
+        })
+      ]);
+      
+      toast.success("HTML Copied to Clipboard!", {
+        duration: 850,
+      });
+    } catch {
+      toast.error("Failed to copy HTML.");
+    }
+  }, []);
+
   const openFullscreen = useCallback((chartType: ChartType) => {
     setFullscreenChart(chartType);
   }, []);
@@ -161,6 +237,7 @@ export function useCharts() {
     lineCardRef,
     copyChartSvg,
     copyChartPng,
+    copyChartHtml,
     openFullscreen,
     closeFullscreen
   };

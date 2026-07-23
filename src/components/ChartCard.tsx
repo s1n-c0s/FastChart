@@ -1,12 +1,13 @@
 import React, { type ReactNode, useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { ImageIcon } from "lucide-react";
+import { ImageIcon, Code } from "lucide-react";
 
 interface ChartCardProps {
   title: string;
   chartRef: React.RefObject<HTMLDivElement | null>;
   onCopyPng: () => void;
   onCopySvg: () => void;
+  onCopyHtml?: () => void;
   onFullscreen: () => void;
   children: ReactNode;
   showOrientation?: boolean;
@@ -20,6 +21,7 @@ export function ChartCard({
   chartRef,
   onCopySvg,
   onCopyPng,
+  onCopyHtml,
   onFullscreen,
   children,
   showOrientation = false,
@@ -76,7 +78,20 @@ export function ChartCard({
       onMouseLeave={handleMouseLeave}
     >
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold">{title}</h3>
+        <div className="flex items-center gap-2">
+          {onCopyHtml && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onCopyHtml}
+              title="Copy chart as HTML"
+              className="h-8 w-8 p-0"
+            >
+              <Code className="w-4 h-4" />
+            </Button>
+          )}
+          <h3 className="text-lg font-semibold">{title}</h3>
+        </div>
         <div className="flex items-center gap-2">
           {customActions}
           {showOrientation && (

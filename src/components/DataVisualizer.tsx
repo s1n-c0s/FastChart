@@ -56,7 +56,7 @@ export default function DataVisualizer() {
     stackedHorizontal, setStackedHorizontal,
     stackedRadial, setStackedRadial,
     fullscreenChart, openFullscreen, closeFullscreen,
-    copyChartSvg, copyChartPng,
+    copyChartSvg, copyChartPng, copyChartHtml,
     barCardRef, pieCardRef, stackedCardRef, lineCardRef
   } = useCharts();
 
@@ -473,6 +473,7 @@ export default function DataVisualizer() {
               chartRef={barCardRef}
               onCopySvg={() => copyChartSvg(barCardRef.current)}
               onCopyPng={() => copyChartPng(barCardRef.current)}
+              onCopyHtml={() => copyChartHtml(barCardRef.current)}
               onFullscreen={() => openFullscreen("bar")}
               showOrientation
               isHorizontal={barHorizontal}
@@ -513,6 +514,7 @@ export default function DataVisualizer() {
               }
               onCopySvg={() => copyChartSvg(pieCardRef.current)}
               onCopyPng={() => copyChartPng(pieCardRef.current)}
+              onCopyHtml={() => copyChartHtml(pieCardRef.current)}
               onFullscreen={() => openFullscreen("pie")}
             >
               <PieChart data={sortedData} total={total} containerRef={pieCardRef as React.RefObject<HTMLDivElement>} showLabels={showLabels} showLegend={showLegend} showFactText={showFactText} factIndex={pieFactIndex} onFactIndexChange={setPieFactIndex} />
@@ -525,6 +527,7 @@ export default function DataVisualizer() {
               chartRef={stackedCardRef}
               onCopySvg={() => copyChartSvg(stackedCardRef.current)}
               onCopyPng={() => copyChartPng(stackedCardRef.current)}
+              onCopyHtml={() => copyChartHtml(stackedCardRef.current)}
               onFullscreen={() => openFullscreen("stacked")}
               showOrientation={!stackedRadial}
               isHorizontal={stackedHorizontal}
@@ -550,6 +553,7 @@ export default function DataVisualizer() {
               chartRef={lineCardRef}
               onCopySvg={() => copyChartSvg(lineCardRef.current)}
               onCopyPng={() => copyChartPng(lineCardRef.current)}
+              onCopyHtml={() => copyChartHtml(lineCardRef.current)}
               onFullscreen={() => openFullscreen("line")}
               customActions={
                 <div className="flex items-center gap-4">
