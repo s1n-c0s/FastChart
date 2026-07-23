@@ -71,9 +71,18 @@ const CustomStackedLabel = (props: any) => {
   
   if (width < 15 || height < 15) return null;
 
+  if (rawData && rawData.length > 4) {
+    const top4Keys = [...rawData]
+      .sort((a, b) => (b.value || 0) - (a.value || 0))
+      .slice(0, 4)
+      .map(d => d.label);
+    
+    if (!top4Keys.includes(barDataKey)) {
+      return null;
+    }
+  }
+
   const percent = Math.round((value || 0) * 100);
-  const rawItem = rawData.find((d: any) => d.label === barDataKey);
-  const rawValue = rawItem ? rawItem.value : 0;
   
   const cx = x + width / 2;
   const cy = y + height / 2;
@@ -85,10 +94,10 @@ const CustomStackedLabel = (props: any) => {
     <g>
       <text x={cx} y={cy} fill="#ffffff" textAnchor="middle" dominantBaseline="central">
         <tspan fontSize={fontSizePercent} fontWeight="500">
-          {percent}%
+          {barDataKey}
         </tspan>
         <tspan fontSize={fontSizeRaw} fontWeight="500" dx={isFullscreen ? 8 : 4} dy={isFullscreen ? -8 : -4}>
-          ({Number(rawValue || 0).toLocaleString()})
+          ({percent}%)
         </tspan>
       </text>
     </g>
