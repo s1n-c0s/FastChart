@@ -12,13 +12,12 @@ import type { Datum } from "@/types"
 import {
   ChartContainer,
   ChartTooltip,
-  ChartTooltipContent,
 } from "@/components/ui/chart"
 
 export interface BarChartProps {
   data: Datum[]
   isHorizontal?: boolean
-  containerRef?: React.RefObject<HTMLDivElement>
+  containerRef?: React.Ref<HTMLDivElement>
   children?: React.ReactNode
   showLabels?: boolean
 }
@@ -53,17 +52,18 @@ export const BarChart = React.memo(function BarChart({
       <div ref={containerRef} className="h-full w-full">
         <ChartContainer config={chartConfig} className="h-full w-full">
           <RechartsBarChart
+            key="horizontal-chart"
             data={data}
             layout="vertical"
             margin={{ top: 5, right: 15, bottom: 5, left: 5 }}
             barCategoryGap="15%"
           >
-            <CartesianGrid strokeDasharray="3 3" />
+            <CartesianGrid className="stroke-border opacity-80" strokeDasharray="4 4" />
             <XAxis 
               type="number" 
               tickLine={false} 
               axisLine={false}
-              style={{ fontSize: '12px' }}
+              style={{ fontSize: '14px' }}
             />
             <YAxis
               dataKey="label"
@@ -71,18 +71,28 @@ export const BarChart = React.memo(function BarChart({
               tickLine={false}
               axisLine={false}
               width={yAxisWidth}
-              style={{ fontSize: '12px' }}
+              style={{ fontSize: '14px' }}
             />
             <ChartTooltip
-              content={({ active, payload }) => (
-                <ChartTooltipContent
-                  active={active}
-                  payload={payload}
-                  formatter={(value) => (
-                    <span>{Number(value).toLocaleString()}</span>
-                  )}
-                />
-              )}
+              cursor={{ fill: 'var(--muted)', opacity: 0.65 }}
+              isAnimationActive={false}
+              content={({ active, payload }) => {
+                if (active && payload && payload.length) {
+                  const data = payload[0].payload
+                  return (
+                    <div key={data.id || data.label} className="rounded-xl border border-border/50 bg-background/95 backdrop-blur-md p-3 shadow-xl animate-in fade-in zoom-in-95 duration-200">
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">{data.label}</span>
+                        <div className="flex items-center gap-2">
+                          <div className="h-3 w-3 rounded-full" style={{ backgroundColor: data.color }} />
+                          <span className="font-bold text-sm text-foreground">{Number(data.value).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                }
+                return null
+              }}
             />
             <Bar dataKey="value" radius={[0, 6, 6, 0]} maxBarSize={50}>
               {data.map((item) => (
@@ -93,9 +103,10 @@ export const BarChart = React.memo(function BarChart({
                   dataKey="value"
                   position="right"
                   offset={8}
-                  className="fill-foreground"
-                  fontSize={12}
-                  formatter={(value: number) => value.toLocaleString()}
+                  className="fill-foreground font-semibold"
+                  fontSize={15}
+                  fontWeight={600}
+                  formatter={(value: any) => (Number(value) || 0).toLocaleString()}
                 />
               )}
             </Bar>
@@ -113,36 +124,47 @@ export const BarChart = React.memo(function BarChart({
     <div ref={containerRef} className="h-full w-full">
       <ChartContainer config={chartConfig} className="h-full w-full">
         <RechartsBarChart
+          key="vertical-chart"
           data={data}
           layout="horizontal"
           margin={{ top: 5, right: 15, bottom: 5, left: 5 }}
           barCategoryGap="15%"
         >
-          <CartesianGrid strokeDasharray="3 3" />
+          <CartesianGrid className="stroke-border opacity-80" strokeDasharray="4 4" />
           <XAxis
             dataKey="label"
             tickLine={false}
             axisLine={false}
             height={xAxisHeight}
-            style={{ fontSize: '12px' }}
+            style={{ fontSize: '14px' }}
           />
           <YAxis
             type="number"
             tickLine={false}
             axisLine={false}
             width={45}
-            style={{ fontSize: '12px' }}
+            style={{ fontSize: '14px' }}
           />
           <ChartTooltip
-            content={({ active, payload }) => (
-              <ChartTooltipContent
-                active={active}
-                payload={payload}
-                formatter={(value) => (
-                  <span>{Number(value).toLocaleString()}</span>
-                )}
-              />
-            )}
+            cursor={{ fill: 'var(--muted)', opacity: 0.65 }}
+            isAnimationActive={false}
+            content={({ active, payload }) => {
+              if (active && payload && payload.length) {
+                const data = payload[0].payload
+                return (
+                  <div key={data.id || data.label} className="rounded-xl border border-border/50 bg-background/95 backdrop-blur-md p-3 shadow-xl animate-in fade-in zoom-in-95 duration-200">
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">{data.label}</span>
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 rounded-full" style={{ backgroundColor: data.color }} />
+                        <span className="font-bold text-sm text-foreground">{Number(data.value).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              }
+              return null
+            }}
           />
           <Bar 
             dataKey="value" 
@@ -157,9 +179,10 @@ export const BarChart = React.memo(function BarChart({
                 dataKey="value"
                 position="top"
                 offset={8}
-                className="fill-foreground"
-                fontSize={12}
-                formatter={(value: number) => value.toLocaleString()}
+                className="fill-foreground font-semibold"
+                fontSize={15}
+                fontWeight={600}
+                formatter={(value: any) => (Number(value) || 0).toLocaleString()}
               />
             )}
           </Bar>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import toast from "react-hot-toast";
@@ -33,6 +33,14 @@ import {
   LineChart,
   StackedChart
 } from "../components/charts";
+import { Database, X, ChevronDown, Copy, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function DataVisualizer() {
   // --- 1. จัดการข้อมูล (Data Layer) ---
@@ -40,7 +48,7 @@ export default function DataVisualizer() {
     data, setData, total, updateLabel, updateValue, updateColor, removeRow 
   } = useDataManipulation(INITIAL_DATA);
   
-  const { sortedData, sortConfig, requestSort } = useSort(data);
+  const { sortedData, sortConfig, requestSort, setSortConfig } = useSort(data);
 
   // --- 2. จัดการแผนภูมิ (Chart Layer) ---
   const {
@@ -48,14 +56,21 @@ export default function DataVisualizer() {
     stackedHorizontal, setStackedHorizontal,
     stackedRadial, setStackedRadial,
     fullscreenChart, openFullscreen, closeFullscreen,
-    copyChartSvg, copyChartPng,
+    copyChartSvg, copyChartPng, copyChartHtml,
     barCardRef, pieCardRef, stackedCardRef, lineCardRef
   } = useCharts();
 
   // --- 3. Local UI State ---
   const [markdownInput, setMarkdownInput] = useState(INITIAL_MARKDOWN);
-  const [showLabels, setShowLabels] = useState(false);
-  const [showGradientArea, setShowGradientArea] = useState(false);
+  const [showLabels, setShowLabels] = useState(true);
+  const [showLegend, setShowLegend] = useState(true);
+  const [showFactText, setShowFactText] = useState(true);
+  const [pieFactIndex, setPieFactIndex] = useState(0);
+  const [showGradientArea, setShowGradientArea] = useState(true);
+  const [lineColor, setLineColor] = useState<string | undefined>(undefined);
+  const [isDockOpen, setIsDockOpen] = useState(false);
+  
+  const fsRef = useRef<HTMLDivElement>(null);
 
   // --- 6. Handlers for data transformation ---
   const parseMarkdownTable = useCallback((md: string): Datum[] => {
@@ -208,122 +223,253 @@ export default function DataVisualizer() {
     }
   }, [fullscreenChart, closeFullscreen]);
 
-  const chartRefs = { bar: barCardRef, pie: pieCardRef, stacked: stackedCardRef, line: lineCardRef };
+  // --- 9. Click outside dock handler ---
+  const dockRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (isDockOpen && dockRef.current && !dockRef.current.contains(target)) {
+        setIsDockOpen(false);
+      }
+    };
+    
+    const handleEscapeDock = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isDockOpen) {
+        setIsDockOpen(false);
+      }
+    };
+
+    if (isDockOpen) {
+      document.addEventListener("mousedown", handleClickOutside, true);
+      document.addEventListener("keydown", handleEscapeDock);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside, true);
+      document.removeEventListener("keydown", handleEscapeDock);
+    };
+  }, [isDockOpen]);
+
+
 
   return (
     <>
       <div className="p-4 space-y-6" data-testid="data-visualizer">
-        {/* --- Header --- */}
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between border-b pb-6">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Data Visualizer</h1>
-            <p className="text-base text-muted-foreground">
-              Edit values in either panel to update the charts live.
-            </p>
-          </div>
-        </div>
 
-        {/* --- Data Input Section --- */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Data Table */}
-          <div className="rounded-lg border p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-medium">
-                Data Table {sortConfig && <span className="text-sm text-primary">(Sorted)</span>}
+        {/* --- Data Input Section (Float Dock) --- */}
+        <div 
+          ref={dockRef}
+          className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center transition-all duration-300 pointer-events-none`}
+        >
+          {/* Paper Panel */}
+          <div 
+            className={`pointer-events-auto bg-background/95 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-border/50 rounded-2xl overflow-hidden transition-all duration-300 origin-bottom flex flex-col ${
+              isDockOpen ? "w-[95vw] sm:w-[85vw] md:w-[800px] h-[75vh] max-h-[750px] opacity-100 mb-4 scale-100" : "w-0 h-0 opacity-0 mb-0 scale-95"
+            }`}
+          >
+            <div className="flex items-center justify-between p-4 border-b bg-muted/40">
+              <h2 className="font-semibold text-lg flex items-center gap-2">
+                <Database className="w-5 h-5 text-primary" /> Data Manager
               </h2>
-              <div className="flex items-center gap-2">
-                <div className="text-sm text-muted-foreground">Total: {total.toLocaleString()}</div>
-                <Button variant="outline" size="sm" onClick={exportToCSV}>Export CSV</Button>
-                <Button variant="outline" size="sm" onClick={exportToMarkdown}>Export MD</Button>
-                <Button variant="secondary" onClick={addRow}>Add Row</Button>
+              <Button variant="ghost" size="icon" onClick={() => setIsDockOpen(false)} className="rounded-full h-8 w-8 hover:bg-muted">
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-6">
+              {/* Data Table */}
+              <div className="rounded-xl border bg-card p-4 sm:p-5 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+                  <h3 className="text-base font-medium flex items-center gap-2">
+                    Data Table {sortConfig && <span className="text-xs text-primary font-normal bg-primary/10 px-2 py-0.5 rounded-full">Sorted</span>}
+                  </h3>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="text-sm font-medium text-muted-foreground mr-1">Total: {total.toLocaleString()}</div>
+                    <Button variant="outline" size="sm" className="h-8" onClick={exportToCSV}>CSV</Button>
+                    <Button variant="outline" size="sm" className="h-8" onClick={exportToMarkdown}>MD</Button>
+                    <Button variant="default" size="sm" className="h-8 shadow-sm" onClick={addRow}>Add Row</Button>
+                  </div>
+                </div>
+                <div className="overflow-x-auto rounded-lg border bg-background/50">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b bg-muted/50">
+                        <th className="text-left py-3 px-3 min-w-[160px] font-medium text-muted-foreground">
+                          <button
+                            className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+                            onClick={() => requestSort("label")}
+                          >
+                            Label
+                            {sortConfig?.key === "label" && (
+                              <span className="text-primary">{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
+                            )}
+                            {!sortConfig && <span className="text-[10px] uppercase tracking-wider ml-1 opacity-60">(Drag)</span>}
+                          </button>
+                        </th>
+                        <th className="text-left py-3 px-3 min-w-[120px] font-medium text-muted-foreground">
+                          <button
+                            className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+                            onClick={() => requestSort("value")}
+                          >
+                            Value
+                            {sortConfig?.key === "value" && (
+                              <span className="text-primary">{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
+                            )}
+                          </button>
+                        </th>
+                        <th className="text-left py-3 px-3 min-w-[120px] font-medium text-muted-foreground">Color</th>
+                        <th className="text-left py-3 px-3 w-[100px] font-medium text-muted-foreground">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                        <SortableContext items={data.map((d) => d.id)} strategy={verticalListSortingStrategy}>
+                          {sortedData.map((row) => (
+                            <SortableRow
+                              key={row.id}
+                              row={row}
+                              onUpdateLabel={updateLabel}
+                              onUpdateValue={updateValue}
+                              onUpdateColor={updateColor}
+                              onRemove={removeRow}
+                              presetColors={PRESET_COLORS}
+                            />
+                          ))}
+                        </SortableContext>
+                      </DndContext>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Markdown Input */}
+              <div className="rounded-xl border bg-card p-4 sm:p-5 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-base font-medium">Paste Data</h3>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 gap-1.5 shadow-sm hover:bg-muted/50"
+                    onClick={() => {
+                      navigator.clipboard.writeText(markdownInput);
+                      toast.success("Data copied to clipboard!", { duration: 900 });
+                    }}
+                  >
+                    <Copy className="w-3.5 h-3.5" /> 
+                    <span className="hidden sm:inline">Copy Data</span>
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 gap-4">
+                  <textarea
+                    className="min-h-[140px] w-full rounded-xl border bg-background/50 px-4 py-3 font-mono text-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary focus-visible:outline-none resize-y placeholder:text-muted-foreground/50 transition-shadow"
+                    aria-label="Paste CSV or Markdown data"
+                    placeholder="Paste your data here (CSV or Markdown Table)..."
+                    value={markdownInput}
+                    onChange={(e) => setMarkdownInput(e.target.value)}
+                  />
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <Button onClick={transformData} className="w-full sm:w-auto shadow-sm">Transform to Table</Button>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                      <Button variant="secondary" size="sm" className="flex-1 sm:flex-none" onClick={() => loadExample("csv")}>CSV Example</Button>
+                      <Button variant="secondary" size="sm" className="flex-1 sm:flex-none" onClick={() => loadExample("markdown")}>MD Example</Button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-2 pr-2 min-w-[160px]">
-                      <button
-                        className="inline-flex items-center gap-1 font-semibold hover:text-foreground/80 transition-colors"
-                        onClick={() => requestSort("label")}
-                      >
-                        Label
-                        {sortConfig?.key === "label" && (
-                          <span>{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
-                        )}
-                        {!sortConfig && <span className="text-xs text-muted-foreground ml-1">(Drag)</span>}
-                      </button>
-                    </th>
-                    <th className="text-left py-2 pr-2 min-w-[120px]">
-                      <button
-                        className="inline-flex items-center gap-1 font-semibold hover:text-foreground/80 transition-colors"
-                        onClick={() => requestSort("value")}
-                      >
-                        Value
-                        {sortConfig?.key === "value" && (
-                          <span>{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
-                        )}
-                      </button>
-                    </th>
-                    <th className="text-left py-2 pr-2 min-w-[120px]">Color</th>
-                    <th className="text-left py-2 pr-2">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                    <SortableContext items={data.map((d) => d.id)} strategy={verticalListSortingStrategy}>
-                      {sortedData.map((row) => (
-                        <SortableRow
-                          key={row.id}
-                          row={row}
-                          onUpdateLabel={updateLabel}
-                          onUpdateValue={updateValue}
-                          onUpdateColor={updateColor}
-                          onRemove={removeRow}
-                          presetColors={PRESET_COLORS}
-                        />
-                      ))}
-                    </SortableContext>
-                  </DndContext>
-                </tbody>
-              </table>
-            </div>
           </div>
 
-          {/* Markdown Input */}
-          <div className="rounded-lg border p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-medium">Paste Data</h2>
+          {/* Toggle Buttons */}
+          <div className="pointer-events-auto flex flex-wrap justify-center items-center gap-2 sm:gap-3 w-full px-2">
+            <div className="flex flex-wrap justify-center items-center gap-3 sm:gap-4 bg-background/95 backdrop-blur-xl shadow-xl border border-border/50 px-4 sm:px-5 py-2 sm:py-0 min-h-[56px] rounded-3xl sm:rounded-full transition-all duration-300 hover:shadow-2xl max-w-[95vw]">
+              {/* Sort Dropdown */}
               <div className="flex items-center gap-2">
-                <label htmlFor="show-labels" className="text-sm text-muted-foreground cursor-pointer">
-                  Show labels
+                <button
+                  onClick={() => {
+                    if (sortConfig) {
+                      setSortConfig({ ...sortConfig, direction: sortConfig.direction === "asc" ? "desc" : "asc" });
+                    }
+                  }}
+                  disabled={!sortConfig}
+                  className={`flex items-center justify-center w-7 h-7 rounded-full transition-colors ${
+                    sortConfig 
+                      ? "hover:bg-muted/80 text-foreground cursor-pointer shadow-sm border border-border/40" 
+                      : "text-muted-foreground opacity-50 cursor-default"
+                  }`}
+                  title={sortConfig ? `Switch to ${sortConfig.direction === 'asc' ? 'descending' : 'ascending'}` : "Select a sort method first"}
+                >
+                  {!sortConfig && <ArrowUpDown className="w-3.5 h-3.5" />}
+                  {sortConfig?.direction === "asc" && <ArrowUp className="w-3.5 h-3.5" />}
+                  {sortConfig?.direction === "desc" && <ArrowDown className="w-3.5 h-3.5" />}
+                </button>
+                <span className="text-sm font-medium select-none hidden sm:inline ml-1">Sort:</span>
+                <Select
+                  value={sortConfig === null ? "none" : sortConfig.key}
+                  onValueChange={(val) => {
+                    if (val === "none") setSortConfig(null);
+                    if (val === "value") setSortConfig({ key: "value", direction: "desc" });
+                    if (val === "label") setSortConfig({ key: "label", direction: "asc" });
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-[80px] rounded-full text-xs font-medium border-border/50 bg-background/50 shadow-sm hover:bg-muted/50 transition-colors focus:ring-0 focus:ring-offset-0">
+                    <SelectValue placeholder="None" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl shadow-xl border-border/50 min-w-[100px]">
+                    <SelectItem value="none" className="text-sm cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-2">None</SelectItem>
+                    <SelectItem value="value" className="text-sm cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-2">Value</SelectItem>
+                    <SelectItem value="label" className="text-sm cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-2">Name</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="w-px h-6 bg-border/50" />
+
+              {/* Show Labels Toggle */}
+              <div className="flex items-center gap-2.5">
+                <label htmlFor="show-labels-dock" className="text-sm font-medium cursor-pointer select-none">
+                  Labels
                 </label>
                 <Switch
-                  id="show-labels"
+                  id="show-labels-dock"
                   checked={showLabels}
                   onCheckedChange={setShowLabels}
+                  className="data-[state=checked]:bg-primary shadow-sm"
+                />
+              </div>
+
+              <div className="w-px h-6 bg-border/50" />
+
+              {/* Show Legend Toggle */}
+              <div className="flex items-center gap-2.5">
+                <label htmlFor="show-legend-dock" className="text-sm font-medium cursor-pointer select-none">
+                  Legend
+                </label>
+                <Switch
+                  id="show-legend-dock"
+                  checked={showLegend}
+                  onCheckedChange={setShowLegend}
+                  className="data-[state=checked]:bg-primary shadow-sm"
                 />
               </div>
             </div>
-            <div className="grid grid-cols-1 gap-3">
-              <textarea
-                className="min-h-[160px] w-full rounded-md border bg-background px-3 py-2 font-mono text-xs"
-                aria-label="Paste CSV or Markdown data"
-                placeholder="Paste your data here..."
-                value={markdownInput}
-                onChange={(e) => setMarkdownInput(e.target.value)}
-              />
-              <div className="flex items-center justify-between gap-2">
-                <Button onClick={transformData}>Transform to Table</Button>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => loadExample("csv")}>CSV Example</Button>
-                  <Button variant="outline" onClick={() => loadExample("markdown")}>Markdown Example</Button>
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Accepts Markdown Table (Label | Value | Color) or CSV (Label,Value,Color).
-              </p>
-            </div>
+            
+            <Button 
+              size="lg" 
+              className={`rounded-full shadow-xl h-14 px-6 gap-2 font-medium text-base transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 active:scale-95 ${
+                isDockOpen ? "bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-secondary/20" : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/20"
+              }`}
+              onClick={() => setIsDockOpen(!isDockOpen)}
+            >
+              {isDockOpen ? (
+                <>
+                  <ChevronDown className="w-5 h-5" /> Hide Data
+                </>
+              ) : (
+                <>
+                  <Database className="w-5 h-5" /> Edit Data
+                </>
+              )}
+            </Button>
           </div>
         </div>
 
@@ -335,6 +481,7 @@ export default function DataVisualizer() {
               chartRef={barCardRef}
               onCopySvg={() => copyChartSvg(barCardRef.current)}
               onCopyPng={() => copyChartPng(barCardRef.current)}
+              onCopyHtml={() => copyChartHtml(barCardRef.current)}
               onFullscreen={() => openFullscreen("bar")}
               showOrientation
               isHorizontal={barHorizontal}
@@ -349,17 +496,36 @@ export default function DataVisualizer() {
             </ChartCard>
 
             <ChartCard
-              title="Pie Chart - Donut with Total"
+              title="Donut Chart"
               chartRef={pieCardRef}
+              customActions={
+                <div className="flex flex-wrap items-center gap-2">
+                  <Select value={pieFactIndex.toString()} onValueChange={(val) => setPieFactIndex(Number(val))}>
+                    <SelectTrigger className="h-8 w-32 bg-transparent text-xs" style={{ fontSize: 12 }}>
+                      <SelectValue placeholder="Fact Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">Total</SelectItem>
+                      <SelectItem value="1">The most</SelectItem>
+                      <SelectItem value="2">The Lowest</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <label htmlFor="show-fact-text" className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap">
+                    Fact Text
+                  </label>
+                  <Switch
+                    id="show-fact-text"
+                    checked={showFactText}
+                    onCheckedChange={setShowFactText}
+                  />
+                </div>
+              }
               onCopySvg={() => copyChartSvg(pieCardRef.current)}
               onCopyPng={() => copyChartPng(pieCardRef.current)}
+              onCopyHtml={() => copyChartHtml(pieCardRef.current)}
               onFullscreen={() => openFullscreen("pie")}
             >
-              <PieChart 
-                data={sortedData} 
-                total={total} 
-                containerRef={pieCardRef as React.RefObject<HTMLDivElement>}
-              />
+              <PieChart data={sortedData} total={total} containerRef={pieCardRef as React.RefObject<HTMLDivElement>} showLabels={showLabels} showLegend={showLegend} showFactText={showFactText} factIndex={pieFactIndex} onFactIndexChange={setPieFactIndex} />
             </ChartCard>
           </div>
 
@@ -369,12 +535,13 @@ export default function DataVisualizer() {
               chartRef={stackedCardRef}
               onCopySvg={() => copyChartSvg(stackedCardRef.current)}
               onCopyPng={() => copyChartPng(stackedCardRef.current)}
+              onCopyHtml={() => copyChartHtml(stackedCardRef.current)}
               onFullscreen={() => openFullscreen("stacked")}
               showOrientation={!stackedRadial}
               isHorizontal={stackedHorizontal}
               onToggleOrientation={() => setStackedHorizontal(!stackedHorizontal)}
               customActions={
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <label htmlFor="show-radial" className="text-xs text-muted-foreground cursor-pointer">
                     Radial
                   </label>
@@ -386,13 +553,7 @@ export default function DataVisualizer() {
                 </div>
               }
             >
-              <StackedChart 
-                data={sortedData} 
-                containerRef={stackedCardRef as React.RefObject<HTMLDivElement>}
-                isHorizontal={stackedHorizontal}
-                showLabels={showLabels}
-                showRadial={stackedRadial}
-              />
+              <StackedChart data={sortedData} isHorizontal={stackedHorizontal} containerRef={stackedCardRef as React.Ref<HTMLDivElement>} showLabels={showLabels} showRadial={stackedRadial} showLegend={showLegend} />
             </ChartCard>
 
             <ChartCard
@@ -400,25 +561,41 @@ export default function DataVisualizer() {
               chartRef={lineCardRef}
               onCopySvg={() => copyChartSvg(lineCardRef.current)}
               onCopyPng={() => copyChartPng(lineCardRef.current)}
+              onCopyHtml={() => copyChartHtml(lineCardRef.current)}
               onFullscreen={() => openFullscreen("line")}
               customActions={
-                <div className="flex items-center gap-2">
-                  <label htmlFor="show-gradient" className="text-xs text-muted-foreground cursor-pointer">
-                    Gradient area
-                  </label>
-                  <Switch
-                    id="show-gradient"
-                    checked={showGradientArea}
-                    onCheckedChange={setShowGradientArea}
-                  />
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="line-color" className="text-xs text-muted-foreground cursor-pointer">
+                      Line Color
+                    </label>
+                    <input
+                      id="line-color"
+                      type="color"
+                      value={lineColor || sortedData[0]?.color || "#3b82f6"}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLineColor(e.target.value)}
+                      className="w-5 h-5 p-0 cursor-pointer rounded-md border-border/50"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="show-gradient" className="text-xs text-muted-foreground cursor-pointer">
+                      Gradient area
+                    </label>
+                    <Switch
+                      id="show-gradient"
+                      checked={showGradientArea}
+                      onCheckedChange={setShowGradientArea}
+                    />
+                  </div>
                 </div>
               }
             >
               <LineChart 
                 data={sortedData} 
-                containerRef={lineCardRef as React.RefObject<HTMLDivElement>}
+                containerRef={lineCardRef as React.Ref<HTMLDivElement>}
                 showLabels={showLabels}
                 showGradientArea={showGradientArea}
+                lineColor={lineColor}
               />
             </ChartCard>
           </div>
@@ -430,31 +607,55 @@ export default function DataVisualizer() {
         isOpen={fullscreenChart === "bar"}
         onClose={closeFullscreen}
         chartType="bar"
-        onCopySvg={() => copyChartSvg(chartRefs.bar.current)}
-        onCopyPng={() => copyChartPng(chartRefs.bar.current)}
+        onCopySvg={() => copyChartSvg(fsRef.current)}
+        onCopyPng={() => copyChartPng(fsRef.current)}
         showOrientation
         isHorizontal={barHorizontal}
         onToggleOrientation={() => setBarHorizontal(!barHorizontal)}
       >
-        <BarChart data={sortedData} isHorizontal={barHorizontal} showLabels={showLabels} />
+        <BarChart containerRef={fsRef} data={sortedData} isHorizontal={barHorizontal} showLabels={showLabels} />
       </FullscreenModal>
 
       <FullscreenModal
         isOpen={fullscreenChart === "pie"}
         onClose={closeFullscreen}
         chartType="pie"
-        onCopySvg={() => copyChartSvg(chartRefs.pie.current)}
-        onCopyPng={() => copyChartPng(chartRefs.pie.current)}
+        onCopySvg={() => copyChartSvg(fsRef.current)}
+        onCopyPng={() => copyChartPng(fsRef.current)}
+        customActions={
+          <div className="flex items-center gap-2">
+            <Select value={pieFactIndex.toString()} onValueChange={(val) => setPieFactIndex(Number(val))}>
+              <SelectTrigger className="h-8 w-32 bg-transparent text-xs" style={{ fontSize: 12 }}>
+                <SelectValue placeholder="Fact Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">Total</SelectItem>
+                <SelectItem value="1">The most</SelectItem>
+                <SelectItem value="2">The Lowest</SelectItem>
+              </SelectContent>
+            </Select>
+            <label htmlFor="fs-show-fact-text" className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap">
+              Fact Text
+            </label>
+            <Switch
+              id="fs-show-fact-text"
+              checked={showFactText}
+              onCheckedChange={setShowFactText}
+            />
+          </div>
+        }
       >
-        <PieChart data={sortedData} total={total} isFullscreen={true} />
+        {fullscreenChart === "pie" && (
+          <PieChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} total={total} showLabels={showLabels} showLegend={showLegend} showFactText={showFactText} isFullscreen={fullscreenChart === "pie"} factIndex={pieFactIndex} onFactIndexChange={setPieFactIndex} />
+        )}
       </FullscreenModal>
 
       <FullscreenModal
         isOpen={fullscreenChart === "stacked"}
         onClose={closeFullscreen}
         chartType="stacked"
-        onCopySvg={() => copyChartSvg(chartRefs.stacked.current)}
-        onCopyPng={() => copyChartPng(chartRefs.stacked.current)}
+        onCopySvg={() => copyChartSvg(fsRef.current)}
+        onCopyPng={() => copyChartPng(fsRef.current)}
         showOrientation={!stackedRadial}
         isHorizontal={stackedHorizontal}
         onToggleOrientation={() => setStackedHorizontal(!stackedHorizontal)}
@@ -471,29 +672,43 @@ export default function DataVisualizer() {
           </div>
         }
       >
-        <StackedChart data={sortedData} isHorizontal={stackedHorizontal} showLabels={showLabels} showRadial={stackedRadial} isFullscreen={fullscreenChart === "stacked"} />
+        <StackedChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} isHorizontal={stackedHorizontal} showLabels={showLabels} showRadial={stackedRadial} showLegend={showLegend} isFullscreen={fullscreenChart === "stacked"} />
       </FullscreenModal>
 
       <FullscreenModal
         isOpen={fullscreenChart === "line"}
         onClose={closeFullscreen}
         chartType="line"
-        onCopySvg={() => copyChartSvg(chartRefs.line.current)}
-        onCopyPng={() => copyChartPng(chartRefs.line.current)}
+        onCopySvg={() => copyChartSvg(fsRef.current)}
+        onCopyPng={() => copyChartPng(fsRef.current)}
         customActions={
-          <div className="flex items-center gap-2">
-            <label htmlFor="fullscreen-show-gradient" className="text-xs text-muted-foreground cursor-pointer">
-              Gradient area
-            </label>
-            <Switch
-              id="fullscreen-show-gradient"
-              checked={showGradientArea}
-              onCheckedChange={setShowGradientArea}
-            />
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <label htmlFor="fullscreen-line-color" className="text-xs text-muted-foreground cursor-pointer">
+                Line Color
+              </label>
+              <input
+                id="fullscreen-line-color"
+                type="color"
+                value={lineColor || sortedData[0]?.color || "#3b82f6"}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLineColor(e.target.value)}
+                className="w-5 h-5 p-0 cursor-pointer rounded-md border-border/50"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label htmlFor="fullscreen-show-gradient" className="text-xs text-muted-foreground cursor-pointer">
+                Gradient area
+              </label>
+              <Switch
+                id="fullscreen-show-gradient"
+                checked={showGradientArea}
+                onCheckedChange={setShowGradientArea}
+              />
+            </div>
           </div>
         }
       >
-        <LineChart data={sortedData} showLabels={showLabels} showGradientArea={showGradientArea} />
+        <LineChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} showLabels={showLabels} showGradientArea={showGradientArea} lineColor={lineColor} />
       </FullscreenModal>
     </>
   );

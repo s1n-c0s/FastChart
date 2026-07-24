@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import * as htmlToImage from 'html-to-image';
 import toast from 'react-hot-toast';
 import type { ChartType } from '@/types';
 
@@ -19,11 +20,24 @@ export function useCharts() {
       if (!svg) return;
       const clone = svg.cloneNode(true) as SVGSVGElement;
       
+      // Remove elements that should not be copied
+      const hiddenElements = clone.querySelectorAll('[data-hide-on-copy="true"]');
+      hiddenElements.forEach(el => el.remove());
+
       // Apply computed styles to preserve text colors and other styling
-      const allElements = clone.querySelectorAll('*');
-      const origAllElements = svg.querySelectorAll('*');
-      allElements.forEach((el, index) => {
-        const origEl = origAllElements[index] as Element;
+      
+      // We need to map cloned elements back to their original elements to get computed styles
+      // Since we removed some nodes, we must re-query the original DOM matching the remaining nodes
+      // However, iterating origAllElements index-to-index is dangerous if we removed nodes!
+      // Let's do it safely by checking the original structure.
+      
+      // To keep it simple, apply styles BEFORE removing nodes, then remove them.
+      const cloneTemp = svg.cloneNode(true) as SVGSVGElement;
+      const allTempElements = cloneTemp.querySelectorAll('*');
+      const origTempElements = svg.querySelectorAll('*');
+      
+      allTempElements.forEach((el, index) => {
+        const origEl = origTempElements[index] as Element;
         const computedStyle = window.getComputedStyle(origEl);
         
         // Apply important computed properties
@@ -51,7 +65,7 @@ export function useCharts() {
       });
 
       // Specifically handle text elements to preserve their colors and fonts
-      const textElements = clone.querySelectorAll('text, tspan');
+      const textElements = cloneTemp.querySelectorAll('text, tspan');
       const origTextElements = svg.querySelectorAll('text, tspan');
       textElements.forEach((el, index) => {
         const origEl = origTextElements[index] as Element;
@@ -78,11 +92,15 @@ export function useCharts() {
         }
       });
 
-      if (!clone.getAttribute("xmlns")) {
-        clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      // Now remove hidden elements AFTER styling
+      const hiddenElementsToRemove = cloneTemp.querySelectorAll('[data-hide-on-copy="true"]');
+      hiddenElementsToRemove.forEach(el => el.remove());
+
+      if (!cloneTemp.getAttribute("xmlns")) {
+        cloneTemp.setAttribute("xmlns", "http://www.w3.org/2000/svg");
       }
 
-      const xml = new XMLSerializer().serializeToString(clone);
+      const xml = new XMLSerializer().serializeToString(cloneTemp);
       await navigator.clipboard.writeText(xml);
       toast.success("SVG Copied to Clipboard!", {
         duration: 850,
@@ -97,103 +115,115 @@ export function useCharts() {
   }, []);
 
   const copyChartPng = useCallback(async (containerEl: HTMLElement | null) => {
-  try {
-    const svg = containerEl?.querySelector("svg") as SVGSVGElement | null;
-    if (!svg) return;
+    if (!containerEl) return;
+    try {
+      // Temporarily remove elements from DOM to guarantee they aren't copied
+      const hiddenElements = Array.from(containerEl.querySelectorAll('[data-hide-on-copy="true"]'));
+      const parents = hiddenElements.map(el => el.parentNode);
+      const nextSiblings = hiddenElements.map(el => el.nextSibling);
+      
+      hiddenElements.forEach(el => el.remove());
 
-    // Clone SVG and apply computed styles to preserve text colors
-    const clone = svg.cloneNode(true) as SVGSVGElement;
-    
-    // Apply computed styles to all elements
-    const origElements = svg.querySelectorAll('*');
-    const cloneElements = clone.querySelectorAll('*');
-    
-    cloneElements.forEach((el, index) => {
-      const origEl = origElements[index];
-      if (origEl) {
+      const dataUrl = await htmlToImage.toPng(containerEl, {
+        backgroundColor: 'transparent',
+        pixelRatio: 2, // High resolution
+        filter: (node) => {
+          return node.getAttribute ? node.getAttribute("data-hide-on-copy") !== "true" : true;
+        }
+      });
+      
+      // Restore elements to the DOM
+      hiddenElements.forEach((el, index) => {
+        if (parents[index]) {
+          parents[index]?.insertBefore(el, nextSiblings[index]);
+        }
+      });
+      
+      const response = await fetch(dataUrl);
+      const blob = await response.blob();
+      
+      if (blob) {
+        await navigator.clipboard.write([
+          new ClipboardItem({ "image/png": blob })
+        ]);
+        toast.success("PNG Copied to Clipboard!");
+      }
+    } catch {
+      toast.error("Failed to copy PNG.");
+    }
+  }, []);
+
+  const copyChartHtml = useCallback(async (containerEl: HTMLElement | null) => {
+    if (!containerEl) return;
+    try {
+      const clone = containerEl.cloneNode(true) as HTMLElement;
+      const allTempElements = clone.querySelectorAll('*');
+      const origTempElements = containerEl.querySelectorAll('*');
+      
+      allTempElements.forEach((el, index) => {
+        const origEl = origTempElements[index] as Element;
+        if (!origEl) return;
         const computedStyle = window.getComputedStyle(origEl);
         
-        if (computedStyle.fill) {
-          (el as SVGElement).setAttribute('fill', computedStyle.fill);
-        }
-        if (computedStyle.stroke) {
-          (el as SVGElement).setAttribute('stroke', computedStyle.stroke);
-        }
-        if (computedStyle.fontFamily) {
-          (el as SVGElement).setAttribute('font-family', computedStyle.fontFamily);
-        }
-        if (computedStyle.fontSize) {
-          (el as SVGElement).setAttribute('font-size', computedStyle.fontSize);
-        }
-        if (computedStyle.fontWeight) {
-          (el as SVGElement).setAttribute('font-weight', computedStyle.fontWeight);
-        }
-        if (computedStyle.fontStyle) {
-          (el as SVGElement).setAttribute('font-style', computedStyle.fontStyle);
-        }
-      }
-    });
-
-    // Specifically handle text elements to preserve colors and fonts
-    const textElements = clone.querySelectorAll('text, tspan');
-    const origTextElements = svg.querySelectorAll('text, tspan');
-    textElements.forEach((el, index) => {
-      const origEl = origTextElements[index] as Element;
-      if (origEl) {
-        const computedStyle = window.getComputedStyle(origEl);
-        if (computedStyle.fill) {
-          (el as SVGElement).setAttribute('fill', computedStyle.fill);
-        }
-        if (computedStyle.fontFamily) {
-          (el as SVGElement).setAttribute('font-family', computedStyle.fontFamily);
-        }
-        if (computedStyle.fontSize) {
-          (el as SVGElement).setAttribute('font-size', computedStyle.fontSize);
-        }
-        if (computedStyle.fontWeight) {
-          (el as SVGElement).setAttribute('font-weight', computedStyle.fontWeight);
-        }
-        if (computedStyle.fontStyle) {
-          (el as SVGElement).setAttribute('font-style', computedStyle.fontStyle);
-        }
-      }
-    });
-
-    const svgData = new XMLSerializer().serializeToString(clone);
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    const img = new Image();
-
-    // ตั้งค่าขนาด canvas ตาม SVG
-    const svgBounds = svg.getBoundingClientRect();
-    canvas.width = svgBounds.width * 2; // เพิ่มความชัด x2
-    canvas.height = svgBounds.height * 2;
-
-    const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
-    const url = URL.createObjectURL(svgBlob);
-
-    img.onload = async () => {
-      if (ctx) {
-        // ตั้ง background เป็น transparent
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        
-        canvas.toBlob(async (blob) => {
-          if (blob) {
-            await navigator.clipboard.write([
-              new ClipboardItem({ "image/png": blob })
-            ]);
-            toast.success("PNG Copied to Clipboard!");
+        if (el instanceof HTMLElement) {
+          el.style.color = computedStyle.color;
+          el.style.backgroundColor = computedStyle.backgroundColor !== 'rgba(0, 0, 0, 0)' ? computedStyle.backgroundColor : 'transparent';
+          el.style.fontFamily = computedStyle.fontFamily;
+          el.style.fontSize = computedStyle.fontSize;
+          el.style.fontWeight = computedStyle.fontWeight;
+          el.style.display = computedStyle.display;
+          if (computedStyle.display === 'flex') {
+            el.style.flexDirection = computedStyle.flexDirection;
+            el.style.alignItems = computedStyle.alignItems;
+            el.style.justifyContent = computedStyle.justifyContent;
+            el.style.gap = computedStyle.gap;
           }
-          URL.revokeObjectURL(url);
-        }, "image/png");
-      }
-    };
-    img.src = url;
-  } catch {
-    toast.error("Failed to copy PNG.");
-  }
-}, []);
+          el.style.padding = computedStyle.padding;
+          el.style.margin = computedStyle.margin;
+          el.style.border = computedStyle.border;
+          el.style.borderRadius = computedStyle.borderRadius;
+          el.style.position = computedStyle.position;
+          if (computedStyle.position === 'absolute') {
+            el.style.top = computedStyle.top;
+            el.style.left = computedStyle.left;
+            el.style.right = computedStyle.right;
+            el.style.bottom = computedStyle.bottom;
+          }
+        } else if (el instanceof SVGElement) {
+          if (computedStyle.fill) el.setAttribute('fill', computedStyle.fill);
+          if (computedStyle.stroke) el.setAttribute('stroke', computedStyle.stroke);
+          if (computedStyle.color) el.setAttribute('color', computedStyle.color);
+          if (computedStyle.fontFamily) el.setAttribute('font-family', computedStyle.fontFamily);
+          if (computedStyle.fontSize) el.setAttribute('font-size', computedStyle.fontSize);
+          if (computedStyle.fontWeight) el.setAttribute('font-weight', computedStyle.fontWeight);
+        }
+      });
+      
+      const hiddenElements = clone.querySelectorAll('[data-hide-on-copy="true"]');
+      hiddenElements.forEach(el => el.remove());
+
+      const rootStyle = window.getComputedStyle(containerEl);
+      clone.style.backgroundColor = rootStyle.backgroundColor !== 'rgba(0, 0, 0, 0)' ? rootStyle.backgroundColor : 'transparent';
+      clone.style.color = rootStyle.color;
+      clone.style.fontFamily = rootStyle.fontFamily;
+      clone.style.display = rootStyle.display;
+      clone.style.width = rootStyle.width;
+      clone.style.height = rootStyle.height;
+
+      const htmlString = clone.outerHTML;
+      
+      // We write as plain text so that website builders (like WordPress) 
+      // don't try to parse and strip the SVG/styles during a rich-text paste.
+      // The user can then paste this raw code into a 'Custom HTML' block.
+      await navigator.clipboard.writeText(htmlString);
+      
+      toast.success("HTML Code Copied!", {
+        duration: 850,
+      });
+    } catch {
+      toast.error("Failed to copy HTML.");
+    }
+  }, []);
 
   const openFullscreen = useCallback((chartType: ChartType) => {
     setFullscreenChart(chartType);
@@ -217,6 +247,7 @@ export function useCharts() {
     lineCardRef,
     copyChartSvg,
     copyChartPng,
+    copyChartHtml,
     openFullscreen,
     closeFullscreen
   };

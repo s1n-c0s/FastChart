@@ -176,7 +176,7 @@ export function FlowChart({
           data={sankeyData}
           nodeWidth={nodeWidth}
           nodePadding={nodePadding}
-          node={(nodeProps) => renderCustomNode({ ...nodeProps, totalValue })}
+          node={(nodeProps: any) => renderCustomNode({ ...nodeProps, totalValue })}
           link={{ stroke: "#94a3b8", strokeOpacity: 0.2 }}
           margin={{ top: 20, left: 20, bottom: 20, right: 120 }}
           iterations={64}
