@@ -343,7 +343,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
         points={newPoints.map((p: any) => `${p.x},${p.y}`).join(' ')}
         stroke={textColor}
         strokeWidth={1}
-        className="pie-custom-label"
+        className="chart-global-label"
       />
     );
   }, [isFullscreen, top4Ids, lastOtherId, textColor]);
@@ -383,7 +383,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
 
     return (
       <g 
-        className="pie-custom-label"
+        className="chart-global-label"
         style={{ 
           overflow: 'visible',
           transformOrigin: `${fx + boxWidth / 2}px ${fy + boxHeight / 2}px`
