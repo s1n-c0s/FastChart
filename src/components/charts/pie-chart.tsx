@@ -176,8 +176,8 @@ const InnerRechartsPie = React.memo(({ size, data, pieCy, showLabels, isFullscre
           nameKey="label"
           cx="50%"
           cy={pieCy}
-          innerRadius={showLabels ? (isFullscreen ? size * 0.20 : size * 0.15) : size * 0.28}
-          outerRadius={showLabels ? (isFullscreen ? size * 0.30 : size * 0.22) : size * 0.42}
+          innerRadius={showLabels ? size * 0.20 : size * 0.28}
+          outerRadius={showLabels ? (isFullscreen ? size * 0.30 : size * 0.28) : size * 0.42}
           paddingAngle={2}
           cornerRadius={6}
           animationDuration={500}
@@ -194,8 +194,8 @@ const InnerRechartsPie = React.memo(({ size, data, pieCy, showLabels, isFullscre
           nameKey="label"
           cx="50%"
           cy={pieCy}
-          innerRadius={showLabels ? (isFullscreen ? size * 0.20 : size * 0.15) : size * 0.28}
-          outerRadius={showLabels ? (isFullscreen ? size * 0.30 : size * 0.22) : size * 0.42}
+          innerRadius={showLabels ? size * 0.20 : size * 0.28}
+          outerRadius={showLabels ? (isFullscreen ? size * 0.30 : size * 0.28) : size * 0.42}
           paddingAngle={2}
           cornerRadius={6}
           animationDuration={500}
@@ -327,7 +327,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     
     const isLeft = points[2].x < points[0].x;
     const isTop = points[2].y < points[0].y;
-    const basePushX = isFullscreen ? 45 : 40; // cleanly extends the horizontal line
+    const basePushX = isFullscreen ? 45 : 30; // cleanly extends the horizontal line
     const basePushY = isFullscreen ? 30 : 20; // vertically push away from pie edge
     
     const newPoints = [
@@ -364,7 +364,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     }
     const boxWidth = isFullscreen ? 160 : 110;
     const boxHeight = isFullscreen ? 56 : 52;
-    const basePushX = isFullscreen ? 45 : 40;
+    const basePushX = isFullscreen ? 45 : 30;
     const basePushY = isFullscreen ? 30 : 20;
     const isLeft = x < cx;
     const isTop = y < cy;
@@ -532,7 +532,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     );
   }, [chartWidth, size, legendRows, legendHeight, isFullscreen, textMainColor, total]);
 
-  const pieCy = (size - legendHeight) / 2 - (showLabels ? (isFullscreen ? 15 : 0) : 0);
+  const pieCy = (size - legendHeight) / 2 - (showLabels ? (isFullscreen ? 15 : 20) : 0);
 
   return (
       <div ref={setRefs} className="flex h-full w-full items-center justify-center flex-col">
