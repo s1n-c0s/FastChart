@@ -98,17 +98,15 @@ export const BarChart = React.memo(function BarChart({
               {data.map((item) => (
                 <Cell key={item.id} fill={item.color} />
               ))}
-              {showLabels && (
-                <LabelList
-                  dataKey="value"
-                  position="right"
-                  offset={8}
-                  className="fill-foreground font-semibold"
-                  fontSize={15}
-                  fontWeight={600}
-                  formatter={(value: any) => (Number(value) || 0).toLocaleString()}
-                />
-              )}
+              <LabelList
+                dataKey="value"
+                position="right"
+                offset={8}
+                className={`fill-foreground font-semibold transition-opacity duration-300 ${showLabels ? 'opacity-100' : 'opacity-0'}`}
+                fontSize={15}
+                fontWeight={600}
+                formatter={(value: any) => (Number(value) || 0).toLocaleString()}
+              />
             </Bar>
             {children}
           </RechartsBarChart>
@@ -174,17 +172,15 @@ export const BarChart = React.memo(function BarChart({
             {data.map((item) => (
               <Cell key={item.id} fill={item.color} />
             ))}
-            {showLabels && (
-              <LabelList
-                dataKey="value"
-                position="top"
-                offset={8}
-                className="fill-foreground font-semibold"
-                fontSize={15}
-                fontWeight={600}
-                formatter={(value: any) => (Number(value) || 0).toLocaleString()}
-              />
-            )}
+            <LabelList
+              dataKey="value"
+              position="top"
+              offset={8}
+              className={`fill-foreground font-semibold transition-opacity duration-300 ${showLabels ? 'opacity-100' : 'opacity-0'}`}
+              fontSize={15}
+              fontWeight={600}
+              formatter={(value: any) => (Number(value) || 0).toLocaleString()}
+            />
           </Bar>
           {children}
         </RechartsBarChart>

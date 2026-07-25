@@ -138,17 +138,15 @@ export const LineChart = React.memo(function LineChart({
                 activeDot={{ r: 6, fill: lineColor }}
                 isAnimationActive={true}
               >
-                {showLabels && (
-                  <LabelList
-                    dataKey="value"
-                    position="top"
-                    offset={8}
-                    className="fill-foreground font-semibold"
-                    fontSize={15}
-                    fontWeight={600}
-                    formatter={(value: any) => (Number(value) || 0).toLocaleString()}
-                  />
-                )}
+                <LabelList
+                  dataKey="value"
+                  position="top"
+                  offset={8}
+                  className={`fill-foreground font-semibold transition-opacity duration-300 ${showLabels ? 'opacity-100' : 'opacity-0'}`}
+                  fontSize={15}
+                  fontWeight={600}
+                  formatter={(value: any) => (Number(value) || 0).toLocaleString()}
+                />
               </Line>
             </ComposedChart>
           </ResponsiveContainer>

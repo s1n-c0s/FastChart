@@ -66,7 +66,7 @@ const StackedTooltip = React.memo(function StackedTooltip({ active, payload }: S
 StackedTooltip.displayName = "StackedTooltip";
 
 const CustomStackedLabel = (props: any) => {
-  const { x, y, width, height, value, rawData, barDataKey, isFullscreen, isHorizontal } = props;
+  const { x, y, width, height, value, rawData, barDataKey, isFullscreen, isHorizontal, showLabels } = props;
   
   if (width < 15 || height < 15) return null;
 
@@ -90,7 +90,7 @@ const CustomStackedLabel = (props: any) => {
   const fontSizeRaw = isFullscreen ? 24 : (isHorizontal ? 16 : 12);
   
   return (
-    <g>
+    <g className={`transition-opacity duration-300 ${showLabels ? 'opacity-100' : 'opacity-0'}`}>
       <text x={cx} y={cy} fill="#ffffff" textAnchor="middle" dominantBaseline="central">
         <tspan fontSize={fontSizePercent} fontWeight="500">
           {barDataKey}
@@ -398,12 +398,10 @@ export const StackedChart = React.memo(function StackedChart({
                 name={d.label}
                 isAnimationActive={true}
               >
-                {showLabels && (
-                  <LabelList
-                    dataKey={d.label}
-                    content={<CustomStackedLabel rawData={data} isFullscreen={isFullscreen} isHorizontal={isHorizontal} barDataKey={d.label} />}
-                  />
-                )}
+                <LabelList
+                  dataKey={d.label}
+                  content={<CustomStackedLabel rawData={data} isFullscreen={isFullscreen} isHorizontal={isHorizontal} barDataKey={d.label} showLabels={showLabels} />}
+                />
               </Bar>
             ))}
             {showLegend && renderSvgLegend()}
@@ -452,12 +450,10 @@ export const StackedChart = React.memo(function StackedChart({
               name={d.label}
               isAnimationActive={true}
             >
-              {showLabels && (
-                <LabelList
-                  dataKey={d.label}
-                  content={<CustomStackedLabel rawData={data} isFullscreen={isFullscreen} isHorizontal={isHorizontal} barDataKey={d.label} />}
-                />
-              )}
+              <LabelList
+                dataKey={d.label}
+                content={<CustomStackedLabel rawData={data} isFullscreen={isFullscreen} isHorizontal={isHorizontal} barDataKey={d.label} showLabels={showLabels} />}
+              />
             </Bar>
           ))}
           {showLegend && renderSvgLegend()}
