@@ -14,6 +14,7 @@ import {
   PolarAngleAxis,
   Label as RechartsLabel
 } from "recharts"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 import {
   ChartContainer,
   type ChartConfig,
@@ -27,6 +28,9 @@ export interface StackedChartProps {
   showLabels?: boolean
   showRadial?: boolean
   isFullscreen?: boolean
+  showFactText?: boolean
+  factIndex?: number
+  onFactIndexChange?: (index: number) => void
   
 }
 
@@ -161,6 +165,9 @@ export const StackedChart = React.memo(function StackedChart({
   showLabels = false,
   showRadial = false,
   isFullscreen = false,
+  showFactText = false,
+  factIndex = 0,
+  onFactIndexChange,
   
 }: StackedChartProps) {
 
@@ -377,8 +384,13 @@ export const StackedChart = React.memo(function StackedChart({
             <PolarAngleAxis type="number" domain={[0, 1]} tick={false} axisLine={false} />
             <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
               <RechartsLabel
+                key={factIndex}
+                factIndex={factIndex}
+                showFactText={showFactText}
                 content={({ viewBox }) => {
                   if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                    const cx = viewBox.cx || 0;
+                    const cy = viewBox.cy || 0;
                     const maxTextSize = isFullscreen ? 80 : 32
                     const maxLabelSize = isFullscreen ? 24 : 16
                     
@@ -388,29 +400,117 @@ export const StackedChart = React.memo(function StackedChart({
                     
                     const textSize = maxTextSize * scaleFactor;
                     const labelSize = maxLabelSize * scaleFactor;
+                    const titleSize = labelSize * 0.9;
                     
-                    // Label sits slightly above the baseline (cy)
-                    const labelY = (viewBox.cy || 0) - (8 * scaleFactor);
-                    // Number sits above the label with some spacing
-                    const numberY = labelY - labelSize - (4 * scaleFactor);
+                    const maxItem = data && data.length > 0 ? data.reduce((prev: any, current: any) => (prev.value > current.value) ? prev : current) : null;
+                    const minItem = data && data.length > 0 ? data.reduce((prev: any, current: any) => (prev.value < current.value) ? prev : current) : null;
+                    
+                    let factTitle = "Total";
+                    let factValue = totalValue.toLocaleString();
+                    let factColor = "var(--muted-foreground)";
+                    let factValueColor = "currentColor";
+                    let factLabel = "";
+                    
+                    if (showFactText) {
+                      if (factIndex === 1 && maxItem) {
+                        factTitle = "The most";
+                        factValue = maxItem.value.toLocaleString();
+                        factColor = maxItem.color;
+                        factValueColor = maxItem.color;
+                        factLabel = maxItem.label;
+                      } else if (factIndex === 2 && minItem) {
+                        factTitle = "The Lowest";
+                        factValue = minItem.value.toLocaleString();
+                        factColor = minItem.color;
+                        factValueColor = minItem.color;
+                        factLabel = minItem.label;
+                      }
+                    }
+
+                    const handlePrev = (e: any) => { 
+                      e.stopPropagation(); 
+                      if (onFactIndexChange) onFactIndexChange(((factIndex || 0) - 1 + 3) % 3);
+                    };
+                    const handleNext = (e: any) => { 
+                      e.stopPropagation(); 
+                      if (onFactIndexChange) onFactIndexChange(((factIndex || 0) + 1) % 3);
+                    };
+                    
+                    // Radial chart is a half circle ending at cy. All content must sit ABOVE cy.
+                    let titleY, valueY, labelY;
+                    if (factLabel) {
+                      labelY = cy - (4 * scaleFactor);
+                      valueY = labelY - labelSize - (4 * scaleFactor);
+                      titleY = valueY - (textSize * 0.8) - (4 * scaleFactor);
+                    } else {
+                      labelY = 0;
+                      valueY = cy - (8 * scaleFactor);
+                      titleY = valueY - (textSize * 0.8) - (6 * scaleFactor);
+                    }
+                    
+                    // Compute the visual center of the text block to perfectly align the arrows
+                    const textCenterY = factLabel 
+                      ? (titleY - titleSize + labelY) / 2 
+                      : (titleY - titleSize + valueY) / 2;
+                    const arrowY = textCenterY - 16;
                     
                     return (
-                      <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle">
-                        <tspan
-                          x={viewBox.cx}
-                          y={numberY}
-                          style={{ fontSize: `${textSize}px`, fontWeight: 'bold', fill: 'currentColor' }}
-                        >
-                          {totalValue.toLocaleString()}
-                        </tspan>
-                        <tspan
-                          x={viewBox.cx}
-                          y={labelY}
-                          style={{ fontSize: `${labelSize}px`, fill: 'var(--muted-foreground)' }}
-                        >
-                          Total
-                        </tspan>
-                      </text>
+                      <g className="group" style={{ pointerEvents: 'all' }}>
+                        <text x={cx} y={cy} textAnchor="middle">
+                          <tspan
+                            x={cx}
+                            y={titleY}
+                            style={{ fontSize: `${titleSize}px`, fill: factColor, fontWeight: '500' }}
+                          >
+                            {factTitle}
+                          </tspan>
+                          <tspan
+                            x={cx}
+                            y={valueY}
+                            style={{ fontSize: `${textSize}px`, fontWeight: 'bold', fill: factValueColor }}
+                          >
+                            {factValue}
+                          </tspan>
+                          {factLabel && (
+                            <tspan
+                              x={cx}
+                              y={labelY}
+                              style={{ fontSize: `${labelSize}px`, fill: factColor, opacity: 0.8, fontWeight: '500' }}
+                            >
+                              {factLabel}
+                            </tspan>
+                          )}
+                        </text>
+                        {showFactText && (
+                          <g>
+                            <svg 
+                              x={cx - innerRadius + (isFullscreen ? 30 : 10)} 
+                              y={arrowY} 
+                              width={32} height={32} 
+                              onClick={handlePrev} 
+                              className="opacity-0 group-hover:opacity-100 cursor-pointer pointer-events-auto text-muted-foreground transition-opacity"
+                              color="currentColor"
+                              data-hide-on-copy="true"
+                            >
+                              <rect width="32" height="32" fill="transparent" />
+                              <ChevronLeft x={4} y={4} width={24} height={24} strokeWidth={2.5} />
+                            </svg>
+
+                            <svg 
+                              x={cx + innerRadius - 32 - (isFullscreen ? 30 : 10)} 
+                              y={arrowY} 
+                              width={32} height={32} 
+                              onClick={handleNext} 
+                              className="opacity-0 group-hover:opacity-100 cursor-pointer pointer-events-auto text-muted-foreground transition-opacity"
+                              color="currentColor"
+                              data-hide-on-copy="true"
+                            >
+                              <rect width="32" height="32" fill="transparent" />
+                              <ChevronRight x={4} y={4} width={24} height={24} strokeWidth={2.5} />
+                            </svg>
+                          </g>
+                        )}
+                      </g>
                     )
                   }
                   return null;
@@ -546,9 +646,10 @@ export const StackedChart = React.memo(function StackedChart({
   return (
     prevProps.isHorizontal === nextProps.isHorizontal &&
     prevProps.showLabels === nextProps.showLabels &&
-    
     prevProps.showRadial === nextProps.showRadial &&
     prevProps.isFullscreen === nextProps.isFullscreen &&
+    prevProps.showFactText === nextProps.showFactText &&
+    prevProps.factIndex === nextProps.factIndex &&
     prevProps.data.length === nextProps.data.length &&
     prevProps.data.every((item, idx) => 
       item.id === nextProps.data[idx]?.id &&

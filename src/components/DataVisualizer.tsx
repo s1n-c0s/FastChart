@@ -66,6 +66,7 @@ export default function DataVisualizer() {
   const [showLegend, setShowLegend] = useState(true);
   const [showFactText, setShowFactText] = useState(true);
   const [pieFactIndex, setPieFactIndex] = useState(0);
+  const [radialFactIndex, setRadialFactIndex] = useState(0);
   const [showGradientArea, setShowGradientArea] = useState(true);
   const [lineColor, setLineColor] = useState<string | undefined>(undefined);
   const [isDockOpen, setIsDockOpen] = useState(false);
@@ -557,7 +558,7 @@ export default function DataVisualizer() {
               }
             >
               <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
-                <StackedChart data={sortedData} isHorizontal={stackedHorizontal} containerRef={stackedCardRef as React.Ref<HTMLDivElement>} showLabels={showLabels} showRadial={stackedRadial} />
+                <StackedChart data={sortedData} isHorizontal={stackedHorizontal} containerRef={stackedCardRef as React.Ref<HTMLDivElement>} showLabels={showLabels} showRadial={stackedRadial} showFactText={showFactText} factIndex={radialFactIndex} onFactIndexChange={setRadialFactIndex} />
               </div>
             </ChartCard>
 
@@ -681,7 +682,7 @@ export default function DataVisualizer() {
         }
       >
         <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
-          <StackedChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} isHorizontal={stackedHorizontal} showLabels={showLabels} showRadial={stackedRadial} isFullscreen={fullscreenChart === "stacked"} />
+          <StackedChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} isHorizontal={stackedHorizontal} showLabels={showLabels} showRadial={stackedRadial} isFullscreen={fullscreenChart === "stacked"} showFactText={showFactText} factIndex={radialFactIndex} onFactIndexChange={setRadialFactIndex} />
         </div>
       </FullscreenModal>
 
