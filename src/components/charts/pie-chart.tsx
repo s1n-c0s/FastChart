@@ -225,14 +225,16 @@ const InnerRechartsPie = React.memo(({ size, data, pieCy, isFullscreen, renderCu
   return (
     <ResponsiveContainer width="100%" height="100%">
       <RechartsPieChart style={{ overflow: 'visible' }}>
-        <style>{`
-          .my-sector {
-            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-          }
-          .my-hovered-sector, .my-hovered-sector-static {
-            transform: scale(1.1);
-          }
-        `}</style>
+        <defs>
+          <style>{`
+            .my-sector {
+              transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            }
+            .my-hovered-sector, .my-hovered-sector-static {
+              transform: scale(1.1);
+            }
+          `}</style>
+        </defs>
         <Tooltip isAnimationActive={false} content={<CustomTooltip />} />
         <Pie
           data={data}
