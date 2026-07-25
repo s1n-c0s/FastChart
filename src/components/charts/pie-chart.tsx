@@ -43,18 +43,14 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
   onFactIndexChange,
 }: PieChartProps) {
   const [isDark, setIsDark] = React.useState(false);
-  const [isMounted, setIsMounted] = React.useState(false);
   
   React.useEffect(() => {
-    // Small delay ensures the CSS transition fires after initial render
-    const timer = setTimeout(() => setIsMounted(true), 50);
     setIsDark(document.documentElement.classList.contains("dark"));
     const observer = new MutationObserver(() => {
       setIsDark(document.documentElement.classList.contains("dark"));
     });
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
     return () => {
-      clearTimeout(timer);
       observer.disconnect();
     };
   }, []);
@@ -127,9 +123,10 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
 
   const renderCustomLabelLine = React.useCallback((props: any) => {
     const { payload, points } = props;
+    const datumId = payload?.payload?.id || payload?.id;
     
-    if (top4Ids && !top4Ids.includes(payload.id)) {
-      return null;
+    if (top4Ids && !top4Ids.includes(datumId)) {
+      if (datumId !== lastOtherId) return null;
     }
     
     if (!points || points.length < 3) return null;
@@ -150,7 +147,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
         points={newPoints.map((p: any) => `${p.x},${p.y}`).join(' ')}
         stroke={textColor}
         strokeWidth={1}
-        className={showLabels ? "animate-in fade-in duration-300" : "opacity-0"}
+        className={showLabels ? "transition-opacity duration-300 opacity-100" : "transition-opacity duration-300 opacity-0"}
         style={{
           pointerEvents: showLabels ? 'auto' : 'none'
         }}
@@ -159,11 +156,18 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
   }, [top4Ids, textColor, isFullscreen, showLabels]);
 
   const renderCustomLabel = React.useCallback((props: any) => {
+    console.log("PIE PROPS", JSON.stringify(props));
     let { x, y, cx, cy, name, value, percent, payload } = props;
-    let color = payload?.color || "#a1a1aa";
+    const datumId = payload?.payload?.id || payload?.id;
+    let color = payload?.payload?.color || payload?.color || "#a1a1aa";
     
-    if (top4Ids && !top4Ids.includes(payload.id)) {
-      if (payload.id !== lastOtherId) return null;
+    // Fallback if Recharts doesn't pass name/value directly to props
+    if (name === undefined) name = payload?.payload?.label || payload?.label;
+    if (value === undefined) value = payload?.payload?.value || payload?.value;
+    if (percent === undefined && total > 0) percent = (value || 0) / total;
+
+    if (top4Ids && !top4Ids.includes(datumId)) {
+      if (datumId !== lastOtherId) return null;
       
       // Override for the 'Other' label box
       name = "Other";
@@ -191,7 +195,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     return (
       <g 
         key={showLabels ? "on" : "off"}
-        className={showLabels ? "animate-in fade-in zoom-in-95 duration-300" : "opacity-0"}
+        className={showLabels ? "transition-all duration-300 opacity-100" : "transition-all duration-300 opacity-0"}
         style={{ 
           overflow: 'visible',
           pointerEvents: showLabels ? 'auto' : 'none',
@@ -361,7 +365,6 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
               outerRadius={showLabels ? size * 0.30 : size * 0.42}
               paddingAngle={2}
               cornerRadius={6}
-              isAnimationActive={!isMounted}
               animationDuration={500}
               stroke="none"
               label={renderCustomLabel}
@@ -487,7 +490,6 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
               outerRadius={showLabels ? size * 0.30 : size * 0.42}
               paddingAngle={2}
               cornerRadius={6}
-              isAnimationActive={!isMounted}
               animationDuration={500}
               stroke="none"
               style={{ pointerEvents: 'none' }}
