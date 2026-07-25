@@ -169,7 +169,7 @@ const InnerRechartsPie = React.memo(({ size, data, pieCy, isFullscreen, renderCu
   return (
     <ResponsiveContainer width="100%" height="100%">
       <RechartsPieChart style={{ overflow: 'visible' }}>
-        <Tooltip content={<CustomTooltip />} />
+        <Tooltip isAnimationActive={false} content={<CustomTooltip />} />
         <Pie
           data={data}
           dataKey="value"

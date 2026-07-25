@@ -117,6 +117,7 @@ export const LineChart = React.memo(function LineChart({
                 style={{ fontSize: '14px' }}
               />
               <Tooltip
+                isAnimationActive={false}
                 cursor={{ stroke: lineColor, strokeWidth: 1, strokeDasharray: "4 4", opacity: 0.5 }}
                 content={<LineChartTooltip lineColor={lineColor} />}
               />

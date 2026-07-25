@@ -378,6 +378,7 @@ export const StackedChart = React.memo(function StackedChart({
               style={{ overflow: 'visible' }}
             >
             <Tooltip
+              isAnimationActive={false}
               cursor={false}
               content={<StackedTooltip rawData={data} />}
             />
@@ -557,7 +558,7 @@ export const StackedChart = React.memo(function StackedChart({
               axisLine={false}
               style={{ fontSize: '12px' }}
             />
-            <Tooltip cursor={{ fill: 'var(--muted)', opacity: 0.65 }} content={<StackedTooltip rawData={data} />} />
+            <Tooltip isAnimationActive={false} cursor={{ fill: 'var(--muted)', opacity: 0.65 }} content={<StackedTooltip rawData={data} />} />
             {data.map((d) => (
               <Bar 
                 key={d.id} 
@@ -611,7 +612,7 @@ export const StackedChart = React.memo(function StackedChart({
             width={50}
             style={{ fontSize: '12px' }}
           />
-          <Tooltip cursor={{ fill: 'var(--muted)', opacity: 0.65 }} content={<StackedTooltip rawData={data} />} />
+          <Tooltip isAnimationActive={false} cursor={{ fill: 'var(--muted)', opacity: 0.65 }} content={<StackedTooltip rawData={data} />} />
           {data.map((d) => (
             <Bar 
               key={d.id} 
