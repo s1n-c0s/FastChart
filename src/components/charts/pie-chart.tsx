@@ -166,6 +166,20 @@ const FactTextOverlay = (props: any) => {
 
 
 const InnerRechartsPie = React.memo(({ size, data, pieCy, showLabels, isFullscreen, renderCustomLabel, renderCustomLabelLine, cells, overlayCells, showLegend, renderSvgLegend }: any) => {
+  const [animate, setAnimate] = React.useState(true);
+  const prevDataRef = React.useRef(data);
+  React.useEffect(() => {
+    if (prevDataRef.current !== data) {
+      setAnimate(true);
+      prevDataRef.current = data;
+      const t = setTimeout(() => setAnimate(false), 800);
+      return () => clearTimeout(t);
+    }
+  }, [data]);
+  React.useEffect(() => {
+    const t = setTimeout(() => setAnimate(false), 800);
+    return () => clearTimeout(t);
+  }, []);
   return (
     <ResponsiveContainer width="100%" height="100%">
       <RechartsPieChart style={{ overflow: 'visible' }}>
@@ -180,6 +194,7 @@ const InnerRechartsPie = React.memo(({ size, data, pieCy, showLabels, isFullscre
           outerRadius={showLabels ? (isFullscreen ? size * 0.30 : size * 0.28) : size * 0.42}
           paddingAngle={2}
           cornerRadius={6}
+          isAnimationActive={animate}
           animationDuration={500}
           stroke="none"
           label={renderCustomLabel}
@@ -198,6 +213,7 @@ const InnerRechartsPie = React.memo(({ size, data, pieCy, showLabels, isFullscre
           outerRadius={showLabels ? (isFullscreen ? size * 0.30 : size * 0.28) : size * 0.42}
           paddingAngle={2}
           cornerRadius={6}
+          isAnimationActive={animate}
           animationDuration={500}
           stroke="none"
           style={{ pointerEvents: 'none' }}

@@ -135,6 +135,20 @@ export const StackedChart = React.memo(function StackedChart({
   isFullscreen = false,
   showLegend = true,
 }: StackedChartProps) {
+  const [animate, setAnimate] = React.useState(true);
+  const prevDataRef = React.useRef(data);
+  React.useEffect(() => {
+    if (prevDataRef.current !== data) {
+      setAnimate(true);
+      prevDataRef.current = data;
+      const t = setTimeout(() => setAnimate(false), 800);
+      return () => clearTimeout(t);
+    }
+  }, [data]);
+  React.useEffect(() => {
+    const t = setTimeout(() => setAnimate(false), 800);
+    return () => clearTimeout(t);
+  }, []);
   const [isDark, setIsDark] = React.useState(false);
   React.useEffect(() => {
     const checkDark = () => setIsDark(document.documentElement.classList.contains('dark'));
@@ -389,7 +403,7 @@ export const StackedChart = React.memo(function StackedChart({
               />
             </PolarRadiusAxis>
             {data.map((d) => (
-              <RadialBar
+              <RadialBar isAnimationActive={animate}
                 key={d.id}
                 dataKey={d.label}
                 name={d.label}
