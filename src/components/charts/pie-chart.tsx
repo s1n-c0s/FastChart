@@ -332,15 +332,32 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     const basePushX = isFullscreen ? 45 : 30; // cleanly extends the horizontal line
     const basePushY = isFullscreen ? 30 : 20; // vertically push away from pie edge
     
+    const chartWidth = containerRef?.current?.clientWidth || 0;
+    const chartHeight = containerRef?.current?.clientHeight || 0;
+    const boxWidth = isFullscreen ? 160 : 110;
+    const boxHeight = isFullscreen ? 56 : 52;
+    
+    let finalX = points[2].x + (isLeft ? -basePushX : basePushX);
+    let finalY = points[2].y + (isTop ? -basePushY : basePushY);
+    
+    if (chartWidth > 0 && chartHeight > 0) {
+      let fx = isLeft ? finalX - boxWidth : finalX;
+      let fy = finalY - boxHeight / 2;
+      fx = Math.max(10, Math.min(fx, chartWidth - boxWidth - 10));
+      fy = Math.max(10, Math.min(fy, chartHeight - boxHeight - 10));
+      finalX = isLeft ? fx + boxWidth : fx;
+      finalY = fy + boxHeight / 2;
+    }
+    
     const newPoints = [
       points[0],
-      { x: points[1].x, y: points[1].y + (isTop ? -basePushY : basePushY) },
-      { x: points[2].x + (isLeft ? -basePushX : basePushX), y: points[2].y + (isTop ? -basePushY : basePushY) }
+      { x: points[1].x, y: finalY },
+      { x: finalX, y: finalY }
     ];
     
     return (
       <polyline
-        points={newPoints.map((p: any) => `${p.x},${p.y}`).join(' ')}
+        points={newPoints.map(p => `${p.x},${p.y}`).join(" ")}
         stroke={textColor}
         strokeWidth={1}
         className="chart-global-label"
@@ -371,11 +388,18 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     const isLeft = x < cx;
     const isTop = y < cy;
     
-    const finalX = x + (isLeft ? -basePushX : basePushX);
-    const finalY = y + (isTop ? -basePushY : basePushY);
+    let finalX = x + (isLeft ? -basePushX : basePushX);
+    let finalY = y + (isTop ? -basePushY : basePushY);
     
-    const fx = isLeft ? finalX - boxWidth : finalX;
-    const fy = finalY - boxHeight / 2;
+    let fx = isLeft ? finalX - boxWidth : finalX;
+    let fy = finalY - boxHeight / 2;
+    
+    const chartWidth = containerRef?.current?.clientWidth || 0;
+    const chartHeight = containerRef?.current?.clientHeight || 0;
+    if (chartWidth > 0 && chartHeight > 0) {
+      fx = Math.max(10, Math.min(fx, chartWidth - boxWidth - 10));
+      fy = Math.max(10, Math.min(fy, chartHeight - boxHeight - 10));
+    }
 
     const safeName = String(name || '');
     const maxLen = isFullscreen ? 18 : 12;

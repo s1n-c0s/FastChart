@@ -383,9 +383,9 @@ export default function DataVisualizer() {
 
           {/* Toggle Buttons */}
           <div className="pointer-events-auto flex flex-wrap justify-center items-center gap-2 sm:gap-3 w-full px-2">
-            <div className="flex flex-wrap justify-center items-center gap-3 sm:gap-4 bg-background/90 backdrop-blur-xl shadow-xl border border-border/50 px-4 sm:px-5 py-2 sm:py-0 min-h-[56px] rounded-3xl sm:rounded-full transition-all duration-300 hover:shadow-2xl max-w-[95vw] transform-gpu isolate">
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-y-3 sm:gap-4 bg-background/90 backdrop-blur-xl shadow-xl border border-border/50 py-3 sm:py-0 px-4 sm:px-5 min-h-[56px] rounded-[24px] sm:rounded-full transition-all duration-300 hover:shadow-2xl max-w-[95vw] transform-gpu isolate">
               {/* Sort Dropdown */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 justify-between sm:justify-center w-[160px] sm:w-auto">
                 <button
                   onClick={() => {
                     if (sortConfig) {
@@ -424,10 +424,10 @@ export default function DataVisualizer() {
                 </Select>
               </div>
 
-              <div className="w-px h-6 bg-border/50" />
+              <div className="hidden sm:block w-px h-6 bg-border/50" />
 
               {/* Show Labels Toggle */}
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2.5 justify-between sm:justify-center w-[160px] sm:w-auto">
                 <label htmlFor="show-labels-dock" className="text-sm font-medium cursor-pointer select-none">
                   Labels
                 </label>
@@ -439,10 +439,10 @@ export default function DataVisualizer() {
                 />
               </div>
 
-              <div className="w-px h-6 bg-border/50" />
+              <div className="hidden sm:block w-px h-6 bg-border/50" />
 
               {/* Show Legend Toggle */}
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2.5 justify-between sm:justify-center w-[160px] sm:w-auto">
                 <label htmlFor="show-legend-dock" className="text-sm font-medium cursor-pointer select-none">
                   Legend
                 </label>
