@@ -138,7 +138,24 @@ export const SortableRow = React.memo(({
         />
       </td>
       <td className="py-2 pr-2">
-        <Select value={row.color} onValueChange={(color) => onUpdateColor(row.id, color)}>
+        <input
+          type="color"
+          id={`color-picker-${row.id}`}
+          value={row.color}
+          onChange={(e) => onUpdateColor(row.id, e.target.value)}
+          className="sr-only opacity-0 absolute pointer-events-none"
+          tabIndex={-1}
+        />
+        <Select 
+          value={row.color} 
+          onValueChange={(val) => {
+            if (val === "custom_trigger") {
+              document.getElementById(`color-picker-${row.id}`)?.click();
+            } else {
+              onUpdateColor(row.id, val);
+            }
+          }}
+        >
           <SelectTrigger className="w-full h-9">
             <SelectValue asChild>
               <div className="flex items-center gap-2 w-full text-left">
@@ -151,8 +168,24 @@ export const SortableRow = React.memo(({
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="custom_trigger" className="pr-4 mb-1 border-b border-border/50 rounded-none cursor-pointer">
+              <div className="flex items-center gap-2 text-foreground font-medium">
+                <span className="text-xs">🎨 Custom Color...</span>
+              </div>
+            </SelectItem>
+            {!presetColors.includes(row.color) && (
+              <SelectItem value={row.color} className="hidden pr-4">
+                <div className="flex items-center gap-2">
+                  <div 
+                    className={styles.colorPreview}
+                    style={{ ['--preview-color' as string]: row.color }}
+                  />
+                  <span className="font-mono text-xs">{row.color}</span>
+                </div>
+              </SelectItem>
+            )}
             {presetColors.map((c) => (
-              <SelectItem key={c} value={c} className="pr-4">
+              <SelectItem key={c} value={c} className="pr-4 cursor-pointer">
                 <div className="flex items-center gap-2">
                   <div 
                     className={styles.colorPreview}
