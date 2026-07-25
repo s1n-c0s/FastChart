@@ -174,19 +174,22 @@ const InnerRechartsPie = React.memo(({ size, data, pieCy, isFullscreen, renderCu
   }, []);
 
   const onPieMouseEnter = React.useCallback((_: any, index: number) => {
+    if (targetFocusIndex !== -1) return;
+
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     
-    document.querySelectorAll('.my-hovered-sector-static').forEach(el => el.classList.remove('my-hovered-sector-static'));
     document.querySelectorAll('.my-hovered-sector').forEach(el => el.classList.remove('my-hovered-sector'));
     document.querySelectorAll(`.my-sector-${index}`).forEach(el => el.classList.add('my-hovered-sector'));
-  }, []);
+  }, [targetFocusIndex]);
 
   const onPieMouseLeave = React.useCallback(() => {
+    if (targetFocusIndex !== -1) return;
+
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
       document.querySelectorAll('.my-hovered-sector').forEach(el => el.classList.remove('my-hovered-sector'));
     }, 4000);
-  }, []);
+  }, [targetFocusIndex]);
 
   const cells = React.useMemo(() => {
     return data.map((item: Datum, index: number) => {
@@ -206,17 +209,18 @@ const InnerRechartsPie = React.memo(({ size, data, pieCy, isFullscreen, renderCu
   const overlayCells = React.useMemo(() => {
     return data.map((item: Datum, index: number) => {
       const isOther = top4Ids && !top4Ids.includes(item.id);
+      const isFocused = index === targetFocusIndex;
       return (
         <Cell 
           key={`overlay-${item.id}`} 
           fill={isOther ? "rgba(0,0,0,0.4)" : "transparent"} 
           stroke="none"
-          className={`my-sector my-sector-${index}`}
+          className={`my-sector my-sector-${index} ${isFocused ? 'my-hovered-sector-static' : ''}`}
           style={{ transformOrigin: `50% ${pieCy}px` }}
         />
       );
     });
-  }, [data, top4Ids, pieCy]);
+  }, [data, top4Ids, targetFocusIndex, pieCy]);
 
   return (
     <ResponsiveContainer width="100%" height="100%">
