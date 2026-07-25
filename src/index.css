@@ -132,3 +132,6 @@
 .chart-global-label {
   transition: opacity 300ms ease-in-out !important;
 }
+.recharts-responsive-container { overflow: visible !important; }
+.recharts-surface { overflow: visible !important; }
+.recharts-wrapper { overflow: visible !important; }
