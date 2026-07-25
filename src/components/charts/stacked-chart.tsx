@@ -281,8 +281,8 @@ export const StackedChart = React.memo(function StackedChart({
     const baseWidth = dimensions.width || (isFullscreen ? 1200 : 400);
     const baseHeight = dimensions.height || (isFullscreen ? 800 : 300);
     // cy="75%" means we have 75% of height available above the center.
-    // Use 70% of height or 90% of half-width, whichever is smaller, to fit perfectly.
-    const calculatedOuter = Math.min((baseWidth / 2) * 0.9, baseHeight * 0.7);
+    // Use 60% of height or 75% of half-width, whichever is smaller, to give more safe area.
+    const calculatedOuter = Math.min((baseWidth / 2) * 0.75, baseHeight * 0.6);
     const outerRadius = Math.max(100, isFullscreen ? calculatedOuter * 1.5 : calculatedOuter);
     const innerRadius = outerRadius * 0.45;
     return (
