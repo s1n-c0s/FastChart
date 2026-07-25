@@ -416,14 +416,17 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
 
                       let titleYOffset, valueYOffset, labelYOffset;
                       if (factLabel) {
-                        titleYOffset = isFullscreen ? -24 : -16;
-                        valueYOffset = isFullscreen ? 10 : 7;
-                        labelYOffset = isFullscreen ? 40 : 25;
+                        titleYOffset = isFullscreen ? -44 : -30;
+                        valueYOffset = isFullscreen ? -10 : -7;
+                        labelYOffset = isFullscreen ? 20 : 11;
                       } else {
-                        titleYOffset = isFullscreen ? -13 : -9;
-                        valueYOffset = isFullscreen ? 20 : 13;
+                        titleYOffset = isFullscreen ? -34 : -24;
+                        valueYOffset = isFullscreen ? 0 : -1;
                         labelYOffset = 0;
                       }
+                      
+                      const midpointOffset = (titleYOffset + (factLabel ? labelYOffset : valueYOffset)) / 2;
+                      const arrowY = (viewBox.cy || 0) + midpointOffset * scaleFactor - 16;
 
                       return (
                         <g className="group">
@@ -463,7 +466,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
                           {/* Prev Button */}
                           <svg 
                             x={(viewBox.cx || 0) - innerR + (isFullscreen ? 30 : 10)} 
-                            y={(viewBox.cy || 0) - 16} 
+                            y={arrowY} 
                             width={32} height={32} 
                             onClick={handlePrev} 
                             className="opacity-0 group-hover:opacity-100 cursor-pointer pointer-events-auto text-muted-foreground transition-opacity"
@@ -477,7 +480,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
                           {/* Next Button */}
                           <svg 
                             x={(viewBox.cx || 0) + innerR - 32 - (isFullscreen ? 30 : 10)} 
-                            y={(viewBox.cy || 0) - 16} 
+                            y={arrowY} 
                             width={32} height={32} 
                             onClick={handleNext} 
                             className="opacity-0 group-hover:opacity-100 cursor-pointer pointer-events-auto text-muted-foreground transition-opacity"
