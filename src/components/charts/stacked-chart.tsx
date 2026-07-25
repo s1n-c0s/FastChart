@@ -8,9 +8,9 @@ import {
   Tooltip,
   ResponsiveContainer,
   LabelList,
-  RadialBar,
-  RadialBarChart,
-  PolarRadiusAxis,
+  Pie,
+  PieChart,
+  Cell,
   Label as RechartsLabel
 } from "recharts"
 import {
@@ -169,17 +169,6 @@ export const StackedChart = React.memo(function StackedChart({
     ]
   }, [data])
 
-  // Transform data for radial chart
-  const radialData = React.useMemo(() => {
-    const total = data.reduce((sum, d) => sum + Math.max(0, d.value || 0), 0)
-    return [
-      data.reduce((acc, d) => ({
-        ...acc,
-        [d.label]: Math.max(0, d.value || 0) / (total || 1)
-      }), {})
-    ]
-  }, [data])
-
   // Build chart config for radial
   const chartConfig = React.useMemo(() => {
     return data.reduce((acc, d) => ({
@@ -296,21 +285,25 @@ export const StackedChart = React.memo(function StackedChart({
       <div ref={setRefs} className="h-full w-full flex flex-col items-center justify-center overflow-hidden">
         <div className="w-full flex-1 min-h-[300px]">
           <ChartContainer config={chartConfig} className="w-full h-full">
-            <RadialBarChart
-              data={radialData}
-              startAngle={180}
-              endAngle={0}
-              cx="50%"
-              cy="75%"
-              innerRadius={innerRadius}
-              outerRadius={outerRadius}
+            <PieChart
               style={{ overflow: 'visible' }}
             >
             <ChartTooltip
               cursor={false}
               content={<ChartTooltipContent hideLabel />}
             />
-            <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
+            <Pie
+              data={data}
+              dataKey="value"
+              nameKey="label"
+              startAngle={180}
+              endAngle={0}
+              cx="50%"
+              cy="75%"
+              innerRadius={innerRadius}
+              outerRadius={outerRadius}
+              stroke="none"
+            >
               <RechartsLabel
                 content={({ viewBox }) => {
                   if (viewBox && "cx" in viewBox && "cy" in viewBox) {
@@ -340,19 +333,11 @@ export const StackedChart = React.memo(function StackedChart({
                   return null;
                 }}
               />
-            </PolarRadiusAxis>
-            {data.map((d) => (
-              <RadialBar
-                key={d.id}
-                dataKey={d.label}
-                name={d.label}
-                stackId="a"
-                cornerRadius={5}
-                fill={d.color}
-                className="stroke-transparent stroke-2"
-              />
-            ))}
-            </RadialBarChart>
+              {data.map((d, index) => (
+                <Cell key={`cell-${index}`} fill={d.color} />
+              ))}
+            </Pie>
+            </PieChart>
           </ChartContainer>
         </div>
         {showLegend && (
