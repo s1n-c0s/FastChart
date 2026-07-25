@@ -1,6 +1,6 @@
 import React, { type ReactNode, useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { ImageIcon, Code } from "lucide-react";
+import { ImageIcon, Code, Maximize } from "lucide-react";
 
 interface ChartCardProps {
   title: string;
@@ -133,8 +133,8 @@ export function ChartCard({
       >
         {showTooltip && (
           <div data-hide-on-copy="true" className="absolute bottom-4 right-4 z-10 pointer-events-none">
-            <div className="bg-black/70 text-white px-3 py-1 rounded-md text-xs font-medium shadow-sm backdrop-blur-sm">
-              Click to fullscreen
+            <div className="bg-black/70 p-2 rounded-md shadow-sm backdrop-blur-sm flex items-center justify-center">
+              <Maximize className="w-4 h-4 text-white" />
             </div>
           </div>
         )}

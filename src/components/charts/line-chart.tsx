@@ -94,7 +94,7 @@ export const LineChart = React.memo(function LineChart({
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
               data={data}
-              margin={{ top: 12, right: 12, bottom: 8, left: 12 }}
+              margin={{ top: 30, right: 30, bottom: 20, left: 20 }}
             >
               <defs>
                 <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -107,13 +107,13 @@ export const LineChart = React.memo(function LineChart({
                 dataKey="label"
                 tickLine={false}
                 axisLine={false}
-                tickMargin={10}
+                tickMargin={12}
                 style={{ fontSize: '14px' }}
               />
               <YAxis
                 tickLine={false}
                 axisLine={false}
-                width={35}
+                width={55}
                 style={{ fontSize: '14px' }}
               />
               <Tooltip
