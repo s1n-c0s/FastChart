@@ -66,7 +66,7 @@ const StackedTooltip = React.memo(function StackedTooltip({ active, payload }: S
 StackedTooltip.displayName = "StackedTooltip";
 
 const CustomStackedLabel = (props: any) => {
-  const { x, y, width, height, value, rawData, barDataKey, isFullscreen, isHorizontal } = props;
+  const { x, y, width, height, value, rawData, barDataKey, isFullscreen, isHorizontal, showLabels } = props;
   
   if (width < 15 || height < 15) return null;
 
@@ -90,7 +90,7 @@ const CustomStackedLabel = (props: any) => {
   const fontSizeRaw = isFullscreen ? 24 : (isHorizontal ? 16 : 12);
   
   return (
-    <g className="chart-global-label">
+    <g className={`transition-opacity duration-300 ${showLabels ? 'opacity-100' : 'opacity-0'}`}>
       <text x={cx} y={cy} fill="#ffffff" textAnchor="middle" dominantBaseline="central">
         <tspan fontSize={fontSizePercent} fontWeight="500">
           {barDataKey}
@@ -107,7 +107,7 @@ export const StackedChart = React.memo(function StackedChart({
   data,
   isHorizontal = true,
   containerRef,
-
+  showLabels = false,
   showRadial = false,
   isFullscreen = false,
   showLegend = true,
@@ -294,7 +294,7 @@ export const StackedChart = React.memo(function StackedChart({
     
     return (
       <div ref={setRefs} className="h-full w-full flex flex-col items-center justify-center overflow-hidden">
-        <div className="w-full flex-1 min-h-[300px]">
+        <ResponsiveContainer width="100%" height="100%">
           <ChartContainer config={chartConfig} className="w-full h-full">
             <RadialBarChart
               data={radialData}
@@ -337,7 +337,6 @@ export const StackedChart = React.memo(function StackedChart({
                       </text>
                     )
                   }
-                  return null;
                 }}
               />
             </PolarRadiusAxis>
@@ -352,14 +351,10 @@ export const StackedChart = React.memo(function StackedChart({
                 className="stroke-transparent stroke-2"
               />
             ))}
-            </RadialBarChart>
+            {showLegend && renderSvgLegend()}
+          </RadialBarChart>
           </ChartContainer>
-        </div>
-        {showLegend && (
-          <svg width={dimensions.width} height={legendHeight} style={{ overflow: 'visible', flexShrink: 0 }}>
-            {renderSvgLegend()}
-          </svg>
-        )}
+        </ResponsiveContainer>
       </div>
     )
   }
@@ -405,7 +400,7 @@ export const StackedChart = React.memo(function StackedChart({
               >
                 <LabelList
                   dataKey={d.label}
-                  content={<CustomStackedLabel rawData={data} isFullscreen={isFullscreen} isHorizontal={isHorizontal} barDataKey={d.label} />}
+                  content={<CustomStackedLabel rawData={data} isFullscreen={isFullscreen} isHorizontal={isHorizontal} barDataKey={d.label} showLabels={showLabels} />}
                 />
               </Bar>
             ))}
@@ -457,7 +452,7 @@ export const StackedChart = React.memo(function StackedChart({
             >
               <LabelList
                 dataKey={d.label}
-                content={<CustomStackedLabel rawData={data} isFullscreen={isFullscreen} isHorizontal={isHorizontal} barDataKey={d.label} />}
+                content={<CustomStackedLabel rawData={data} isFullscreen={isFullscreen} isHorizontal={isHorizontal} barDataKey={d.label} showLabels={showLabels} />}
               />
             </Bar>
           ))}
@@ -469,6 +464,7 @@ export const StackedChart = React.memo(function StackedChart({
 }, (prevProps, nextProps) => {
   return (
     prevProps.isHorizontal === nextProps.isHorizontal &&
+    prevProps.showLabels === nextProps.showLabels &&
     prevProps.showLegend === nextProps.showLegend &&
     prevProps.showRadial === nextProps.showRadial &&
     prevProps.isFullscreen === nextProps.isFullscreen &&

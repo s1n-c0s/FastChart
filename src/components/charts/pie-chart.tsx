@@ -518,7 +518,6 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
       item.value === nextProps.data[idx]?.value &&
       item.color === nextProps.data[idx]?.color
     ) &&
-    prevProps.showLabels === nextProps.showLabels &&
     prevProps.showLegend === nextProps.showLegend &&
     prevProps.showFactText === nextProps.showFactText &&
     prevProps.factIndex === nextProps.factIndex
