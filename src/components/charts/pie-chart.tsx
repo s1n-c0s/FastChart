@@ -400,23 +400,37 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
                         if (onFactIndexChange) onFactIndexChange((factIndex + 1) % 3);
                       };
 
+                      const maxTitleSize = isFullscreen ? 16 : 12;
+                      const maxValueSize = isFullscreen ? 36 : 22;
+                      const maxLabelSize = isFullscreen ? 14 : 11;
+                      
+                      // Calculate scale factor to ensure text fits inside innerR
+                      const totalTextHeight = maxTitleSize + maxValueSize + maxLabelSize + 20;
+                      // Maximum diameter is innerR * 2. We use innerR * 1.6 as the safe bounding box height
+                      const safeHeight = innerR * 1.6;
+                      const scaleFactor = Math.min(1, safeHeight / totalTextHeight);
+                      
+                      const titleSize = maxTitleSize * scaleFactor;
+                      const valueSize = maxValueSize * scaleFactor;
+                      const labelSize = maxLabelSize * scaleFactor;
+
                       return (
                         <g className="group">
                           <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle" className="pointer-events-none select-none">
                             <tspan
                               x={viewBox.cx}
-                              y={(viewBox.cy || 0) - (isFullscreen ? 25 : 18)}
+                              y={(viewBox.cy || 0) - (isFullscreen ? 25 : 18) * scaleFactor}
                               fill={textColor} 
-                              fontSize={isFullscreen ? 16 : 12}
+                              fontSize={titleSize}
                               fontWeight="500"
                             >
                               {factTitle}
                             </tspan>
                             <tspan
                               x={viewBox.cx}
-                              y={(viewBox.cy || 0) + (isFullscreen ? 15 : 10)}
+                              y={(viewBox.cy || 0) + (isFullscreen ? 15 : 10) * scaleFactor}
                               fill={factColor}
-                              fontSize={isFullscreen ? 36 : 22}
+                              fontSize={valueSize}
                               fontWeight="bold" 
                             >
                               {factValue}
@@ -424,9 +438,9 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
                             {factLabel && (
                               <tspan
                                 x={viewBox.cx}
-                                y={(viewBox.cy || 0) + (isFullscreen ? 45 : 28)}
+                                y={(viewBox.cy || 0) + (isFullscreen ? 45 : 28) * scaleFactor}
                                 fill={factColor}
-                                fontSize={isFullscreen ? 14 : 11}
+                                fontSize={labelSize}
                                 fontWeight="500"
                                 opacity={0.8}
                               >

@@ -319,9 +319,16 @@ export const StackedChart = React.memo(function StackedChart({
               <RechartsLabel
                 content={({ viewBox }) => {
                   if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                    const textSize = isFullscreen ? 80 : 32
-                    const labelSize = isFullscreen ? 24 : 16
-                    const offsetY = isFullscreen ? -30 : -20
+                    const maxTextSize = isFullscreen ? 80 : 32
+                    const maxLabelSize = isFullscreen ? 24 : 16
+                    
+                    // Dynamically scale text to fit inside the innerRadius hole
+                    const availableHeight = innerRadius; 
+                    const scaleFactor = Math.min(1, availableHeight / (maxTextSize + maxLabelSize + 20));
+                    
+                    const textSize = maxTextSize * scaleFactor;
+                    const labelSize = maxLabelSize * scaleFactor;
+                    const offsetY = -(labelSize + 4); // Position the number just above the label
                     
                     return (
                       <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle">
@@ -334,7 +341,7 @@ export const StackedChart = React.memo(function StackedChart({
                         </tspan>
                         <tspan
                           x={viewBox.cx}
-                          y={(viewBox.cy || 0) + offsetY + (isFullscreen ? 45 : 30)}
+                          y={(viewBox.cy || 0) - 4} // Label sits just above the bottom edge
                           style={{ fontSize: `${labelSize}px`, fill: 'var(--muted-foreground)' }}
                         >
                           Total
