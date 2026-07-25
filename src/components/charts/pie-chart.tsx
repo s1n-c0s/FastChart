@@ -9,7 +9,6 @@ export interface PieChartProps {
   total: number;
   containerRef?: React.Ref<HTMLDivElement>;
   isFullscreen?: boolean;
-  showLabels?: boolean;
   showLegend?: boolean;
   showFactText?: boolean;
   factIndex?: number;
@@ -36,13 +35,13 @@ const CustomTooltip = React.memo(({ active, payload }: any) => {
 
 const FactTextOverlay = (props: any) => {
   const {
-    chartWidth, pieCy, size, showLabels, data, total, factIndex,
+    chartWidth, pieCy, size, data, total, factIndex,
     isFullscreen, textColor, textMainColor, onFactIndexChange
   } = props;
   
   const cx = chartWidth / 2;
   const cy = pieCy;
-  const innerR = showLabels ? size * 0.18 : size * 0.28;
+  const innerR = size * 0.20;
   
   const maxItem = data && data.length > 0 ? data.reduce((prev: any, current: any) => (prev.value > current.value) ? prev : current) : null;
   const minItem = data && data.length > 0 ? data.reduce((prev: any, current: any) => (prev.value < current.value) ? prev : current) : null;
@@ -165,7 +164,7 @@ const FactTextOverlay = (props: any) => {
 };
 
 
-const InnerRechartsPie = React.memo(({ size, data, pieCy, showLabels, isFullscreen, renderCustomLabel, renderCustomLabelLine, cells, overlayCells, renderSvgLegend }: any) => {
+const InnerRechartsPie = React.memo(({ size, data, pieCy, isFullscreen, renderCustomLabel, renderCustomLabelLine, cells, overlayCells, renderSvgLegend }: any) => {
 
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -177,8 +176,8 @@ const InnerRechartsPie = React.memo(({ size, data, pieCy, showLabels, isFullscre
           nameKey="label"
           cx="50%"
           cy={pieCy}
-          innerRadius={showLabels ? size * 0.20 : size * 0.28}
-          outerRadius={showLabels ? (isFullscreen ? size * 0.30 : size * 0.28) : size * 0.42}
+          innerRadius={size * 0.22}
+          outerRadius={isFullscreen ? size * 0.33 : size * 0.31}
           paddingAngle={2}
           cornerRadius={6}
           isAnimationActive={true}
@@ -196,8 +195,8 @@ const InnerRechartsPie = React.memo(({ size, data, pieCy, showLabels, isFullscre
           nameKey="label"
           cx="50%"
           cy={pieCy}
-          innerRadius={showLabels ? size * 0.20 : size * 0.28}
-          outerRadius={showLabels ? (isFullscreen ? size * 0.30 : size * 0.28) : size * 0.42}
+          innerRadius={size * 0.22}
+          outerRadius={isFullscreen ? size * 0.33 : size * 0.31}
           paddingAngle={2}
           cornerRadius={6}
           isAnimationActive={true}
@@ -214,7 +213,7 @@ const InnerRechartsPie = React.memo(({ size, data, pieCy, showLabels, isFullscre
   );
 });
 
-export const PieChart = React.memo(function PieChart({ data, total, containerRef, isFullscreen = false,  showLabels = false,
+export const PieChart = React.memo(function PieChart({ data, total, containerRef, isFullscreen = false,  
   showLegend = false,
   showFactText = false,
   factIndex = 0,
@@ -344,7 +343,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
         points={newPoints.map((p: any) => `${p.x},${p.y}`).join(' ')}
         stroke={textColor}
         strokeWidth={1}
-        className="chart-global-label"
+        className="pie-custom-label"
       />
     );
   }, [isFullscreen, top4Ids, lastOtherId, textColor]);
@@ -384,7 +383,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
 
     return (
       <g 
-        className="chart-global-label"
+        className="pie-custom-label"
         style={{ 
           overflow: 'visible',
           transformOrigin: `${fx + boxWidth / 2}px ${fy + boxHeight / 2}px`
@@ -535,7 +534,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     );
   }, [chartWidth, size, legendRows, legendHeight, isFullscreen, textMainColor, total]);
 
-  const pieCy = (size - legendHeight) / 2 - (showLabels ? (isFullscreen ? 15 : 20) : 0);
+  const pieCy = (size - legendHeight) / 2;
 
   return (
       <div ref={setRefs} className={`flex h-full w-full items-center justify-center flex-col ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
@@ -544,7 +543,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
             size={size}
             data={data}
             pieCy={pieCy}
-            showLabels={showLabels}
+            
             isFullscreen={isFullscreen}
             renderCustomLabel={renderCustomLabel}
             renderCustomLabelLine={renderCustomLabelLine as any}
@@ -560,7 +559,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
               chartWidth={chartWidth}
               pieCy={pieCy}
               size={size}
-              showLabels={showLabels}
+              
               data={data}
               total={total}
               factIndex={factIndex}
