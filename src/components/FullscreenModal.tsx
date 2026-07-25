@@ -66,9 +66,9 @@ export function FullscreenModal({
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className={styles.fullscreenContent}>
-        <div className="flex items-center justify-between p-4 border-b">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border-b gap-4">
           <h2 className="text-xl font-semibold capitalize">{chartType} Chart - Full Screen</h2>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {customActions}
             {showOrientation && (
                         <Button
