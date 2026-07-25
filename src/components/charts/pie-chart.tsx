@@ -44,6 +44,25 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
 }: PieChartProps) {
   const [isDark, setIsDark] = React.useState(false);
   
+  const cells = React.useMemo(() => {
+    return data.map((item: Datum) => (
+      <Cell key={item.id} fill={item.color} stroke="none" />
+    ));
+  }, [data]);
+  
+  const overlayCells = React.useMemo(() => {
+    return data.map((item: Datum) => {
+      const isOther = top4Ids && !top4Ids.includes(item.id);
+      return (
+        <Cell 
+          key={`overlay-${item.id}`} 
+          fill={isOther ? "rgba(0,0,0,0.5)" : "transparent"} 
+          stroke="none" 
+        />
+      );
+    });
+  }, [data, top4Ids]);
+
   React.useEffect(() => {
     setIsDark(document.documentElement.classList.contains("dark"));
     const observer = new MutationObserver(() => {
@@ -150,18 +169,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
         className="chart-global-label"
       />
     );
-  }, [top4Ids, textColor, isFullscreen]);
-
-  const [animate, setAnimate] = React.useState(true);
-
-  React.useEffect(() => {
-    setAnimate(true);
-    const timer = setTimeout(() => {
-      setAnimate(false);
-    }, 600);
-    return () => clearTimeout(timer);
-  }, [data, showLabels, size]);
-
+  }, [isFullscreen, top4Ids, lastOtherId, textColor]);
   const renderCustomLabel = React.useCallback((props: any) => {
     console.log("PIE PROPS", JSON.stringify(props));
     let { x, y, cx, cy, name, value, percent, payload } = props;
@@ -371,14 +379,11 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
                 paddingAngle={2}
                 cornerRadius={6}
                 animationDuration={500}
-                isAnimationActive={animate}
                 stroke="none"
                 label={renderCustomLabel}
                 labelLine={renderCustomLabelLine as any}
               >
-              {data.map((item: Datum) => (
-                <Cell key={item.id} fill={item.color} stroke="none" />
-              ))}
+              {cells}
             </Pie>
             
             {showFactText && (
@@ -522,20 +527,10 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
               paddingAngle={2}
               cornerRadius={6}
               animationDuration={500}
-              isAnimationActive={animate}
               stroke="none"
               style={{ pointerEvents: 'none' }}
             >
-              {data.map((item: Datum) => {
-                const isOther = top4Ids && !top4Ids.includes(item.id);
-                return (
-                  <Cell 
-                    key={`overlay-${item.id}`} 
-                    fill={isOther ? "rgba(0,0,0,0.5)" : "transparent"} 
-                    stroke="none" 
-                  />
-                );
-              })}
+              {overlayCells}
             </Pie>
             
             {showLegend && renderSvgLegend()}
