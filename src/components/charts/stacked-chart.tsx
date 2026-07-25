@@ -91,8 +91,8 @@ const CustomStackedLabel = (props: any) => {
   const cx = x + width / 2;
   const cy = y + height / 2;
   
-  const baseFontSizePercent = isFullscreen ? 32 : (isHorizontal ? 18 : 14);
-  const baseFontSizeRaw = isFullscreen ? 16 : (isHorizontal ? 12 : 10);
+  const baseFontSizePercent = isFullscreen ? 40 : (isHorizontal ? 24 : 20);
+  const baseFontSizeRaw = isFullscreen ? 20 : (isHorizontal ? 16 : 14);
   
   // Calculate text width approximately (0.6 is typical average character width ratio)
   const textStr = `${barDataKey} (${percent}%)`;
