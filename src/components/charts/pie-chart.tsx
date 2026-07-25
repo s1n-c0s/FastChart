@@ -489,7 +489,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
 
   return (
       <div ref={setRefs} className="flex h-full w-full items-center justify-center flex-col">
-        <div className="flex-shrink-0 w-full" style={{ height: size }}>
+        <div className="relative flex-shrink-0 w-full" style={{ height: size }}>
           <ResponsiveContainer width="100%" height="100%">
             <RechartsPieChart style={{ overflow: 'visible' }}>
               <Tooltip content={<CustomTooltip />} />

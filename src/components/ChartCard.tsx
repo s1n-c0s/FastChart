@@ -132,8 +132,8 @@ export function ChartCard({
         onClick={handleChartClick}
       >
         {showTooltip && (
-          <div data-hide-on-copy="true" className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-            <div className="bg-black/50 text-white px-3 py-1 rounded-md text-xs font-medium">
+          <div data-hide-on-copy="true" className="absolute bottom-4 right-4 z-10 pointer-events-none">
+            <div className="bg-black/70 text-white px-3 py-1 rounded-md text-xs font-medium shadow-sm backdrop-blur-sm">
               Click to fullscreen
             </div>
           </div>
