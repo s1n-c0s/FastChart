@@ -16,100 +16,72 @@ export function useCharts() {
 
   const copyChartSvg = useCallback(async (containerEl: HTMLElement | null) => {
     try {
-      // Ensure the chart has fully rendered (especially after toggling axis) before we grab the SVG.
-      // A short async pause gives the browser a chance to finish layout and paint.
+      // Short pause so the chart (including axis labels after a toggle) finishes layout.
       await new Promise(res => setTimeout(res, 80));
-      // Target the recharts-surface specifically so we don't accidentally copy UI icons like the fullscreen/copy buttons.
+
       const svg = containerEl?.querySelector("svg.recharts-surface") as SVGSVGElement | null;
       if (!svg) return;
-      const clone = svg.cloneNode(true) as SVGSVGElement;
-      
-      // Remove elements that should not be copied
-      const hiddenElements = clone.querySelectorAll('[data-hide-on-copy="true"]');
-      hiddenElements.forEach(el => el.remove());
 
-      // Apply computed styles to preserve text colors and other styling
-      
-      // We need to map cloned elements back to their original elements to get computed styles
-      // Since we removed some nodes, we must re-query the original DOM matching the remaining nodes
-      // However, iterating origAllElements index-to-index is dangerous if we removed nodes!
-      // Let's do it safely by checking the original structure.
-      
-      // To keep it simple, apply styles BEFORE removing nodes, then remove them.
+      // Clone once — we only use this single clone for the final output.
       const cloneTemp = svg.cloneNode(true) as SVGSVGElement;
       const allTempElements = cloneTemp.querySelectorAll('*');
       const origTempElements = svg.querySelectorAll('*');
-      
+
       allTempElements.forEach((el, index) => {
         const origEl = origTempElements[index] as Element;
-        const computedStyle = window.getComputedStyle(origEl);
-        
-        if (computedStyle.opacity === '0' || computedStyle.display === 'none' || computedStyle.visibility === 'hidden') {
+        if (!origEl) return;
+        const cs = window.getComputedStyle(origEl);
+
+        if (cs.opacity === '0' || cs.display === 'none' || cs.visibility === 'hidden') {
           (el as SVGElement).setAttribute('data-hide-on-copy', 'true');
           return;
         }
 
-        // Apply important computed properties. 
-        // We ALWAYS apply colors and fonts (except font-size) because they might use CSS variables (like var(--color))
-        // which need to be resolved to absolute values for the copied SVG.
-        if (computedStyle.fill) {
-          (el as SVGElement).setAttribute('fill', computedStyle.fill);
+        // Resolve CSS-variable-based colors & fonts into absolute values.
+        if (cs.fill) (el as SVGElement).setAttribute('fill', cs.fill);
+        if (cs.stroke) (el as SVGElement).setAttribute('stroke', cs.stroke);
+        if (cs.color) {
+          (el as SVGElement).setAttribute('color', cs.color);
+          (el as SVGElement).style.color = cs.color;
         }
-        if (computedStyle.stroke) {
-          (el as SVGElement).setAttribute('stroke', computedStyle.stroke);
+        if (cs.fontFamily) (el as SVGElement).setAttribute('font-family', cs.fontFamily);
+        if (cs.fontSize && !origEl.hasAttribute('font-size')) {
+          (el as SVGElement).setAttribute('font-size', cs.fontSize);
         }
-        if (computedStyle.color) {
-          (el as SVGElement).setAttribute('color', computedStyle.color);
-          (el as SVGElement).style.color = computedStyle.color;
+        if (cs.fontWeight) (el as SVGElement).setAttribute('font-weight', cs.fontWeight);
+        if (cs.fontStyle) (el as SVGElement).setAttribute('font-style', cs.fontStyle);
+
+        // ★ Capture transform + transform-origin so focused pie segments keep their scale.
+        if (cs.transform && cs.transform !== 'none') {
+          (el as SVGElement).style.transform = cs.transform;
         }
-        if (computedStyle.fontFamily) {
-          (el as SVGElement).setAttribute('font-family', computedStyle.fontFamily);
-        }
-        // ONLY skip font-size if it already exists, to prevent browser minimum font size clamping (e.g., 12px)
-        // from breaking dynamically scaled down text like in the StackedChart labels.
-        if (computedStyle.fontSize && !origEl.hasAttribute('font-size')) {
-          (el as SVGElement).setAttribute('font-size', computedStyle.fontSize);
-        }
-        if (computedStyle.fontWeight) {
-          (el as SVGElement).setAttribute('font-weight', computedStyle.fontWeight);
-        }
-        if (computedStyle.fontStyle) {
-          (el as SVGElement).setAttribute('font-style', computedStyle.fontStyle);
+        if (cs.transformOrigin) {
+          (el as SVGElement).style.transformOrigin = cs.transformOrigin;
         }
       });
 
-      // Now remove hidden elements AFTER styling
-      const hiddenElementsToRemove = cloneTemp.querySelectorAll('[data-hide-on-copy="true"]');
-      hiddenElementsToRemove.forEach(el => el.remove());
+      // Strip hidden elements AFTER styling (so index mapping stays 1:1 above).
+      cloneTemp.querySelectorAll('[data-hide-on-copy="true"]').forEach(el => el.remove());
 
       if (!cloneTemp.getAttribute("xmlns")) {
         cloneTemp.setAttribute("xmlns", "http://www.w3.org/2000/svg");
       }
-      
-      // Inject fact text overlay if it exists
+
+      // Inject fact-text overlay if it exists.
       const factOverlayEl = containerEl?.querySelector('.fact-text-overlay') as SVGSVGElement;
       if (factOverlayEl) {
         const overlayClone = factOverlayEl.cloneNode(true) as SVGSVGElement;
-        const hiddenInOverlay = overlayClone.querySelectorAll('[data-hide-on-copy="true"]');
-        hiddenInOverlay.forEach((el: Element) => el.remove());
+        overlayClone.querySelectorAll('[data-hide-on-copy="true"]').forEach((el: Element) => el.remove());
         cloneTemp.innerHTML += overlayClone.innerHTML;
       }
-      
-      // Explicitly inject required CSS classes for exported charts (e.g. pie chart hover states)
-      // since Recharts sometimes strips unrecognized children like <style> tags from its React tree.
+
+      // Inject hover-state CSS (useful when pasting into browsers / SVG-aware viewers).
       const styleNode = document.createElementNS("http://www.w3.org/2000/svg", "style");
       styleNode.textContent = `
         .my-sector { transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .my-hovered-sector, .my-hovered-sector-static { transform: scale(1.1); }
       `;
       cloneTemp.appendChild(styleNode);
-      // Inline the hover‑scale transform so the copied SVG looks exactly like the preview.
-      const hoveredEls = cloneTemp.querySelectorAll('.my-hovered-sector, .my-hovered-sector-static');
-      hoveredEls.forEach(el => {
-        const existing = el.getAttribute('style') || '';
-        // Append transform; preserve any existing style declarations.
-        el.setAttribute('style', `${existing} transform: scale(1.1);`);
-      });
 
       const xml = new XMLSerializer().serializeToString(cloneTemp);
       await navigator.clipboard.writeText(xml);
@@ -120,8 +92,8 @@ export function useCharts() {
           color: "#ffffff",
         },
       });
-    } catch {
-      toast.error("Failed to copy SVG.");
+    } catch (error: any) {
+      toast.error(`Failed to copy SVG: ${error?.message || error}`);
     }
   }, []);
 
