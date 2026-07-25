@@ -52,10 +52,11 @@ export function useCharts() {
         if (cs.fontStyle) (el as SVGElement).setAttribute('font-style', cs.fontStyle);
 
         // ★ Capture transform + transform-origin so focused pie segments keep their scale.
-        if (cs.transform && cs.transform !== 'none') {
+        // DO NOT override if they already have an inline style!
+        if (cs.transform && cs.transform !== 'none' && !(origEl as SVGElement).style.transform) {
           (el as SVGElement).style.transform = cs.transform;
         }
-        if (cs.transformOrigin) {
+        if (cs.transformOrigin && !(origEl as SVGElement).style.transformOrigin) {
           (el as SVGElement).style.transformOrigin = cs.transformOrigin;
         }
       });
@@ -88,15 +89,32 @@ export function useCharts() {
       // a CSS stylesheet transform is active, so we must set it by class name.
       const origFocused = Array.from(svg.querySelectorAll('.my-hovered-sector, .my-hovered-sector-static'));
       const cloneFocused = Array.from(cloneTemp.querySelectorAll('.my-hovered-sector, .my-hovered-sector-static'));
+      const svgRect = svg.getBoundingClientRect();
       cloneFocused.forEach((el, i) => {
         const svgEl = el as SVGElement;
         svgEl.style.transform = 'scale(1.1)';
-        // Grab the transform-origin from the matching original element so the
-        // segment scales from the pie centre, not from (0,0).
-        const origEl = origFocused[i];
+        
+        const origEl = origFocused[i] as SVGElement;
         if (origEl) {
-          const originVal = window.getComputedStyle(origEl).transformOrigin;
-          if (originVal) svgEl.style.transformOrigin = originVal;
+          const originVal = origEl.style.transformOrigin || window.getComputedStyle(origEl).transformOrigin;
+          if (originVal) {
+            svgEl.style.transformOrigin = originVal;
+            
+            // Calculate absolute px for cx, cy
+            const parts = originVal.split(' ').map(p => p.trim()).filter(Boolean);
+            if (parts.length >= 2) {
+              let cx = 0, cy = 0;
+              if (parts[0].includes('%')) cx = (parseFloat(parts[0]) / 100) * svgRect.width;
+              else cx = parseFloat(parts[0]);
+              
+              if (parts[1].includes('%')) cy = (parseFloat(parts[1]) / 100) * svgRect.height;
+              else cy = parseFloat(parts[1]);
+              
+              if (!isNaN(cx) && !isNaN(cy)) {
+                svgEl.setAttribute('transform', `translate(${cx}, ${cy}) scale(1.1) translate(${-cx}, ${-cy})`);
+              }
+            }
+          }
         }
       });
 
