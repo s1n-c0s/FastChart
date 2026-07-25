@@ -232,6 +232,12 @@ export default function DataVisualizer() {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
+      
+      // Prevent closing when clicking inside a Radix Select dropdown (which renders in a portal outside the dock)
+      if (target.closest('[data-radix-popper-content-wrapper]') || target.closest('[role="listbox"]') || target.closest('[data-slot="select-content"]')) {
+        return;
+      }
+
       if (isDockOpen && dockRef.current && !dockRef.current.contains(target)) {
         setIsDockOpen(false);
       }
