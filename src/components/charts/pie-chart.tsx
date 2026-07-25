@@ -176,8 +176,8 @@ const InnerRechartsPie = React.memo(({ size, data, pieCy, isFullscreen, renderCu
           nameKey="label"
           cx="50%"
           cy={pieCy}
-          innerRadius={size * 0.22}
-          outerRadius={isFullscreen ? size * 0.33 : size * 0.31}
+          innerRadius={size * 0.20}
+          outerRadius={isFullscreen ? size * 0.30 : size * 0.27}
           paddingAngle={2}
           cornerRadius={6}
           isAnimationActive={true}
@@ -195,8 +195,8 @@ const InnerRechartsPie = React.memo(({ size, data, pieCy, isFullscreen, renderCu
           nameKey="label"
           cx="50%"
           cy={pieCy}
-          innerRadius={size * 0.22}
-          outerRadius={isFullscreen ? size * 0.33 : size * 0.31}
+          innerRadius={size * 0.20}
+          outerRadius={isFullscreen ? size * 0.30 : size * 0.27}
           paddingAngle={2}
           cornerRadius={6}
           isAnimationActive={true}
@@ -534,7 +534,9 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     );
   }, [chartWidth, size, legendRows, legendHeight, isFullscreen, textMainColor, total]);
 
-  const pieCy = (size - legendHeight) / 2;
+  // Add extra safe area padding to ensure the bottom labels never overlap the legend
+  const safeAreaPadding = isFullscreen ? 60 : 40;
+  const pieCy = (size - legendHeight - safeAreaPadding) / 2;
 
   return (
       <div ref={setRefs} className={`flex h-full w-full items-center justify-center flex-col `}>
