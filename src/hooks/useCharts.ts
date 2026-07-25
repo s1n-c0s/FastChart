@@ -103,6 +103,13 @@ export function useCharts() {
         .my-hovered-sector, .my-hovered-sector-static { transform: scale(1.1); }
       `;
       cloneTemp.appendChild(styleNode);
+      // Inline the hover‑scale transform so the copied SVG looks exactly like the preview.
+      const hoveredEls = cloneTemp.querySelectorAll('.my-hovered-sector, .my-hovered-sector-static');
+      hoveredEls.forEach(el => {
+        const existing = el.getAttribute('style') || '';
+        // Append transform; preserve any existing style declarations.
+        el.setAttribute('style', `${existing} transform: scale(1.1);`);
+      });
 
       const xml = new XMLSerializer().serializeToString(cloneTemp);
       await navigator.clipboard.writeText(xml);
