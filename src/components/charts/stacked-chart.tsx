@@ -27,7 +27,7 @@ export interface StackedChartProps {
   showLabels?: boolean
   showRadial?: boolean
   isFullscreen?: boolean
-  showLegend?: boolean
+  
 }
 
 interface StackedTooltipProps {
@@ -133,7 +133,7 @@ export const StackedChart = React.memo(function StackedChart({
   showLabels = false,
   showRadial = false,
   isFullscreen = false,
-  showLegend = true,
+  
 }: StackedChartProps) {
 
   const [isDark, setIsDark] = React.useState(false);
@@ -329,7 +329,7 @@ export const StackedChart = React.memo(function StackedChart({
     const innerRadius = outerRadius * 0.55;
     
     return (
-      <div ref={setRefs} className={`h-full w-full flex flex-col items-center justify-center overflow-hidden ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
+      <div ref={setRefs} className={`h-full w-full flex flex-col items-center justify-center overflow-hidden `}>
         <div className="w-full flex-1 min-h-[300px]">
           <ChartContainer config={chartConfig} className="w-full h-full">
             <RadialBarChart
@@ -411,7 +411,7 @@ export const StackedChart = React.memo(function StackedChart({
   // Horizontal mode: bars grow to the right
   if (isHorizontal) {
     return (
-      <div ref={setRefs} className={`h-full w-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
+      <div ref={setRefs} className={`h-full w-full `}>
         <ResponsiveContainer width="100%" height="100%">
           <RechartsBarChart
             key="horizontal-stacked-chart"
@@ -464,7 +464,7 @@ export const StackedChart = React.memo(function StackedChart({
 
   // Vertical mode: bars grow upward
   return (
-    <div ref={setRefs} className={`h-full w-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
+    <div ref={setRefs} className={`h-full w-full `}>
       <ResponsiveContainer width="100%" height="100%">
         <RechartsBarChart
           key="vertical-stacked-chart"
@@ -518,7 +518,7 @@ export const StackedChart = React.memo(function StackedChart({
   return (
     prevProps.isHorizontal === nextProps.isHorizontal &&
     prevProps.showLabels === nextProps.showLabels &&
-    prevProps.showLegend === nextProps.showLegend &&
+    
     prevProps.showRadial === nextProps.showRadial &&
     prevProps.isFullscreen === nextProps.isFullscreen &&
     prevProps.data.length === nextProps.data.length &&

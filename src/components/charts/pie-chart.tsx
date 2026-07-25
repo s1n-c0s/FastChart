@@ -9,7 +9,7 @@ export interface PieChartProps {
   total: number;
   containerRef?: React.Ref<HTMLDivElement>;
   isFullscreen?: boolean;
-  showLegend?: boolean;
+  
   showFactText?: boolean;
   factIndex?: number;
   onFactIndexChange?: (index: number) => void;
@@ -214,7 +214,7 @@ const InnerRechartsPie = React.memo(({ size, data, pieCy, isFullscreen, renderCu
 });
 
 export const PieChart = React.memo(function PieChart({ data, total, containerRef, isFullscreen = false,  
-  showLegend = false,
+  
   showFactText = false,
   factIndex = 0,
   onFactIndexChange,
@@ -537,7 +537,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
   const pieCy = (size - legendHeight) / 2;
 
   return (
-      <div ref={setRefs} className={`flex h-full w-full items-center justify-center flex-col ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
+      <div ref={setRefs} className={`flex h-full w-full items-center justify-center flex-col `}>
         <div className="relative flex-shrink-0 w-full" style={{ height: size }}>
           <InnerRechartsPie
             size={size}
@@ -583,7 +583,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
       item.value === nextProps.data[idx]?.value &&
       item.color === nextProps.data[idx]?.color
     ) &&
-    prevProps.showLegend === nextProps.showLegend &&
+    
     prevProps.showFactText === nextProps.showFactText &&
     prevProps.factIndex === nextProps.factIndex
   );
