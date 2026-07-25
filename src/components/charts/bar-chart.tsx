@@ -55,7 +55,7 @@ export const BarChart = React.memo(function BarChart({
             key="horizontal-chart"
             data={data}
             layout="vertical"
-            margin={{ top: 5, right: 15, bottom: 5, left: 5 }}
+            margin={{ top: 10, right: 60, bottom: 5, left: 5 }}
             barCategoryGap="15%"
           >
             <CartesianGrid className="stroke-border opacity-80" strokeDasharray="4 4" />
@@ -125,7 +125,7 @@ export const BarChart = React.memo(function BarChart({
           key="vertical-chart"
           data={data}
           layout="horizontal"
-          margin={{ top: 5, right: 15, bottom: 5, left: 5 }}
+          margin={{ top: 25, right: 15, bottom: 5, left: 5 }}
           barCategoryGap="15%"
         >
           <CartesianGrid className="stroke-border opacity-80" strokeDasharray="4 4" />
