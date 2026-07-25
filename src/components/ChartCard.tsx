@@ -14,6 +14,7 @@ interface ChartCardProps {
   isHorizontal?: boolean;
   onToggleOrientation?: () => void;
   customActions?: ReactNode;
+  preventClickOnElements?: string[];
 }
 
 export function ChartCard({
@@ -28,6 +29,7 @@ export function ChartCard({
   isHorizontal = false,
   onToggleOrientation,
   customActions,
+  preventClickOnElements = [],
 }: ChartCardProps) {
   const [showTooltip, setShowTooltip] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -60,6 +62,12 @@ export function ChartCard({
     ) {
       return;
     }
+    
+    // Check custom elements that shouldn't trigger fullscreen
+    if (preventClickOnElements.some(selector => target.closest(selector))) {
+      return;
+    }
+    
     onFullscreen();
   }, [onFullscreen]);
 

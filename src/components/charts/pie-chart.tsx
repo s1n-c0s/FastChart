@@ -1,6 +1,6 @@
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { PieChart as RechartsPieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { PieChart as RechartsPieChart, Pie, Cell, Tooltip, ResponsiveContainer, Sector } from "recharts";
 
 import type { Datum } from "@/types";
 
@@ -164,7 +164,73 @@ const FactTextOverlay = (props: any) => {
 };
 
 
-const InnerRechartsPie = React.memo(({ size, data, pieCy, isFullscreen, renderCustomLabel, renderCustomLabelLine, cells, overlayCells, renderSvgLegend }: any) => {
+const InnerRechartsPie = React.memo(({ size, data, pieCy, isFullscreen, renderCustomLabel, renderCustomLabelLine, top4Ids, targetFocusIndex, renderSvgLegend }: any) => {
+  const [hoverIndex, setHoverIndex] = React.useState<number | undefined>(undefined);
+  const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  const onPieMouseEnter = React.useCallback((_: any, index: number) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setHoverIndex(index);
+  }, []);
+
+  const onPieMouseLeave = React.useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    timeoutRef.current = setTimeout(() => {
+      setHoverIndex(undefined);
+      timeoutRef.current = null;
+    }, 4000);
+  }, []);
+
+  const combinedActiveIndex = hoverIndex !== undefined ? hoverIndex : targetFocusIndex;
+
+  const cells = React.useMemo(() => {
+    return data.map((item: Datum, index: number) => {
+      return (
+        <Cell 
+          key={item.id} 
+          fill={item.color} 
+          stroke="none" 
+        />
+      );
+    });
+  }, [data]);
+  
+  const overlayCells = React.useMemo(() => {
+    return data.map((item: Datum, index: number) => {
+      const isOther = top4Ids && !top4Ids.includes(item.id);
+      return (
+        <Cell 
+          key={`overlay-${item.id}`} 
+          fill={isOther ? "rgba(0,0,0,0.4)" : "transparent"} 
+          stroke="none" 
+        />
+      );
+    });
+  }, [data, top4Ids]);
+
+  const focusCells = React.useMemo(() => {
+    return data.map((item: Datum, index: number) => {
+      const isFocused = index === combinedActiveIndex;
+      return (
+        <Cell 
+          key={`focus-${item.id}`} 
+          fill={isFocused ? item.color : "transparent"} 
+          stroke="none" 
+        />
+      );
+    });
+  }, [data, combinedActiveIndex]);
 
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -185,6 +251,9 @@ const InnerRechartsPie = React.memo(({ size, data, pieCy, isFullscreen, renderCu
           stroke="none"
           label={renderCustomLabel}
           labelLine={renderCustomLabelLine}
+          onMouseEnter={onPieMouseEnter}
+          onMouseLeave={onPieMouseLeave}
+          style={{ cursor: 'pointer' }}
         >
           {cells}
         </Pie>
@@ -205,6 +274,23 @@ const InnerRechartsPie = React.memo(({ size, data, pieCy, isFullscreen, renderCu
           style={{ pointerEvents: 'none' }}
         >
           {overlayCells}
+        </Pie>
+        
+        <Pie
+          data={data}
+          dataKey="value"
+          nameKey="label"
+          cx="50%"
+          cy={pieCy}
+          innerRadius={size * 0.20}
+          outerRadius={isFullscreen ? size * 0.33 : size * 0.30}
+          paddingAngle={2}
+          cornerRadius={6}
+          isAnimationActive={false}
+          stroke="none"
+          style={{ pointerEvents: 'none' }}
+        >
+          {focusCells}
         </Pie>
         
         {renderSvgLegend()}
@@ -282,12 +368,13 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     return [...data].sort((a, b) => b.value - a.value).slice(0, 4).map(d => d.id);
   }, [data]);
 
-  const cells = React.useMemo(() => {
-    return data.map((item: Datum) => (
-      <Cell key={item.id} fill={item.color} stroke="none" />
-    ));
-  }, [data]);
-  
+  const maxItem = data && data.length > 0 ? data.reduce((prev: any, current: any) => (prev.value > current.value) ? prev : current) : null;
+  const minItem = data && data.length > 0 ? data.reduce((prev: any, current: any) => (prev.value < current.value) ? prev : current) : null;
+
+  const targetFocusIndex = factIndex === 1 && maxItem ? data.findIndex(d => d.id === maxItem.id) 
+                         : factIndex === 2 && minItem ? data.findIndex(d => d.id === minItem.id) 
+                         : -1;
+
   const overlayCells = React.useMemo(() => {
     return data.map((item: Datum) => {
       const isOther = top4Ids && !top4Ids.includes(item.id);
@@ -569,13 +656,11 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
             size={size}
             data={data}
             pieCy={pieCy}
-            
             isFullscreen={isFullscreen}
             renderCustomLabel={renderCustomLabel}
             renderCustomLabelLine={renderCustomLabelLine as any}
-            cells={cells}
-            overlayCells={overlayCells}
-            
+            top4Ids={top4Ids}
+            targetFocusIndex={targetFocusIndex}
             renderSvgLegend={renderSvgLegend}
           />
 
