@@ -437,21 +437,13 @@ export const StackedChart = React.memo(function StackedChart({
                     };
                     
                     // Radial chart is a half circle ending at cy. All content must sit ABOVE cy.
-                    let titleY, valueY, labelY;
-                    if (factLabel) {
-                      labelY = cy - (4 * scaleFactor);
-                      valueY = labelY - labelSize - (4 * scaleFactor);
-                      titleY = valueY - (textSize * 0.8) - (4 * scaleFactor);
-                    } else {
-                      labelY = 0;
-                      valueY = cy - (8 * scaleFactor);
-                      titleY = valueY - (textSize * 0.8) - (6 * scaleFactor);
-                    }
+                    // We use fixed Y coordinates so the text and arrows don't jiggle when toggling
+                    const labelY = cy - (4 * scaleFactor);
+                    const valueY = labelY - labelSize - (4 * scaleFactor);
+                    const titleY = valueY - (textSize * 0.8) - (4 * scaleFactor);
                     
                     // Compute the visual center of the text block to perfectly align the arrows
-                    const textCenterY = factLabel 
-                      ? (titleY - titleSize + labelY) / 2 
-                      : (titleY - titleSize + valueY) / 2;
+                    const textCenterY = (titleY - titleSize + labelY) / 2;
                     const arrowY = textCenterY - 16;
                     
                     return (
