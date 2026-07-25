@@ -500,7 +500,15 @@ export default function DataVisualizer() {
               chartRef={pieCardRef}
               customActions={
                 <div className="flex flex-wrap items-center gap-2">
-                  <Select value={pieFactIndex.toString()} onValueChange={(val) => setPieFactIndex(Number(val))}>
+                  <label htmlFor="fs-show-labels-pie" className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap">
+              Labels
+            </label>
+            <Switch
+              id="fs-show-labels-pie"
+              checked={showLabels}
+              onCheckedChange={setShowLabels}
+            />
+            <Select value={pieFactIndex.toString()} onValueChange={(val) => setPieFactIndex(Number(val))}>
                     <SelectTrigger className="h-8 w-32 bg-transparent text-xs" style={{ fontSize: 12 }}>
                       <SelectValue placeholder="Fact Type" />
                     </SelectTrigger>
@@ -603,7 +611,7 @@ export default function DataVisualizer() {
       </div>
 
       {/* --- Fullscreen Modals --- */}
-      <FullscreenModal
+      <FullscreenModal showLabels={showLabels}
         isOpen={fullscreenChart === "bar"}
         onClose={closeFullscreen}
         chartType="bar"
@@ -616,7 +624,7 @@ export default function DataVisualizer() {
         <BarChart containerRef={fsRef} data={sortedData} isHorizontal={barHorizontal} showLabels={showLabels} />
       </FullscreenModal>
 
-      <FullscreenModal
+      <FullscreenModal showLabels={showLabels}
         isOpen={fullscreenChart === "pie"}
         onClose={closeFullscreen}
         chartType="pie"
@@ -624,6 +632,14 @@ export default function DataVisualizer() {
         onCopyPng={() => copyChartPng(fsRef.current)}
         customActions={
           <div className="flex items-center gap-2">
+            <label htmlFor="fs-show-labels-pie" className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap">
+              Labels
+            </label>
+            <Switch
+              id="fs-show-labels-pie"
+              checked={showLabels}
+              onCheckedChange={setShowLabels}
+            />
             <Select value={pieFactIndex.toString()} onValueChange={(val) => setPieFactIndex(Number(val))}>
               <SelectTrigger className="h-8 w-32 bg-transparent text-xs" style={{ fontSize: 12 }}>
                 <SelectValue placeholder="Fact Type" />
@@ -650,7 +666,7 @@ export default function DataVisualizer() {
         )}
       </FullscreenModal>
 
-      <FullscreenModal
+      <FullscreenModal showLabels={showLabels}
         isOpen={fullscreenChart === "stacked"}
         onClose={closeFullscreen}
         chartType="stacked"
@@ -675,7 +691,7 @@ export default function DataVisualizer() {
         <StackedChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} isHorizontal={stackedHorizontal} showLabels={showLabels} showRadial={stackedRadial} showLegend={showLegend} isFullscreen={fullscreenChart === "stacked"} />
       </FullscreenModal>
 
-      <FullscreenModal
+      <FullscreenModal showLabels={showLabels}
         isOpen={fullscreenChart === "line"}
         onClose={closeFullscreen}
         chartType="line"

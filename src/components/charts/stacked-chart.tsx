@@ -135,20 +135,7 @@ export const StackedChart = React.memo(function StackedChart({
   isFullscreen = false,
   showLegend = true,
 }: StackedChartProps) {
-  const [animate, setAnimate] = React.useState(true);
-  const prevDataRef = React.useRef(data);
-  React.useEffect(() => {
-    if (prevDataRef.current !== data) {
-      setAnimate(true);
-      prevDataRef.current = data;
-      const t = setTimeout(() => setAnimate(false), 800);
-      return () => clearTimeout(t);
-    }
-  }, [data]);
-  React.useEffect(() => {
-    const t = setTimeout(() => setAnimate(false), 800);
-    return () => clearTimeout(t);
-  }, []);
+
   const [isDark, setIsDark] = React.useState(false);
   React.useEffect(() => {
     const checkDark = () => setIsDark(document.documentElement.classList.contains('dark'));
@@ -342,7 +329,7 @@ export const StackedChart = React.memo(function StackedChart({
     const innerRadius = outerRadius * 0.55;
     
     return (
-      <div ref={setRefs} className="h-full w-full flex flex-col items-center justify-center overflow-hidden">
+      <div ref={setRefs} className={`h-full w-full flex flex-col items-center justify-center overflow-hidden ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
         <div className="w-full flex-1 min-h-[300px]">
           <ChartContainer config={chartConfig} className="w-full h-full">
             <RadialBarChart
@@ -403,7 +390,7 @@ export const StackedChart = React.memo(function StackedChart({
               />
             </PolarRadiusAxis>
             {data.map((d) => (
-              <RadialBar isAnimationActive={animate}
+              <RadialBar isAnimationActive={true}
                 key={d.id}
                 dataKey={d.label}
                 name={d.label}

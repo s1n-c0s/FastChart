@@ -165,21 +165,8 @@ const FactTextOverlay = (props: any) => {
 };
 
 
-const InnerRechartsPie = React.memo(({ size, data, pieCy, showLabels, isFullscreen, renderCustomLabel, renderCustomLabelLine, cells, overlayCells, showLegend, renderSvgLegend }: any) => {
-  const [animate, setAnimate] = React.useState(true);
-  const prevDataRef = React.useRef(data);
-  React.useEffect(() => {
-    if (prevDataRef.current !== data) {
-      setAnimate(true);
-      prevDataRef.current = data;
-      const t = setTimeout(() => setAnimate(false), 800);
-      return () => clearTimeout(t);
-    }
-  }, [data]);
-  React.useEffect(() => {
-    const t = setTimeout(() => setAnimate(false), 800);
-    return () => clearTimeout(t);
-  }, []);
+const InnerRechartsPie = React.memo(({ size, data, pieCy, showLabels, isFullscreen, renderCustomLabel, renderCustomLabelLine, cells, overlayCells, renderSvgLegend }: any) => {
+
   return (
     <ResponsiveContainer width="100%" height="100%">
       <RechartsPieChart style={{ overflow: 'visible' }}>
@@ -194,7 +181,7 @@ const InnerRechartsPie = React.memo(({ size, data, pieCy, showLabels, isFullscre
           outerRadius={showLabels ? (isFullscreen ? size * 0.30 : size * 0.28) : size * 0.42}
           paddingAngle={2}
           cornerRadius={6}
-          isAnimationActive={animate}
+          isAnimationActive={true}
           animationDuration={500}
           stroke="none"
           label={renderCustomLabel}
@@ -213,7 +200,7 @@ const InnerRechartsPie = React.memo(({ size, data, pieCy, showLabels, isFullscre
           outerRadius={showLabels ? (isFullscreen ? size * 0.30 : size * 0.28) : size * 0.42}
           paddingAngle={2}
           cornerRadius={6}
-          isAnimationActive={animate}
+          isAnimationActive={true}
           animationDuration={500}
           stroke="none"
           style={{ pointerEvents: 'none' }}
@@ -221,7 +208,7 @@ const InnerRechartsPie = React.memo(({ size, data, pieCy, showLabels, isFullscre
           {overlayCells}
         </Pie>
         
-        {showLegend && renderSvgLegend()}
+        {renderSvgLegend()}
       </RechartsPieChart>
     </ResponsiveContainer>
   );
@@ -551,7 +538,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
   const pieCy = (size - legendHeight) / 2 - (showLabels ? (isFullscreen ? 15 : 20) : 0);
 
   return (
-      <div ref={setRefs} className="flex h-full w-full items-center justify-center flex-col">
+      <div ref={setRefs} className={`flex h-full w-full items-center justify-center flex-col ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
         <div className="relative flex-shrink-0 w-full" style={{ height: size }}>
           <InnerRechartsPie
             size={size}
@@ -563,7 +550,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
             renderCustomLabelLine={renderCustomLabelLine as any}
             cells={cells}
             overlayCells={overlayCells}
-            showLegend={showLegend}
+            
             renderSvgLegend={renderSvgLegend}
           />
 

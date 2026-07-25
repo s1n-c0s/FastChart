@@ -14,6 +14,7 @@ interface FullscreenModalProps {
   showOrientation?: boolean;
   customActions?: ReactNode;
   children?: ReactNode;
+  showLabels?: boolean;
 }
 
 export function FullscreenModal({
@@ -27,6 +28,7 @@ export function FullscreenModal({
   showOrientation = false,
   customActions,
   children,
+  showLabels = true,
 }: FullscreenModalProps) {
   // Lazy render chart content only when modal is open
   const [shouldRenderChart, setShouldRenderChart] = useState(false);
@@ -108,7 +110,7 @@ export function FullscreenModal({
             </Button>
           </div>
         </div>
-        <div className={styles.chartContent}>
+        <div className={`${styles.chartContent} ${showLabels ? "fast-chart-labels-visible" : "fast-chart-labels-hidden"}`}>
           {shouldRenderChart ? (
             children
           ) : (

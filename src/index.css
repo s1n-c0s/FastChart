@@ -135,3 +135,11 @@
 .recharts-responsive-container { overflow: visible !important; }
 .recharts-surface { overflow: visible !important; }
 .recharts-wrapper { overflow: visible !important; }
+
+.fast-chart-legend-hidden .svg-legend {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+.svg-legend {
+  transition: opacity 300ms ease-in-out !important;
+}
