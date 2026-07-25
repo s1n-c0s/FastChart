@@ -112,15 +112,43 @@ const CustomStackedLabel = (props: any) => {
   // If the bar is so tiny that scale drops below 0.3, just hide it to avoid illegible microscopic text
   if (scale < 0.3) return null;
   
+  const str1 = barDataKey;
+  const str2 = `(${percent}%)`;
+  
+  const width1 = str1.length * fontSizePercent * 0.55;
+  const width2 = str2.length * fontSizeRaw * 0.55;
+  const gap = fontSizePercent * 0.2; 
+  
+  const totalW = width1 + gap + width2;
+  const splitX1 = cx - totalW / 2 + width1;
+  const splitX2 = splitX1 + gap;
+
+  // We use two separate <text> elements with explicit X positions instead of <tspan>
+  // to ensure flawless compatibility with all SVG viewers (like Figma) while keeping 
+  // the different font sizes.
   return (
     <g>
-      <text x={cx} y={cy} fill="#ffffff" textAnchor="middle" dominantBaseline="central">
-        <tspan fontSize={fontSizePercent} fontWeight="500">
-          {barDataKey}
-        </tspan>
-        <tspan fontSize={fontSizeRaw} fontWeight="500" dx={isFullscreen ? 6 * scale : 4 * scale} dy={isFullscreen ? -4 * scale : -2 * scale}>
-          ({percent}%)
-        </tspan>
+      <text 
+        x={splitX1} 
+        y={cy} 
+        fill="#ffffff" 
+        textAnchor="end" 
+        dominantBaseline="central"
+        fontSize={fontSizePercent} 
+        fontWeight="500"
+      >
+        {str1}
+      </text>
+      <text 
+        x={splitX2} 
+        y={cy} 
+        fill="#ffffff" 
+        textAnchor="start" 
+        dominantBaseline="central"
+        fontSize={fontSizeRaw} 
+        fontWeight="500"
+      >
+        {str2}
       </text>
     </g>
   );

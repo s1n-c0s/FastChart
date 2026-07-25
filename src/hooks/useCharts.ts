@@ -45,7 +45,9 @@ export function useCharts() {
           return;
         }
 
-        // Apply important computed properties
+        // Apply important computed properties. 
+        // We ALWAYS apply colors and fonts (except font-size) because they might use CSS variables (like var(--color))
+        // which need to be resolved to absolute values for the copied SVG.
         if (computedStyle.fill) {
           (el as SVGElement).setAttribute('fill', computedStyle.fill);
         }
@@ -54,11 +56,14 @@ export function useCharts() {
         }
         if (computedStyle.color) {
           (el as SVGElement).setAttribute('color', computedStyle.color);
+          (el as SVGElement).style.color = computedStyle.color;
         }
         if (computedStyle.fontFamily) {
           (el as SVGElement).setAttribute('font-family', computedStyle.fontFamily);
         }
-        if (computedStyle.fontSize) {
+        // ONLY skip font-size if it already exists, to prevent browser minimum font size clamping (e.g., 12px)
+        // from breaking dynamically scaled down text like in the StackedChart labels.
+        if (computedStyle.fontSize && !origEl.hasAttribute('font-size')) {
           (el as SVGElement).setAttribute('font-size', computedStyle.fontSize);
         }
         if (computedStyle.fontWeight) {
@@ -66,34 +71,6 @@ export function useCharts() {
         }
         if (computedStyle.fontStyle) {
           (el as SVGElement).setAttribute('font-style', computedStyle.fontStyle);
-        }
-      });
-
-      // Specifically handle text elements to preserve their colors and fonts
-      const textElements = cloneTemp.querySelectorAll('text, tspan');
-      const origTextElements = svg.querySelectorAll('text, tspan');
-      textElements.forEach((el, index) => {
-        const origEl = origTextElements[index] as Element;
-        if (origEl) {
-          const computedStyle = window.getComputedStyle(origEl);
-          if (computedStyle.fill) {
-            (el as SVGElement).setAttribute('fill', computedStyle.fill);
-          }
-          if (computedStyle.color) {
-            (el as SVGElement).style.color = computedStyle.color;
-          }
-          if (computedStyle.fontFamily) {
-            (el as SVGElement).setAttribute('font-family', computedStyle.fontFamily);
-          }
-          if (computedStyle.fontSize) {
-            (el as SVGElement).setAttribute('font-size', computedStyle.fontSize);
-          }
-          if (computedStyle.fontWeight) {
-            (el as SVGElement).setAttribute('font-weight', computedStyle.fontWeight);
-          }
-          if (computedStyle.fontStyle) {
-            (el as SVGElement).setAttribute('font-style', computedStyle.fontStyle);
-          }
         }
       });
 
