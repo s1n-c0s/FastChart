@@ -400,7 +400,7 @@ export const StackedChart = React.memo(function StackedChart({
                 className="stroke-transparent stroke-2"
               />
             ))}
-            {showLegend && renderSvgLegend()}
+            {renderSvgLegend()}
           </RadialBarChart>
           </ChartContainer>
         </div>
@@ -455,7 +455,7 @@ export const StackedChart = React.memo(function StackedChart({
                 )}
               </Bar>
             ))}
-            {showLegend && renderSvgLegend()}
+            {renderSvgLegend()}
           </RechartsBarChart>
         </ResponsiveContainer>
       </div>
@@ -509,7 +509,7 @@ export const StackedChart = React.memo(function StackedChart({
               )}
             </Bar>
           ))}
-          {showLegend && renderSvgLegend()}
+          {renderSvgLegend()}
         </RechartsBarChart>
       </ResponsiveContainer>
     </div>
