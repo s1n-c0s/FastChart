@@ -147,13 +147,10 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
         points={newPoints.map((p: any) => `${p.x},${p.y}`).join(' ')}
         stroke={textColor}
         strokeWidth={1}
-        className={showLabels ? "transition-opacity duration-300 opacity-100" : "transition-opacity duration-300 opacity-0"}
-        style={{
-          pointerEvents: showLabels ? 'auto' : 'none'
-        }}
+        className="chart-global-label"
       />
     );
-  }, [top4Ids, textColor, isFullscreen, showLabels]);
+  }, [top4Ids, textColor, isFullscreen]);
 
   const renderCustomLabel = React.useCallback((props: any) => {
     console.log("PIE PROPS", JSON.stringify(props));
@@ -194,11 +191,9 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
 
     return (
       <g 
-        key={showLabels ? "on" : "off"}
-        className={showLabels ? "transition-all duration-300 opacity-100" : "transition-all duration-300 opacity-0"}
+        className="chart-global-label"
         style={{ 
           overflow: 'visible',
-          pointerEvents: showLabels ? 'auto' : 'none',
           transformOrigin: `${fx + boxWidth / 2}px ${fy + boxHeight / 2}px`
         }}
       >
@@ -253,7 +248,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
         </text>
       </g>
     );
-  }, [isFullscreen, isDark, bgColor, borderColor, textMainColor, textColor, top4Ids, lastOtherId, otherSum, total, showLabels]);
+  }, [isFullscreen, isDark, bgColor, borderColor, textMainColor, textColor, top4Ids, lastOtherId, otherSum, total]);
 
   React.useEffect(() => {
     if (!isFullscreen) return;

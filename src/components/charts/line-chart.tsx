@@ -57,7 +57,7 @@ const LineChartTooltip = ({ active, payload, label, lineColor }: LineChartToolti
 export const LineChart = React.memo(function LineChart({ 
   data, 
   containerRef, 
-  showLabels = false, 
+ 
   showGradientArea = false,
   lineColor: customLineColor
 }: LineChartProps) {
@@ -142,7 +142,7 @@ export const LineChart = React.memo(function LineChart({
                   dataKey="value"
                   position="top"
                   offset={8}
-                  className={`fill-foreground font-semibold transition-opacity duration-300 ${showLabels ? 'opacity-100' : 'opacity-0'}`}
+                  className="fill-foreground font-semibold chart-global-label"
                   fontSize={15}
                   fontWeight={600}
                   formatter={(value: any) => (Number(value) || 0).toLocaleString()}
@@ -156,7 +156,6 @@ export const LineChart = React.memo(function LineChart({
   )
 }, (prevProps, nextProps) => {
   return (
-    prevProps.showLabels === nextProps.showLabels &&
     prevProps.showGradientArea === nextProps.showGradientArea &&
     prevProps.lineColor === nextProps.lineColor &&
     prevProps.data === nextProps.data

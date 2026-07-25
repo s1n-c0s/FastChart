@@ -120,3 +120,15 @@
     @apply bg-background text-foreground;
   }
 }
+/* Global Label Visibility Toggle */
+.fast-chart-labels-hidden .chart-global-label {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+.fast-chart-labels-visible .chart-global-label {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+.chart-global-label {
+  transition: opacity 300ms ease-in-out !important;
+}

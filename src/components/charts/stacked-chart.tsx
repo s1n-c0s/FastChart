@@ -66,7 +66,7 @@ const StackedTooltip = React.memo(function StackedTooltip({ active, payload }: S
 StackedTooltip.displayName = "StackedTooltip";
 
 const CustomStackedLabel = (props: any) => {
-  const { x, y, width, height, value, rawData, barDataKey, isFullscreen, isHorizontal, showLabels } = props;
+  const { x, y, width, height, value, rawData, barDataKey, isFullscreen, isHorizontal } = props;
   
   if (width < 15 || height < 15) return null;
 
@@ -90,7 +90,7 @@ const CustomStackedLabel = (props: any) => {
   const fontSizeRaw = isFullscreen ? 24 : (isHorizontal ? 16 : 12);
   
   return (
-    <g className={`transition-opacity duration-300 ${showLabels ? 'opacity-100' : 'opacity-0'}`}>
+    <g className="chart-global-label">
       <text x={cx} y={cy} fill="#ffffff" textAnchor="middle" dominantBaseline="central">
         <tspan fontSize={fontSizePercent} fontWeight="500">
           {barDataKey}
@@ -107,7 +107,7 @@ export const StackedChart = React.memo(function StackedChart({
   data,
   isHorizontal = true,
   containerRef,
-  showLabels = false,
+
   showRadial = false,
   isFullscreen = false,
   showLegend = true,
@@ -400,7 +400,7 @@ export const StackedChart = React.memo(function StackedChart({
               >
                 <LabelList
                   dataKey={d.label}
-                  content={<CustomStackedLabel rawData={data} isFullscreen={isFullscreen} isHorizontal={isHorizontal} barDataKey={d.label} showLabels={showLabels} />}
+                  content={<CustomStackedLabel rawData={data} isFullscreen={isFullscreen} isHorizontal={isHorizontal} barDataKey={d.label} />}
                 />
               </Bar>
             ))}
@@ -452,7 +452,7 @@ export const StackedChart = React.memo(function StackedChart({
             >
               <LabelList
                 dataKey={d.label}
-                content={<CustomStackedLabel rawData={data} isFullscreen={isFullscreen} isHorizontal={isHorizontal} barDataKey={d.label} showLabels={showLabels} />}
+                content={<CustomStackedLabel rawData={data} isFullscreen={isFullscreen} isHorizontal={isHorizontal} barDataKey={d.label} />}
               />
             </Bar>
           ))}
@@ -464,7 +464,6 @@ export const StackedChart = React.memo(function StackedChart({
 }, (prevProps, nextProps) => {
   return (
     prevProps.isHorizontal === nextProps.isHorizontal &&
-    prevProps.showLabels === nextProps.showLabels &&
     prevProps.showLegend === nextProps.showLegend &&
     prevProps.showRadial === nextProps.showRadial &&
     prevProps.isFullscreen === nextProps.isFullscreen &&

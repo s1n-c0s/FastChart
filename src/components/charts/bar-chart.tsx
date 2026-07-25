@@ -27,7 +27,7 @@ export const BarChart = React.memo(function BarChart({
   isHorizontal = true,
   containerRef,
   children,
-  showLabels = false,
+
 }: BarChartProps) {
   const chartConfig = React.useMemo(() => {
     return data.reduce((acc, item) => {
@@ -102,7 +102,7 @@ export const BarChart = React.memo(function BarChart({
                 dataKey="value"
                 position="right"
                 offset={8}
-                className={`fill-foreground font-semibold transition-opacity duration-300 ${showLabels ? 'opacity-100' : 'opacity-0'}`}
+                className="fill-foreground font-semibold chart-global-label"
                 fontSize={15}
                 fontWeight={600}
                 formatter={(value: any) => (Number(value) || 0).toLocaleString()}
@@ -176,7 +176,7 @@ export const BarChart = React.memo(function BarChart({
               dataKey="value"
               position="top"
               offset={8}
-              className={`fill-foreground font-semibold transition-opacity duration-300 ${showLabels ? 'opacity-100' : 'opacity-0'}`}
+              className="fill-foreground font-semibold chart-global-label"
               fontSize={15}
               fontWeight={600}
               formatter={(value: any) => (Number(value) || 0).toLocaleString()}
@@ -190,7 +190,6 @@ export const BarChart = React.memo(function BarChart({
 }, (prevProps, nextProps) => {
   return (
     prevProps.isHorizontal === nextProps.isHorizontal &&
-    prevProps.showLabels === nextProps.showLabels &&
     prevProps.data.length === nextProps.data.length &&
     prevProps.data.every((item, idx) => 
       item.id === nextProps.data[idx]?.id &&

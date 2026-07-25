@@ -474,7 +474,7 @@ export default function DataVisualizer() {
         </div>
 
         {/* --- Charts Section --- */}
-        <div className="space-y-6">
+        <div className={`space-y-6 ${showLabels ? 'fast-chart-labels-visible' : 'fast-chart-labels-hidden'}`}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <ChartCard
               title="Bar Chart"
