@@ -429,8 +429,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
                     labelYOffset = 0;
                   }
                   
-                  const midpointOffset = (titleYOffset + (factLabel ? labelYOffset : valueYOffset)) / 2;
-                  const arrowY = cy + midpointOffset * scaleFactor - 16;
+                  const arrowY = cy - 16;
 
                   return (
                     <g className="group">
