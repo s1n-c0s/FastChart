@@ -465,7 +465,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     data.forEach((item: Datum) => {
       const percentage = total > 0 ? Math.round((Math.max(0, item.value || 0) / total) * 100) : 0;
       const labelText = `${item.label}: ${Number(item.value || 0).toLocaleString()} (${percentage}%)`;
-      const textWidth = labelText.length * (isFullscreen ? 8.5 : 7.5); 
+      const textWidth = labelText.length * (isFullscreen ? 7.5 : 6.5); 
       const itemWidth = rectSize + gap + textWidth + itemMargin;
       const maxItemsPerRow = 4;
 
