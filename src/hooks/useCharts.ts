@@ -40,6 +40,11 @@ export function useCharts() {
         const origEl = origTempElements[index] as Element;
         const computedStyle = window.getComputedStyle(origEl);
         
+        if (computedStyle.opacity === '0' || computedStyle.display === 'none' || computedStyle.visibility === 'hidden') {
+          (el as SVGElement).setAttribute('data-hide-on-copy', 'true');
+          return;
+        }
+
         // Apply important computed properties
         if (computedStyle.fill) {
           (el as SVGElement).setAttribute('fill', computedStyle.fill);
