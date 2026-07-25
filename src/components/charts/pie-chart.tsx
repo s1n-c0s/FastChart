@@ -365,142 +365,140 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
               label={renderCustomLabel}
               labelLine={renderCustomLabelLine as any}
             >
-              {showFactText && (
-                <Label
-                  content={({ viewBox }) => {
-                    if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                      const innerR = showLabels ? size * 0.18 : size * 0.28;
-                      
-                      const maxItem = data.length > 0 ? data.reduce((prev, current) => (prev.value > current.value) ? prev : current) : null;
-                      const minItem = data.length > 0 ? data.reduce((prev, current) => (prev.value < current.value) ? prev : current) : null;
-                      
-                      let factTitle = "Total";
-                      let factValue = total.toLocaleString();
-                      let factColor = textMainColor;
-                      let factLabel = "";
-                      
-                      if (factIndex === 1 && maxItem) {
-                        factTitle = "The most";
-                        factValue = maxItem.value.toLocaleString();
-                        factColor = maxItem.color;
-                        factLabel = maxItem.label;
-                      } else if (factIndex === 2 && minItem) {
-                        factTitle = "The Lowest";
-                        factValue = minItem.value.toLocaleString();
-                        factColor = minItem.color;
-                        factLabel = minItem.label;
-                      }
-                      
-                      const handlePrev = (e: React.MouseEvent) => { 
-                        e.stopPropagation(); 
-                        if (onFactIndexChange) onFactIndexChange((factIndex - 1 + 3) % 3);
-                      };
-                      const handleNext = (e: React.MouseEvent) => { 
-                        e.stopPropagation(); 
-                        if (onFactIndexChange) onFactIndexChange((factIndex + 1) % 3);
-                      };
-
-                      const maxTitleSize = isFullscreen ? 16 : 12;
-                      const maxValueSize = isFullscreen ? 36 : 22;
-                      const maxLabelSize = isFullscreen ? 14 : 11;
-                      
-                      // Calculate scale factor to ensure text fits inside innerR
-                      const totalTextHeight = maxTitleSize + maxValueSize + maxLabelSize + 20;
-                      // Maximum diameter is innerR * 2. We use innerR * 1.6 as the safe bounding box height
-                      const safeHeight = innerR * 1.6;
-                      const scaleFactor = Math.min(1, safeHeight / totalTextHeight);
-                      
-                      const titleSize = maxTitleSize * scaleFactor;
-                      const valueSize = maxValueSize * scaleFactor;
-                      const labelSize = maxLabelSize * scaleFactor;
-
-                      let titleYOffset, valueYOffset, labelYOffset;
-                      if (factLabel) {
-                        titleYOffset = isFullscreen ? -44 : -30;
-                        valueYOffset = isFullscreen ? -10 : -7;
-                        labelYOffset = isFullscreen ? 20 : 11;
-                      } else {
-                        titleYOffset = isFullscreen ? -34 : -24;
-                        valueYOffset = isFullscreen ? 0 : -1;
-                        labelYOffset = 0;
-                      }
-                      
-                      const midpointOffset = (titleYOffset + (factLabel ? labelYOffset : valueYOffset)) / 2;
-                      const arrowY = (viewBox.cy || 0) + midpointOffset * scaleFactor - 16;
-
-                      return (
-                        <g className="group">
-                          <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle" className="pointer-events-none select-none">
-                            <tspan
-                              x={viewBox.cx}
-                              y={(viewBox.cy || 0) + titleYOffset * scaleFactor}
-                              fill={textColor} 
-                              fontSize={titleSize}
-                              fontWeight="500"
-                            >
-                              {factTitle}
-                            </tspan>
-                            <tspan
-                              x={viewBox.cx}
-                              y={(viewBox.cy || 0) + valueYOffset * scaleFactor}
-                              fill={factColor}
-                              fontSize={valueSize}
-                              fontWeight="bold" 
-                            >
-                              {factValue}
-                            </tspan>
-                            {factLabel && (
-                              <tspan
-                                x={viewBox.cx}
-                                y={(viewBox.cy || 0) + labelYOffset * scaleFactor}
-                                fill={factColor}
-                                fontSize={labelSize}
-                                fontWeight="500"
-                                opacity={0.8}
-                              >
-                                {factLabel}
-                              </tspan>
-                            )}
-                          </text>
-                          
-                          {/* Prev Button */}
-                          <svg 
-                            x={(viewBox.cx || 0) - innerR + (isFullscreen ? 30 : 10)} 
-                            y={arrowY} 
-                            width={32} height={32} 
-                            onClick={handlePrev} 
-                            className="opacity-0 group-hover:opacity-100 cursor-pointer pointer-events-auto text-muted-foreground transition-opacity"
-                            color="currentColor"
-                            data-hide-on-copy="true"
-                          >
-                            <rect width="32" height="32" fill="transparent" />
-                            <ChevronLeft x={4} y={4} width={24} height={24} strokeWidth={2.5} />
-                          </svg>
-
-                          {/* Next Button */}
-                          <svg 
-                            x={(viewBox.cx || 0) + innerR - 32 - (isFullscreen ? 30 : 10)} 
-                            y={arrowY} 
-                            width={32} height={32} 
-                            onClick={handleNext} 
-                            className="opacity-0 group-hover:opacity-100 cursor-pointer pointer-events-auto text-muted-foreground transition-opacity"
-                            color="currentColor"
-                            data-hide-on-copy="true"
-                          >
-                            <rect width="32" height="32" fill="transparent" />
-                            <ChevronRight x={4} y={4} width={24} height={24} strokeWidth={2.5} />
-                          </svg>
-                        </g>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-              )}
               {data.map((item: Datum) => (
                 <Cell key={item.id} fill={item.color} stroke="none" />
               ))}
             </Pie>
+            
+            {showFactText && (
+              <Customized
+                component={() => {
+                  const cx = chartWidth / 2;
+                  const cy = pieCy;
+                  const innerR = showLabels ? size * 0.18 : size * 0.28;
+                  
+                  const maxItem = data.length > 0 ? data.reduce((prev, current) => (prev.value > current.value) ? prev : current) : null;
+                  const minItem = data.length > 0 ? data.reduce((prev, current) => (prev.value < current.value) ? prev : current) : null;
+                  
+                  let factTitle = "Total";
+                  let factValue = total.toLocaleString();
+                  let factColor = textMainColor;
+                  let factLabel = "";
+                  
+                  if (factIndex === 1 && maxItem) {
+                    factTitle = "The most";
+                    factValue = maxItem.value.toLocaleString();
+                    factColor = maxItem.color;
+                    factLabel = maxItem.label;
+                  } else if (factIndex === 2 && minItem) {
+                    factTitle = "The Lowest";
+                    factValue = minItem.value.toLocaleString();
+                    factColor = minItem.color;
+                    factLabel = minItem.label;
+                  }
+                  
+                  const handlePrev = (e: React.MouseEvent) => { 
+                    e.stopPropagation(); 
+                    if (onFactIndexChange) onFactIndexChange((factIndex - 1 + 3) % 3);
+                  };
+                  const handleNext = (e: React.MouseEvent) => { 
+                    e.stopPropagation(); 
+                    if (onFactIndexChange) onFactIndexChange((factIndex + 1) % 3);
+                  };
+
+                  const maxTitleSize = isFullscreen ? 16 : 12;
+                  const maxValueSize = isFullscreen ? 36 : 22;
+                  const maxLabelSize = isFullscreen ? 14 : 11;
+                  
+                  const totalTextHeight = maxTitleSize + maxValueSize + maxLabelSize + 20;
+                  const safeHeight = innerR * 1.6;
+                  const scaleFactor = Math.min(1, safeHeight / totalTextHeight);
+                  
+                  const titleSize = maxTitleSize * scaleFactor;
+                  const valueSize = maxValueSize * scaleFactor;
+                  const labelSize = maxLabelSize * scaleFactor;
+
+                  let titleYOffset, valueYOffset, labelYOffset;
+                  if (factLabel) {
+                    titleYOffset = isFullscreen ? -44 : -30;
+                    valueYOffset = isFullscreen ? -10 : -7;
+                    labelYOffset = isFullscreen ? 20 : 11;
+                  } else {
+                    titleYOffset = isFullscreen ? -34 : -24;
+                    valueYOffset = isFullscreen ? 0 : -1;
+                    labelYOffset = 0;
+                  }
+                  
+                  const midpointOffset = (titleYOffset + (factLabel ? labelYOffset : valueYOffset)) / 2;
+                  const arrowY = cy + midpointOffset * scaleFactor - 16;
+
+                  return (
+                    <g className="group">
+                      <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle" className="pointer-events-none select-none">
+                        <tspan
+                          x={cx}
+                          y={cy + titleYOffset * scaleFactor}
+                          fill={textColor} 
+                          fontSize={titleSize}
+                          fontWeight="500"
+                        >
+                          {factTitle}
+                        </tspan>
+                        <tspan
+                          x={cx}
+                          y={cy + valueYOffset * scaleFactor}
+                          fill={factColor}
+                          fontSize={valueSize}
+                          fontWeight="bold" 
+                        >
+                          {factValue}
+                        </tspan>
+                        {factLabel && (
+                          <tspan
+                            x={cx}
+                            y={cy + labelYOffset * scaleFactor}
+                            fill={factColor}
+                            fontSize={labelSize}
+                            fontWeight="500"
+                            opacity={0.8}
+                          >
+                            {factLabel}
+                          </tspan>
+                        )}
+                      </text>
+                      
+                      {/* Prev Button */}
+                      <svg 
+                        x={cx - innerR + (isFullscreen ? 30 : 10)} 
+                        y={arrowY} 
+                        width={32} height={32} 
+                        onClick={handlePrev} 
+                        className="opacity-0 group-hover:opacity-100 cursor-pointer pointer-events-auto text-muted-foreground transition-opacity"
+                        color="currentColor"
+                        data-hide-on-copy="true"
+                      >
+                        <rect width="32" height="32" fill="transparent" />
+                        <ChevronLeft x={4} y={4} width={24} height={24} strokeWidth={2.5} />
+                      </svg>
+
+                      {/* Next Button */}
+                      <svg 
+                        x={cx + innerR - 32 - (isFullscreen ? 30 : 10)} 
+                        y={arrowY} 
+                        width={32} height={32} 
+                        onClick={handleNext} 
+                        className="opacity-0 group-hover:opacity-100 cursor-pointer pointer-events-auto text-muted-foreground transition-opacity"
+                        color="currentColor"
+                        data-hide-on-copy="true"
+                      >
+                        <rect width="32" height="32" fill="transparent" />
+                        <ChevronRight x={4} y={4} width={24} height={24} strokeWidth={2.5} />
+                      </svg>
+                    </g>
+                  );
+                }}
+              />
+            )}
             
             {/* Black Overlay Pie for 'Other' slices */}
             <Pie
