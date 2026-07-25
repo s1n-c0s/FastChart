@@ -103,7 +103,10 @@ export function useCharts() {
       // Inject fact text overlay if it exists
       const factOverlayEl = containerEl?.querySelector('.fact-text-overlay') as SVGSVGElement;
       if (factOverlayEl) {
-        cloneTemp.innerHTML += factOverlayEl.innerHTML;
+        const overlayClone = factOverlayEl.cloneNode(true) as SVGSVGElement;
+        const hiddenInOverlay = overlayClone.querySelectorAll('[data-hide-on-copy="true"]');
+        hiddenInOverlay.forEach((el: Element) => el.remove());
+        cloneTemp.innerHTML += overlayClone.innerHTML;
       }
 
       const xml = new XMLSerializer().serializeToString(cloneTemp);
