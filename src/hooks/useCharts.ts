@@ -100,6 +100,15 @@ export function useCharts() {
         cloneTemp.setAttribute("xmlns", "http://www.w3.org/2000/svg");
       }
 
+      // Add background to match visual preview
+      const cardEl = containerEl?.closest('.bg-card') || document.body;
+      const bgColor = window.getComputedStyle(cardEl).backgroundColor;
+      const bgRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      bgRect.setAttribute("width", "100%");
+      bgRect.setAttribute("height", "100%");
+      bgRect.setAttribute("fill", bgColor === 'rgba(0, 0, 0, 0)' ? '#ffffff' : bgColor);
+      cloneTemp.insertBefore(bgRect, cloneTemp.firstChild);
+
       const xml = new XMLSerializer().serializeToString(cloneTemp);
       await navigator.clipboard.writeText(xml);
       toast.success("SVG Copied to Clipboard!", {
@@ -124,8 +133,11 @@ export function useCharts() {
       
       hiddenElements.forEach(el => el.remove());
 
+      const cardEl = containerEl.closest('.bg-card') || document.body;
+      const bgColor = window.getComputedStyle(cardEl).backgroundColor;
+
       const dataUrl = await htmlToImage.toPng(containerEl, {
-        backgroundColor: 'transparent',
+        backgroundColor: bgColor === 'rgba(0, 0, 0, 0)' ? '#ffffff' : bgColor,
         pixelRatio: 2, // High resolution
         filter: (node) => {
           return node.getAttribute ? node.getAttribute("data-hide-on-copy") !== "true" : true;

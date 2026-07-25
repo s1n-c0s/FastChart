@@ -414,12 +414,23 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
                       const valueSize = maxValueSize * scaleFactor;
                       const labelSize = maxLabelSize * scaleFactor;
 
+                      let titleYOffset, valueYOffset, labelYOffset;
+                      if (factLabel) {
+                        titleYOffset = isFullscreen ? -28 : -18;
+                        valueYOffset = isFullscreen ? 6 : 4;
+                        labelYOffset = isFullscreen ? 36 : 22;
+                      } else {
+                        titleYOffset = isFullscreen ? -18 : -12;
+                        valueYOffset = isFullscreen ? 16 : 10;
+                        labelYOffset = 0;
+                      }
+
                       return (
                         <g className="group">
                           <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle" className="pointer-events-none select-none">
                             <tspan
                               x={viewBox.cx}
-                              y={(viewBox.cy || 0) - (isFullscreen ? 25 : 18) * scaleFactor}
+                              y={(viewBox.cy || 0) + titleYOffset * scaleFactor}
                               fill={textColor} 
                               fontSize={titleSize}
                               fontWeight="500"
@@ -428,7 +439,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
                             </tspan>
                             <tspan
                               x={viewBox.cx}
-                              y={(viewBox.cy || 0) + (isFullscreen ? 15 : 10) * scaleFactor}
+                              y={(viewBox.cy || 0) + valueYOffset * scaleFactor}
                               fill={factColor}
                               fontSize={valueSize}
                               fontWeight="bold" 
@@ -438,7 +449,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
                             {factLabel && (
                               <tspan
                                 x={viewBox.cx}
-                                y={(viewBox.cy || 0) + (isFullscreen ? 45 : 28) * scaleFactor}
+                                y={(viewBox.cy || 0) + labelYOffset * scaleFactor}
                                 fill={factColor}
                                 fontSize={labelSize}
                                 fontWeight="500"

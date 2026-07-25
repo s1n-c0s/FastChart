@@ -399,14 +399,10 @@ export const StackedChart = React.memo(function StackedChart({
                 className="stroke-transparent stroke-2"
               />
             ))}
+            {showLegend && renderSvgLegend()}
           </RadialBarChart>
           </ChartContainer>
         </div>
-        {showLegend && (
-          <svg width={dimensions.width} height={legendHeight} style={{ overflow: 'visible', flexShrink: 0 }}>
-            {renderSvgLegend(true)}
-          </svg>
-        )}
       </div>
     )
   }
