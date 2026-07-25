@@ -15,8 +15,6 @@ import {
 } from "recharts"
 import {
   ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
 import type { Datum } from "@/types"
@@ -38,9 +36,10 @@ interface StackedTooltipProps {
     value: number
     fill?: string
   } & Record<string, unknown>>
+  rawData?: Datum[]
 }
 
-const StackedTooltip = React.memo(function StackedTooltip({ active, payload }: StackedTooltipProps) {
+const StackedTooltip = React.memo(function StackedTooltip({ active, payload, rawData }: StackedTooltipProps) {
   if (!active || !payload || payload.length === 0) return null
 
   return (
@@ -54,7 +53,12 @@ const StackedTooltip = React.memo(function StackedTooltip({ active, payload }: S
                 <div className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.fill }} />
                 <span className="font-medium text-sm text-foreground">{entry.name}</span>
               </div>
-              <span className="font-bold text-sm text-foreground">{Math.round(entry.value * 100)}%</span>
+              <div className="flex flex-col items-end">
+                <span className="font-bold text-sm text-foreground">
+                  {rawData?.find(d => d.label === entry.name)?.value?.toLocaleString() || 0}
+                </span>
+                <span className="font-medium text-[11px] text-muted-foreground">{Math.round((entry.value || 0) * 100)}%</span>
+              </div>
             </div>
           ))}
         </div>
@@ -318,9 +322,9 @@ export const StackedChart = React.memo(function StackedChart({
               outerRadius={outerRadius}
               style={{ overflow: 'visible' }}
             >
-            <ChartTooltip
+            <Tooltip
               cursor={false}
-              content={<ChartTooltipContent hideLabel />}
+              content={<StackedTooltip rawData={data} />}
             />
             <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
               <RechartsLabel
@@ -412,7 +416,7 @@ export const StackedChart = React.memo(function StackedChart({
               axisLine={false}
               style={{ fontSize: '12px' }}
             />
-            <Tooltip cursor={{ fill: 'var(--muted)', opacity: 0.65 }} content={<StackedTooltip />} />
+            <Tooltip cursor={{ fill: 'var(--muted)', opacity: 0.65 }} content={<StackedTooltip rawData={data} />} />
             {data.map((d) => (
               <Bar 
                 key={d.id} 
@@ -466,7 +470,7 @@ export const StackedChart = React.memo(function StackedChart({
             width={50}
             style={{ fontSize: '12px' }}
           />
-          <Tooltip cursor={{ fill: 'var(--muted)', opacity: 0.65 }} content={<StackedTooltip />} />
+          <Tooltip cursor={{ fill: 'var(--muted)', opacity: 0.65 }} content={<StackedTooltip rawData={data} />} />
           {data.map((d) => (
             <Bar 
               key={d.id} 
