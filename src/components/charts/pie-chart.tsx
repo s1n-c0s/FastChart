@@ -1,6 +1,6 @@
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Pie, PieChart as RechartsPieChart, Cell, Tooltip, Label, ResponsiveContainer } from "recharts";
+import { Pie, PieChart as RechartsPieChart, Cell, Tooltip, Label, ResponsiveContainer, Customized } from "recharts";
 
 import type { Datum } from "@/types";
 
