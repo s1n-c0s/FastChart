@@ -1,6 +1,6 @@
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Pie, PieChart as RechartsPieChart, Cell, Tooltip, Label, ResponsiveContainer, Customized } from "recharts";
+import { PieChart as RechartsPieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
 import type { Datum } from "@/types";
 
@@ -100,7 +100,6 @@ const FactTextOverlay = (props: any) => {
 
   return (
     <g className="group" style={{ pointerEvents: 'all' }}>
-      {/* Invisible hit area for group hover that precisely fills the donut hole */}
       <circle cx={cx} cy={cy} r={innerR} fill="transparent" />
       
       <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle" className="pointer-events-none select-none">
@@ -136,7 +135,6 @@ const FactTextOverlay = (props: any) => {
         )}
       </text>
       
-      {/* Prev Button */}
       <svg 
         x={cx - innerR + (isFullscreen ? 30 : 10)} 
         y={arrowY} 
@@ -150,7 +148,6 @@ const FactTextOverlay = (props: any) => {
         <ChevronLeft x={4} y={4} width={24} height={24} strokeWidth={2.5} />
       </svg>
 
-      {/* Next Button */}
       <svg 
         x={cx + innerR - 32 - (isFullscreen ? 30 : 10)} 
         y={arrowY} 
@@ -302,12 +299,10 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     );
   }, [isFullscreen, top4Ids, lastOtherId, textColor]);
   const renderCustomLabel = React.useCallback((props: any) => {
-    console.log("PIE PROPS", JSON.stringify(props));
     let { x, y, cx, cy, name, value, percent, payload } = props;
     const datumId = payload?.payload?.id || payload?.id;
     let color = payload?.payload?.color || payload?.color || "#a1a1aa";
     
-    // Fallback if Recharts doesn't pass name/value directly to props
     if (name === undefined) name = payload?.payload?.label || payload?.label;
     if (value === undefined) value = payload?.payload?.value || payload?.value;
     if (percent === undefined && total > 0) percent = (value || 0) / total;
@@ -315,7 +310,6 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     if (top4Ids && !top4Ids.includes(datumId)) {
       if (datumId !== lastOtherId) return null;
       
-      // Override for the 'Other' label box
       name = "Other";
       value = otherSum;
       percent = otherSum / total;
@@ -517,7 +511,6 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
               {cells}
             </Pie>
             
-            {/* Black Overlay Pie for 'Other' slices */}
             <Pie
               data={data}
               dataKey="value"
@@ -560,7 +553,6 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     </div>
   );
 }, (prevProps, nextProps) => {
-  // ... (memo comparison คงเดิม)
   return (
     prevProps.isFullscreen === nextProps.isFullscreen &&
     prevProps.total === nextProps.total &&

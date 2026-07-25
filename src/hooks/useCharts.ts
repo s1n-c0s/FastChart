@@ -101,7 +101,7 @@ export function useCharts() {
       }
       
       // Inject fact text overlay if it exists
-      const factOverlayEl = containerEl.querySelector('.fact-text-overlay') as SVGSVGElement;
+      const factOverlayEl = containerEl?.querySelector('.fact-text-overlay') as SVGSVGElement;
       if (factOverlayEl) {
         cloneTemp.innerHTML += factOverlayEl.innerHTML;
       }
