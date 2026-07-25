@@ -152,6 +152,16 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     );
   }, [top4Ids, textColor, isFullscreen]);
 
+  const [animate, setAnimate] = React.useState(true);
+
+  React.useEffect(() => {
+    setAnimate(true);
+    const timer = setTimeout(() => {
+      setAnimate(false);
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [data, showLabels, size]);
+
   const renderCustomLabel = React.useCallback((props: any) => {
     console.log("PIE PROPS", JSON.stringify(props));
     let { x, y, cx, cy, name, value, percent, payload } = props;
@@ -356,15 +366,16 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
                 nameKey="label"
                 cx="50%"
                 cy={pieCy}
-              innerRadius={showLabels ? size * 0.20 : size * 0.28}
-              outerRadius={showLabels ? size * 0.30 : size * 0.42}
-              paddingAngle={2}
-              cornerRadius={6}
-              animationDuration={500}
-              stroke="none"
-              label={renderCustomLabel}
-              labelLine={renderCustomLabelLine as any}
-            >
+                innerRadius={showLabels ? size * 0.20 : size * 0.28}
+                outerRadius={showLabels ? size * 0.30 : size * 0.42}
+                paddingAngle={2}
+                cornerRadius={6}
+                animationDuration={500}
+                isAnimationActive={animate}
+                stroke="none"
+                label={renderCustomLabel}
+                labelLine={renderCustomLabelLine as any}
+              >
               {data.map((item: Datum) => (
                 <Cell key={item.id} fill={item.color} stroke="none" />
               ))}
@@ -511,6 +522,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
               paddingAngle={2}
               cornerRadius={6}
               animationDuration={500}
+              isAnimationActive={animate}
               stroke="none"
               style={{ pointerEvents: 'none' }}
             >
