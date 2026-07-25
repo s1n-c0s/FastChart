@@ -44,25 +44,6 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
 }: PieChartProps) {
   const [isDark, setIsDark] = React.useState(false);
   
-  const cells = React.useMemo(() => {
-    return data.map((item: Datum) => (
-      <Cell key={item.id} fill={item.color} stroke="none" />
-    ));
-  }, [data]);
-  
-  const overlayCells = React.useMemo(() => {
-    return data.map((item: Datum) => {
-      const isOther = top4Ids && !top4Ids.includes(item.id);
-      return (
-        <Cell 
-          key={`overlay-${item.id}`} 
-          fill={isOther ? "rgba(0,0,0,0.5)" : "transparent"} 
-          stroke="none" 
-        />
-      );
-    });
-  }, [data, top4Ids]);
-
   React.useEffect(() => {
     setIsDark(document.documentElement.classList.contains("dark"));
     const observer = new MutationObserver(() => {
@@ -123,6 +104,25 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     if (data.length <= 5) return null;
     return [...data].sort((a, b) => b.value - a.value).slice(0, 4).map(d => d.id);
   }, [data]);
+
+  const cells = React.useMemo(() => {
+    return data.map((item: Datum) => (
+      <Cell key={item.id} fill={item.color} stroke="none" />
+    ));
+  }, [data]);
+  
+  const overlayCells = React.useMemo(() => {
+    return data.map((item: Datum) => {
+      const isOther = top4Ids && !top4Ids.includes(item.id);
+      return (
+        <Cell 
+          key={`overlay-${item.id}`} 
+          fill={isOther ? "rgba(0,0,0,0.5)" : "transparent"} 
+          stroke="none" 
+        />
+      );
+    });
+  }, [data, top4Ids]);
 
   const otherSum = React.useMemo(() => {
     if (!top4Ids) return 0;
