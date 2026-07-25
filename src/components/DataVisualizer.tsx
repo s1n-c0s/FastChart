@@ -599,11 +599,28 @@ export default function DataVisualizer() {
               customActions={
                 <div className="flex flex-wrap items-center gap-4">
                   <div className="flex items-center gap-2">
-                    <label htmlFor="line-color" className="text-xs text-muted-foreground cursor-pointer">
+                    <label htmlFor="line-color" className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap">
                       Line Color
                     </label>
-                    <Select value={lineColor || sortedData[0]?.color || "#3b82f6"} onValueChange={(color) => setLineColor(color)}>
-                      <SelectTrigger id="line-color" className="w-fit h-7 gap-2 px-2">
+                    <input
+                      id="line-color"
+                      type="color"
+                      value={lineColor || sortedData[0]?.color || "#3b82f6"}
+                      onChange={(e) => setLineColor(e.target.value)}
+                      className="sr-only opacity-0 absolute pointer-events-none"
+                      tabIndex={-1}
+                    />
+                    <Select 
+                      value={lineColor || sortedData[0]?.color || "#3b82f6"} 
+                      onValueChange={(val) => {
+                        if (val === "custom_trigger") {
+                          document.getElementById('line-color')?.click();
+                        } else {
+                          setLineColor(val);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-fit h-7 gap-2 px-2">
                         <SelectValue asChild>
                           <div className="flex items-center gap-2 w-full text-left">
                             <div 
@@ -615,8 +632,24 @@ export default function DataVisualizer() {
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="custom_trigger" className="pr-4 mb-1 border-b border-border/50 rounded-none cursor-pointer">
+                          <div className="flex items-center gap-2 text-foreground font-medium">
+                            <span className="text-xs">🎨 Custom Color...</span>
+                          </div>
+                        </SelectItem>
+                        {!(PRESET_COLORS as readonly string[]).includes(lineColor || sortedData[0]?.color || "#3b82f6") && (
+                          <SelectItem value={lineColor || sortedData[0]?.color || "#3b82f6"} className="hidden pr-4">
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-3 h-3 rounded-full shadow-inner shrink-0"
+                                style={{ backgroundColor: lineColor || sortedData[0]?.color || "#3b82f6" }}
+                              />
+                              <span className="font-mono text-xs">{lineColor || sortedData[0]?.color || "#3b82f6"}</span>
+                            </div>
+                          </SelectItem>
+                        )}
                         {PRESET_COLORS.map((c) => (
-                          <SelectItem key={c} value={c} className="pr-4">
+                          <SelectItem key={c} value={c} className="pr-4 cursor-pointer">
                             <div className="flex items-center gap-2">
                               <div 
                                 className="w-3 h-3 rounded-full shadow-inner shrink-0"
