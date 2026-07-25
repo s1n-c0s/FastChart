@@ -1,6 +1,6 @@
 import React, { type ReactNode, useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { ImageIcon, Code } from "lucide-react";
+import { ImageIcon, Code, Maximize } from "lucide-react";
 
 interface ChartCardProps {
   title: string;
@@ -14,6 +14,7 @@ interface ChartCardProps {
   isHorizontal?: boolean;
   onToggleOrientation?: () => void;
   customActions?: ReactNode;
+  preventClickOnElements?: string[];
 }
 
 export function ChartCard({
@@ -28,6 +29,7 @@ export function ChartCard({
   isHorizontal = false,
   onToggleOrientation,
   customActions,
+  preventClickOnElements = [],
 }: ChartCardProps) {
   const [showTooltip, setShowTooltip] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -60,6 +62,12 @@ export function ChartCard({
     ) {
       return;
     }
+    
+    // Check custom elements that shouldn't trigger fullscreen
+    if (preventClickOnElements.some(selector => target.closest(selector))) {
+      return;
+    }
+    
     onFullscreen();
   }, [onFullscreen]);
 
@@ -132,9 +140,9 @@ export function ChartCard({
         onClick={handleChartClick}
       >
         {showTooltip && (
-          <div data-hide-on-copy="true" className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-            <div className="bg-black/50 text-white px-3 py-1 rounded-md text-xs font-medium">
-              Click to fullscreen
+          <div data-hide-on-copy="true" className="absolute bottom-4 right-4 z-10 pointer-events-none">
+            <div className="bg-black/70 p-2 rounded-md shadow-sm backdrop-blur-sm flex items-center justify-center">
+              <Maximize className="w-4 h-4 text-white" />
             </div>
           </div>
         )}

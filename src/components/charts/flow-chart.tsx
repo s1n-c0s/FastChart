@@ -181,7 +181,7 @@ export function FlowChart({
           margin={{ top: 20, left: 20, bottom: 20, right: 120 }}
           iterations={64}
         >
-          <Tooltip content={sankeyTooltip} />
+          <Tooltip isAnimationActive={false} content={sankeyTooltip} />
         </Sankey>
       </ResponsiveContainer>
     </div>

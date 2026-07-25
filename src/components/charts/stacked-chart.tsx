@@ -11,12 +11,12 @@ import {
   RadialBar,
   RadialBarChart,
   PolarRadiusAxis,
+  PolarAngleAxis,
   Label as RechartsLabel
 } from "recharts"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 import {
   ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
 import type { Datum } from "@/types"
@@ -28,7 +28,10 @@ export interface StackedChartProps {
   showLabels?: boolean
   showRadial?: boolean
   isFullscreen?: boolean
-  showLegend?: boolean
+  showFactText?: boolean
+  factIndex?: number
+  onFactIndexChange?: (index: number) => void
+  
 }
 
 interface StackedTooltipProps {
@@ -38,9 +41,10 @@ interface StackedTooltipProps {
     value: number
     fill?: string
   } & Record<string, unknown>>
+  rawData?: Datum[]
 }
 
-const StackedTooltip = React.memo(function StackedTooltip({ active, payload }: StackedTooltipProps) {
+const StackedTooltip = React.memo(function StackedTooltip({ active, payload, rawData }: StackedTooltipProps) {
   if (!active || !payload || payload.length === 0) return null
 
   return (
@@ -54,7 +58,12 @@ const StackedTooltip = React.memo(function StackedTooltip({ active, payload }: S
                 <div className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.fill }} />
                 <span className="font-medium text-sm text-foreground">{entry.name}</span>
               </div>
-              <span className="font-bold text-sm text-foreground">{Math.round(entry.value * 100)}%</span>
+              <div className="flex flex-col items-end">
+                <span className="font-bold text-sm text-foreground">
+                  {rawData?.find(d => d.label === entry.name)?.value?.toLocaleString() || 0}
+                </span>
+                <span className="font-medium text-[11px] text-muted-foreground">{Math.round((entry.value || 0) * 100)}%</span>
+              </div>
             </div>
           ))}
         </div>
@@ -86,18 +95,64 @@ const CustomStackedLabel = (props: any) => {
   const cx = x + width / 2;
   const cy = y + height / 2;
   
-  const fontSizePercent = isFullscreen ? 64 : (isHorizontal ? 32 : 24);
-  const fontSizeRaw = isFullscreen ? 24 : (isHorizontal ? 16 : 12);
+  const baseFontSizePercent = isFullscreen ? 40 : (isHorizontal ? 24 : 20);
+  const baseFontSizeRaw = isFullscreen ? 20 : (isHorizontal ? 16 : 14);
   
+  // Calculate text width approximately (0.6 is typical average character width ratio)
+  const textStr = `${barDataKey} (${percent}%)`;
+  const approxTextWidth = textStr.length * (baseFontSizePercent * 0.55);
+  const approxTextHeight = baseFontSizePercent;
+
+  // Scale factor to fit inside the bar with some padding (4px each side minimum)
+  const paddingX = 8;
+  const paddingY = 4;
+  const scaleX = Math.min(1, Math.max(0.1, (width - paddingX) / approxTextWidth));
+  const scaleY = Math.min(1, Math.max(0.1, (height - paddingY) / approxTextHeight));
+  const scale = Math.min(scaleX, scaleY);
+
+  const fontSizePercent = baseFontSizePercent * scale;
+  const fontSizeRaw = baseFontSizeRaw * scale;
+  
+  // If the bar is so tiny that scale drops below 0.3, just hide it to avoid illegible microscopic text
+  if (scale < 0.3) return null;
+  
+  const str1 = barDataKey;
+  const str2 = `(${percent}%)`;
+  
+  const width1 = str1.length * fontSizePercent * 0.55;
+  const width2 = str2.length * fontSizeRaw * 0.55;
+  const gap = fontSizePercent * 0.2; 
+  
+  const totalW = width1 + gap + width2;
+  const splitX1 = cx - totalW / 2 + width1;
+  const splitX2 = splitX1 + gap;
+
+  // We use two separate <text> elements with explicit X positions instead of <tspan>
+  // to ensure flawless compatibility with all SVG viewers (like Figma) while keeping 
+  // the different font sizes.
   return (
     <g>
-      <text x={cx} y={cy} fill="#ffffff" textAnchor="middle" dominantBaseline="central">
-        <tspan fontSize={fontSizePercent} fontWeight="500">
-          {barDataKey}
-        </tspan>
-        <tspan fontSize={fontSizeRaw} fontWeight="500" dx={isFullscreen ? 8 : 4} dy={isFullscreen ? -8 : -4}>
-          ({percent}%)
-        </tspan>
+      <text 
+        x={splitX1} 
+        y={cy} 
+        fill="#ffffff" 
+        textAnchor="end" 
+        dominantBaseline="central"
+        fontSize={fontSizePercent} 
+        fontWeight="500"
+      >
+        {str1}
+      </text>
+      <text 
+        x={splitX2} 
+        y={cy} 
+        fill="#ffffff" 
+        textAnchor="start" 
+        dominantBaseline="central"
+        fontSize={fontSizeRaw} 
+        fontWeight="500"
+      >
+        {str2}
       </text>
     </g>
   );
@@ -110,8 +165,12 @@ export const StackedChart = React.memo(function StackedChart({
   showLabels = false,
   showRadial = false,
   isFullscreen = false,
-  showLegend = true,
+  showFactText = false,
+  factIndex = 0,
+  onFactIndexChange,
+  
 }: StackedChartProps) {
+
   const [isDark, setIsDark] = React.useState(false);
   React.useEffect(() => {
     const checkDark = () => setIsDark(document.documentElement.classList.contains('dark'));
@@ -238,7 +297,7 @@ export const StackedChart = React.memo(function StackedChart({
     };
   }, [data, dimensions, isFullscreen]);
 
-  const renderSvgLegend = () => {
+  const renderSvgLegend = (isStandalone = false) => {
     if (!dimensions.width || !dimensions.height || legendRows.length === 0) return null;
 
     const spacingY = 25;
@@ -246,7 +305,7 @@ export const StackedChart = React.memo(function StackedChart({
     const gap = 8;
     const textColor = isDark ? "#e4e4e7" : "#3f3f46"; 
     
-    const startY = dimensions.height ? dimensions.height - legendHeight : 0;
+    const startY = isStandalone ? 12 : (dimensions.height ? dimensions.height - legendHeight : 0);
 
     return (
       <g className="svg-legend">
@@ -289,59 +348,170 @@ export const StackedChart = React.memo(function StackedChart({
 
   // Render radial chart
   if (showRadial) {
-    const innerRadius = isFullscreen ? 300 : 150
-    const outerRadius = isFullscreen ? 600 : 350
+    const baseWidth = dimensions.width || (isFullscreen ? 800 : 400);
+    const baseHeight = dimensions.height || (isFullscreen ? 500 : 300);
+    
+    // We want the chart to fit nicely in the top part of the container.
+    // The cx="50%" cy="80%" means the center of the half circle is very low.
+    // So the height of the chart is actually mostly its radius.
+    // Let's ensure it doesn't overflow horizontally or vertically.
+    
+    const availableRadiusW = (baseWidth / 2) * 0.8; 
+    const availableRadiusH = baseHeight * 0.7; // since cy=80%, we have 80% height available
+    const maxRadius = Math.min(availableRadiusW, availableRadiusH);
+    
+    const outerRadius = Math.max(100, isFullscreen ? maxRadius * 0.9 : maxRadius * 0.9);
+    const innerRadius = outerRadius * 0.55;
     
     return (
-      <div ref={setRefs} className="h-full w-full flex flex-col items-center justify-center overflow-hidden">
-        <ResponsiveContainer width="100%" height="100%">
+      <div ref={setRefs} className={`h-full w-full flex flex-col items-center justify-center overflow-hidden `}>
+        <div className="w-full flex-1 min-h-[300px]">
           <ChartContainer config={chartConfig} className="w-full h-full">
             <RadialBarChart
               data={radialData}
               startAngle={180}
               endAngle={0}
               cx="50%"
-              cy="75%"
+              cy="80%"
               innerRadius={innerRadius}
               outerRadius={outerRadius}
               style={{ overflow: 'visible' }}
             >
-            <ChartTooltip
+            <Tooltip
+              isAnimationActive={false}
               cursor={false}
-              content={<ChartTooltipContent hideLabel />}
+              content={<StackedTooltip rawData={data} />}
             />
+            <PolarAngleAxis type="number" domain={[0, 1]} tick={false} axisLine={false} />
             <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
               <RechartsLabel
+                key={`${factIndex}-${showFactText}`}
                 content={({ viewBox }) => {
+                  if (!showFactText) return null;
+                  
                   if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                    const textSize = isFullscreen ? 80 : 32
-                    const labelSize = isFullscreen ? 24 : 16
-                    const offsetY = isFullscreen ? -24 : -16
+                    const cx = viewBox.cx || 0;
+                    const cy = viewBox.cy || 0;
+                    const maxTextSize = isFullscreen ? 80 : 32
+                    const maxLabelSize = isFullscreen ? 24 : 16
+                    
+                    // Dynamically scale text to fit inside the innerRadius hole
+                    const availableHeight = innerRadius; 
+                    const scaleFactor = Math.min(1, availableHeight / (maxTextSize + maxLabelSize + 12));
+                    
+                    const textSize = maxTextSize * scaleFactor;
+                    const labelSize = maxLabelSize * scaleFactor;
+                    const titleSize = labelSize * 0.9;
+                    
+                    const maxItem = data && data.length > 0 ? data.reduce((prev: any, current: any) => (prev.value > current.value) ? prev : current) : null;
+                    const minItem = data && data.length > 0 ? data.reduce((prev: any, current: any) => (prev.value < current.value) ? prev : current) : null;
+                    
+                    let factTitle = "Total";
+                    let factValue = totalValue.toLocaleString();
+                    let factColor = "var(--muted-foreground)";
+                    let factValueColor = "currentColor";
+                    let factLabel = "";
+                    
+                    if (showFactText) {
+                      if (factIndex === 1 && maxItem) {
+                        factTitle = "The most";
+                        factValue = maxItem.value.toLocaleString();
+                        factColor = maxItem.color;
+                        factValueColor = maxItem.color;
+                        factLabel = maxItem.label;
+                      } else if (factIndex === 2 && minItem) {
+                        factTitle = "The Lowest";
+                        factValue = minItem.value.toLocaleString();
+                        factColor = minItem.color;
+                        factValueColor = minItem.color;
+                        factLabel = minItem.label;
+                      }
+                    }
+
+                    const handlePrev = (e: any) => { 
+                      e.stopPropagation(); 
+                      if (onFactIndexChange) onFactIndexChange(((factIndex || 0) - 1 + 3) % 3);
+                    };
+                    const handleNext = (e: any) => { 
+                      e.stopPropagation(); 
+                      if (onFactIndexChange) onFactIndexChange(((factIndex || 0) + 1) % 3);
+                    };
+                    
+                    // Radial chart is a half circle ending at cy. All content must sit ABOVE cy.
+                    // We use fixed Y coordinates so the text and arrows don't jiggle when toggling
+                    const labelY = cy - (4 * scaleFactor);
+                    const valueY = labelY - labelSize - (4 * scaleFactor);
+                    const titleY = valueY - (textSize * 0.8) - (4 * scaleFactor);
+                    
+                    // Compute the visual center of the text block to perfectly align the arrows
+                    const textCenterY = (titleY - titleSize + labelY) / 2;
+                    const arrowY = textCenterY - 16;
                     
                     return (
-                      <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle">
-                        <tspan
-                          x={viewBox.cx}
-                          y={(viewBox.cy || 0) + offsetY}
-                          style={{ fontSize: `${textSize}px`, fontWeight: 'bold', fill: 'currentColor' }}
-                        >
-                          {totalValue.toLocaleString()}
-                        </tspan>
-                        <tspan
-                          x={viewBox.cx}
-                          y={(viewBox.cy || 0) + 8}
-                          style={{ fontSize: `${labelSize}px`, fill: 'var(--muted-foreground)' }}
-                        >
-                          Total
-                        </tspan>
-                      </text>
+                      <g className="group" style={{ pointerEvents: 'all' }}>
+                        <text x={cx} y={cy} textAnchor="middle">
+                          <tspan
+                            x={cx}
+                            y={titleY}
+                            style={{ fontSize: `${titleSize}px`, fill: factColor, fontWeight: '500' }}
+                          >
+                            {factTitle}
+                          </tspan>
+                          <tspan
+                            x={cx}
+                            y={valueY}
+                            style={{ fontSize: `${textSize}px`, fontWeight: 'bold', fill: factValueColor }}
+                          >
+                            {factValue}
+                          </tspan>
+                          {factLabel && (
+                            <tspan
+                              x={cx}
+                              y={labelY}
+                              style={{ fontSize: `${labelSize}px`, fill: factColor, opacity: 0.8, fontWeight: '500' }}
+                            >
+                              {factLabel}
+                            </tspan>
+                          )}
+                        </text>
+                        {showFactText && (
+                          <g>
+                            <svg 
+                              x={cx - innerRadius + (isFullscreen ? 60 : 35)} 
+                              y={arrowY} 
+                              width={32} height={32} 
+                              onClick={handlePrev} 
+                              className="opacity-0 group-hover:opacity-100 cursor-pointer pointer-events-auto text-muted-foreground transition-opacity"
+                              color="currentColor"
+                              data-hide-on-copy="true"
+                            >
+                              <rect width="32" height="32" fill="transparent" />
+                              <ChevronLeft x={4} y={4} width={24} height={24} strokeWidth={2.5} />
+                            </svg>
+
+                            <svg 
+                              x={cx + innerRadius - 32 - (isFullscreen ? 60 : 35)} 
+                              y={arrowY} 
+                              width={32} height={32} 
+                              onClick={handleNext} 
+                              className="opacity-0 group-hover:opacity-100 cursor-pointer pointer-events-auto text-muted-foreground transition-opacity"
+                              color="currentColor"
+                              data-hide-on-copy="true"
+                            >
+                              <rect width="32" height="32" fill="transparent" />
+                              <ChevronRight x={4} y={4} width={24} height={24} strokeWidth={2.5} />
+                            </svg>
+                          </g>
+                        )}
+                      </g>
                     )
                   }
+                  return null;
                 }}
               />
             </PolarRadiusAxis>
             {data.map((d) => (
-              <RadialBar
+              <RadialBar isAnimationActive={true}
                 key={d.id}
                 dataKey={d.label}
                 name={d.label}
@@ -351,10 +521,10 @@ export const StackedChart = React.memo(function StackedChart({
                 className="stroke-transparent stroke-2"
               />
             ))}
-            {showLegend && renderSvgLegend()}
+            {renderSvgLegend()}
           </RadialBarChart>
           </ChartContainer>
-        </ResponsiveContainer>
+        </div>
       </div>
     )
   }
@@ -362,7 +532,7 @@ export const StackedChart = React.memo(function StackedChart({
   // Horizontal mode: bars grow to the right
   if (isHorizontal) {
     return (
-      <div ref={setRefs} className="h-full w-full">
+      <div ref={setRefs} className={`h-full w-full `}>
         <ResponsiveContainer width="100%" height="100%">
           <RechartsBarChart
             key="horizontal-stacked-chart"
@@ -388,7 +558,7 @@ export const StackedChart = React.memo(function StackedChart({
               axisLine={false}
               style={{ fontSize: '12px' }}
             />
-            <Tooltip cursor={{ fill: 'var(--muted)', opacity: 0.65 }} content={<StackedTooltip />} />
+            <Tooltip isAnimationActive={false} cursor={{ fill: 'var(--muted)', opacity: 0.65 }} content={<StackedTooltip rawData={data} />} />
             {data.map((d) => (
               <Bar 
                 key={d.id} 
@@ -406,7 +576,7 @@ export const StackedChart = React.memo(function StackedChart({
                 )}
               </Bar>
             ))}
-            {showLegend && renderSvgLegend()}
+            {renderSvgLegend()}
           </RechartsBarChart>
         </ResponsiveContainer>
       </div>
@@ -415,7 +585,7 @@ export const StackedChart = React.memo(function StackedChart({
 
   // Vertical mode: bars grow upward
   return (
-    <div ref={setRefs} className="h-full w-full">
+    <div ref={setRefs} className={`h-full w-full `}>
       <ResponsiveContainer width="100%" height="100%">
         <RechartsBarChart
           key="vertical-stacked-chart"
@@ -442,7 +612,7 @@ export const StackedChart = React.memo(function StackedChart({
             width={50}
             style={{ fontSize: '12px' }}
           />
-          <Tooltip cursor={{ fill: 'var(--muted)', opacity: 0.65 }} content={<StackedTooltip />} />
+          <Tooltip isAnimationActive={false} cursor={{ fill: 'var(--muted)', opacity: 0.65 }} content={<StackedTooltip rawData={data} />} />
           {data.map((d) => (
             <Bar 
               key={d.id} 
@@ -460,7 +630,7 @@ export const StackedChart = React.memo(function StackedChart({
               )}
             </Bar>
           ))}
-          {showLegend && renderSvgLegend()}
+          {renderSvgLegend()}
         </RechartsBarChart>
       </ResponsiveContainer>
     </div>
@@ -469,9 +639,10 @@ export const StackedChart = React.memo(function StackedChart({
   return (
     prevProps.isHorizontal === nextProps.isHorizontal &&
     prevProps.showLabels === nextProps.showLabels &&
-    prevProps.showLegend === nextProps.showLegend &&
     prevProps.showRadial === nextProps.showRadial &&
     prevProps.isFullscreen === nextProps.isFullscreen &&
+    prevProps.showFactText === nextProps.showFactText &&
+    prevProps.factIndex === nextProps.factIndex &&
     prevProps.data.length === nextProps.data.length &&
     prevProps.data.every((item, idx) => 
       item.id === nextProps.data[idx]?.id &&

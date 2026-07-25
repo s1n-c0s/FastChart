@@ -66,6 +66,9 @@ export default function DataVisualizer() {
   const [showLegend, setShowLegend] = useState(true);
   const [showFactText, setShowFactText] = useState(true);
   const [pieFactIndex, setPieFactIndex] = useState(0);
+
+  const [radialFactIndex, setRadialFactIndex] = useState(0);
+  const [showRadialFactText, setShowRadialFactText] = useState(true);
   const [showGradientArea, setShowGradientArea] = useState(true);
   const [lineColor, setLineColor] = useState<string | undefined>(undefined);
   const [isDockOpen, setIsDockOpen] = useState(false);
@@ -263,7 +266,7 @@ export default function DataVisualizer() {
         >
           {/* Paper Panel */}
           <div 
-            className={`pointer-events-auto bg-background/95 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-border/50 rounded-2xl overflow-hidden transition-all duration-300 origin-bottom flex flex-col ${
+            className={`pointer-events-auto bg-background/90 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-border/50 rounded-2xl overflow-hidden transition-all duration-300 origin-bottom flex flex-col transform-gpu isolate ${
               isDockOpen ? "w-[95vw] sm:w-[85vw] md:w-[800px] h-[75vh] max-h-[750px] opacity-100 mb-4 scale-100" : "w-0 h-0 opacity-0 mb-0 scale-95"
             }`}
           >
@@ -381,9 +384,9 @@ export default function DataVisualizer() {
 
           {/* Toggle Buttons */}
           <div className="pointer-events-auto flex flex-wrap justify-center items-center gap-2 sm:gap-3 w-full px-2">
-            <div className="flex flex-wrap justify-center items-center gap-3 sm:gap-4 bg-background/95 backdrop-blur-xl shadow-xl border border-border/50 px-4 sm:px-5 py-2 sm:py-0 min-h-[56px] rounded-3xl sm:rounded-full transition-all duration-300 hover:shadow-2xl max-w-[95vw]">
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-y-3 sm:gap-4 bg-background/90 backdrop-blur-xl shadow-xl border border-border/50 py-3 sm:py-0 px-4 sm:px-5 min-h-[56px] rounded-[24px] sm:rounded-full transition-all duration-300 hover:shadow-2xl max-w-[95vw] transform-gpu isolate">
               {/* Sort Dropdown */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 justify-between sm:justify-center w-[160px] sm:w-auto">
                 <button
                   onClick={() => {
                     if (sortConfig) {
@@ -422,10 +425,10 @@ export default function DataVisualizer() {
                 </Select>
               </div>
 
-              <div className="w-px h-6 bg-border/50" />
+              <div className="hidden sm:block w-px h-6 bg-border/50" />
 
               {/* Show Labels Toggle */}
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2.5 justify-between sm:justify-center w-[160px] sm:w-auto">
                 <label htmlFor="show-labels-dock" className="text-sm font-medium cursor-pointer select-none">
                   Labels
                 </label>
@@ -437,10 +440,10 @@ export default function DataVisualizer() {
                 />
               </div>
 
-              <div className="w-px h-6 bg-border/50" />
+              <div className="hidden sm:block w-px h-6 bg-border/50" />
 
               {/* Show Legend Toggle */}
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2.5 justify-between sm:justify-center w-[160px] sm:w-auto">
                 <label htmlFor="show-legend-dock" className="text-sm font-medium cursor-pointer select-none">
                   Legend
                 </label>
@@ -474,7 +477,7 @@ export default function DataVisualizer() {
         </div>
 
         {/* --- Charts Section --- */}
-        <div className="space-y-6">
+        <div className={`space-y-6 ${showLabels ? 'fast-chart-labels-visible' : 'fast-chart-labels-hidden'}`}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <ChartCard
               title="Bar Chart"
@@ -500,7 +503,8 @@ export default function DataVisualizer() {
               chartRef={pieCardRef}
               customActions={
                 <div className="flex flex-wrap items-center gap-2">
-                  <Select value={pieFactIndex.toString()} onValueChange={(val) => setPieFactIndex(Number(val))}>
+                  
+            <Select value={pieFactIndex.toString()} onValueChange={(val) => setPieFactIndex(Number(val))}>
                     <SelectTrigger className="h-8 w-32 bg-transparent text-xs" style={{ fontSize: 12 }}>
                       <SelectValue placeholder="Fact Type" />
                     </SelectTrigger>
@@ -525,7 +529,9 @@ export default function DataVisualizer() {
               onCopyHtml={() => copyChartHtml(pieCardRef.current)}
               onFullscreen={() => openFullscreen("pie")}
             >
-              <PieChart data={sortedData} total={total} containerRef={pieCardRef as React.RefObject<HTMLDivElement>} showLabels={showLabels} showLegend={showLegend} showFactText={showFactText} factIndex={pieFactIndex} onFactIndexChange={setPieFactIndex} />
+              <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
+                <PieChart data={sortedData} total={total} containerRef={pieCardRef as React.RefObject<HTMLDivElement>} showFactText={showFactText} factIndex={pieFactIndex} onFactIndexChange={setPieFactIndex} />
+              </div>
             </ChartCard>
           </div>
 
@@ -550,10 +556,25 @@ export default function DataVisualizer() {
                     checked={stackedRadial}
                     onCheckedChange={setStackedRadial}
                   />
+                  {stackedRadial && (
+                    <>
+                      <div className="w-px h-4 bg-border mx-1" />
+                      <label htmlFor="show-radial-fact-text" className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap">
+                        Fact Text
+                      </label>
+                      <Switch
+                        id="show-radial-fact-text"
+                        checked={showRadialFactText}
+                        onCheckedChange={setShowRadialFactText}
+                      />
+                    </>
+                  )}
                 </div>
               }
             >
-              <StackedChart data={sortedData} isHorizontal={stackedHorizontal} containerRef={stackedCardRef as React.Ref<HTMLDivElement>} showLabels={showLabels} showRadial={stackedRadial} showLegend={showLegend} />
+              <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
+                <StackedChart data={sortedData} isHorizontal={stackedHorizontal} containerRef={stackedCardRef as React.Ref<HTMLDivElement>} showLabels={showLabels} showRadial={stackedRadial} showFactText={showRadialFactText} factIndex={radialFactIndex} onFactIndexChange={setRadialFactIndex} />
+              </div>
             </ChartCard>
 
             <ChartCard
@@ -603,7 +624,7 @@ export default function DataVisualizer() {
       </div>
 
       {/* --- Fullscreen Modals --- */}
-      <FullscreenModal
+      <FullscreenModal showLabels={showLabels}
         isOpen={fullscreenChart === "bar"}
         onClose={closeFullscreen}
         chartType="bar"
@@ -616,7 +637,7 @@ export default function DataVisualizer() {
         <BarChart containerRef={fsRef} data={sortedData} isHorizontal={barHorizontal} showLabels={showLabels} />
       </FullscreenModal>
 
-      <FullscreenModal
+      <FullscreenModal showLabels={showLabels}
         isOpen={fullscreenChart === "pie"}
         onClose={closeFullscreen}
         chartType="pie"
@@ -624,6 +645,7 @@ export default function DataVisualizer() {
         onCopyPng={() => copyChartPng(fsRef.current)}
         customActions={
           <div className="flex items-center gap-2">
+            
             <Select value={pieFactIndex.toString()} onValueChange={(val) => setPieFactIndex(Number(val))}>
               <SelectTrigger className="h-8 w-32 bg-transparent text-xs" style={{ fontSize: 12 }}>
                 <SelectValue placeholder="Fact Type" />
@@ -646,11 +668,13 @@ export default function DataVisualizer() {
         }
       >
         {fullscreenChart === "pie" && (
-          <PieChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} total={total} showLabels={showLabels} showLegend={showLegend} showFactText={showFactText} isFullscreen={fullscreenChart === "pie"} factIndex={pieFactIndex} onFactIndexChange={setPieFactIndex} />
+          <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
+            <PieChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} total={total} showFactText={showFactText} isFullscreen={fullscreenChart === "pie"} factIndex={pieFactIndex} onFactIndexChange={setPieFactIndex} />
+          </div>
         )}
       </FullscreenModal>
 
-      <FullscreenModal
+      <FullscreenModal showLabels={showLabels}
         isOpen={fullscreenChart === "stacked"}
         onClose={closeFullscreen}
         chartType="stacked"
@@ -669,13 +693,28 @@ export default function DataVisualizer() {
               checked={stackedRadial}
               onCheckedChange={setStackedRadial}
             />
+            {stackedRadial && (
+              <>
+                <div className="w-px h-4 bg-border mx-1" />
+                <label htmlFor="fs-show-radial-fact-text" className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap">
+                  Fact Text
+                </label>
+                <Switch
+                  id="fs-show-radial-fact-text"
+                  checked={showRadialFactText}
+                  onCheckedChange={setShowRadialFactText}
+                />
+              </>
+            )}
           </div>
         }
       >
-        <StackedChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} isHorizontal={stackedHorizontal} showLabels={showLabels} showRadial={stackedRadial} showLegend={showLegend} isFullscreen={fullscreenChart === "stacked"} />
+        <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
+          <StackedChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} isHorizontal={stackedHorizontal} showLabels={showLabels} showRadial={stackedRadial} isFullscreen={fullscreenChart === "stacked"} showFactText={showRadialFactText} factIndex={radialFactIndex} onFactIndexChange={setRadialFactIndex} />
+        </div>
       </FullscreenModal>
 
-      <FullscreenModal
+      <FullscreenModal showLabels={showLabels}
         isOpen={fullscreenChart === "line"}
         onClose={closeFullscreen}
         chartType="line"

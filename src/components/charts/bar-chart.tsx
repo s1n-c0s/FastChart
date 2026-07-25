@@ -27,7 +27,7 @@ export const BarChart = React.memo(function BarChart({
   isHorizontal = true,
   containerRef,
   children,
-  showLabels = false,
+
 }: BarChartProps) {
   const chartConfig = React.useMemo(() => {
     return data.reduce((acc, item) => {
@@ -55,7 +55,7 @@ export const BarChart = React.memo(function BarChart({
             key="horizontal-chart"
             data={data}
             layout="vertical"
-            margin={{ top: 5, right: 15, bottom: 5, left: 5 }}
+            margin={{ top: 10, right: 60, bottom: 5, left: 5 }}
             barCategoryGap="15%"
           >
             <CartesianGrid className="stroke-border opacity-80" strokeDasharray="4 4" />
@@ -98,17 +98,15 @@ export const BarChart = React.memo(function BarChart({
               {data.map((item) => (
                 <Cell key={item.id} fill={item.color} />
               ))}
-              {showLabels && (
-                <LabelList
-                  dataKey="value"
-                  position="right"
-                  offset={8}
-                  className="fill-foreground font-semibold"
-                  fontSize={15}
-                  fontWeight={600}
-                  formatter={(value: any) => (Number(value) || 0).toLocaleString()}
-                />
-              )}
+              <LabelList
+                dataKey="value"
+                position="right"
+                offset={8}
+                className="fill-foreground font-semibold chart-global-label"
+                fontSize={15}
+                fontWeight={600}
+                formatter={(value: any) => (Number(value) || 0).toLocaleString()}
+              />
             </Bar>
             {children}
           </RechartsBarChart>
@@ -127,7 +125,7 @@ export const BarChart = React.memo(function BarChart({
           key="vertical-chart"
           data={data}
           layout="horizontal"
-          margin={{ top: 5, right: 15, bottom: 5, left: 5 }}
+          margin={{ top: 25, right: 15, bottom: 5, left: 5 }}
           barCategoryGap="15%"
         >
           <CartesianGrid className="stroke-border opacity-80" strokeDasharray="4 4" />
@@ -174,17 +172,15 @@ export const BarChart = React.memo(function BarChart({
             {data.map((item) => (
               <Cell key={item.id} fill={item.color} />
             ))}
-            {showLabels && (
-              <LabelList
-                dataKey="value"
-                position="top"
-                offset={8}
-                className="fill-foreground font-semibold"
-                fontSize={15}
-                fontWeight={600}
-                formatter={(value: any) => (Number(value) || 0).toLocaleString()}
-              />
-            )}
+            <LabelList
+              dataKey="value"
+              position="top"
+              offset={8}
+              className="fill-foreground font-semibold chart-global-label"
+              fontSize={15}
+              fontWeight={600}
+              formatter={(value: any) => (Number(value) || 0).toLocaleString()}
+            />
           </Bar>
           {children}
         </RechartsBarChart>
@@ -194,7 +190,6 @@ export const BarChart = React.memo(function BarChart({
 }, (prevProps, nextProps) => {
   return (
     prevProps.isHorizontal === nextProps.isHorizontal &&
-    prevProps.showLabels === nextProps.showLabels &&
     prevProps.data.length === nextProps.data.length &&
     prevProps.data.every((item, idx) => 
       item.id === nextProps.data[idx]?.id &&

@@ -57,7 +57,7 @@ const LineChartTooltip = ({ active, payload, label, lineColor }: LineChartToolti
 export const LineChart = React.memo(function LineChart({ 
   data, 
   containerRef, 
- 
+  showLabels = false, 
   showGradientArea = false,
   lineColor: customLineColor
 }: LineChartProps) {
@@ -94,7 +94,7 @@ export const LineChart = React.memo(function LineChart({
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
               data={data}
-              margin={{ top: 30, right: 30, bottom: 20, left: 20 }}
+              margin={{ top: 12, right: 12, bottom: 8, left: 12 }}
             >
               <defs>
                 <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -107,17 +107,16 @@ export const LineChart = React.memo(function LineChart({
                 dataKey="label"
                 tickLine={false}
                 axisLine={false}
-                tickMargin={12}
+                tickMargin={10}
                 style={{ fontSize: '14px' }}
               />
               <YAxis
                 tickLine={false}
                 axisLine={false}
-                width={55}
+                width={35}
                 style={{ fontSize: '14px' }}
               />
               <Tooltip
-                isAnimationActive={false}
                 cursor={{ stroke: lineColor, strokeWidth: 1, strokeDasharray: "4 4", opacity: 0.5 }}
                 content={<LineChartTooltip lineColor={lineColor} />}
               />
@@ -139,15 +138,17 @@ export const LineChart = React.memo(function LineChart({
                 activeDot={{ r: 6, fill: lineColor }}
                 isAnimationActive={true}
               >
-                <LabelList
-                  dataKey="value"
-                  position="top"
-                  offset={8}
-                  className="fill-foreground font-semibold chart-global-label"
-                  fontSize={15}
-                  fontWeight={600}
-                  formatter={(value: any) => (Number(value) || 0).toLocaleString()}
-                />
+                {showLabels && (
+                  <LabelList
+                    dataKey="value"
+                    position="top"
+                    offset={8}
+                    className="fill-foreground font-semibold"
+                    fontSize={15}
+                    fontWeight={600}
+                    formatter={(value: number) => (value || 0).toLocaleString()}
+                  />
+                )}
               </Line>
             </ComposedChart>
           </ResponsiveContainer>
@@ -157,6 +158,7 @@ export const LineChart = React.memo(function LineChart({
   )
 }, (prevProps, nextProps) => {
   return (
+    prevProps.showLabels === nextProps.showLabels &&
     prevProps.showGradientArea === nextProps.showGradientArea &&
     prevProps.lineColor === nextProps.lineColor &&
     prevProps.data === nextProps.data

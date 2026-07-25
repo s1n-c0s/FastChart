@@ -1,6 +1,6 @@
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Pie, PieChart as RechartsPieChart, Cell, Tooltip, Label, ResponsiveContainer } from "recharts";
+import { PieChart as RechartsPieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
 import type { Datum } from "@/types";
 
@@ -9,8 +9,7 @@ export interface PieChartProps {
   total: number;
   containerRef?: React.Ref<HTMLDivElement>;
   isFullscreen?: boolean;
-  showLabels?: boolean;
-  showLegend?: boolean;
+  
   showFactText?: boolean;
   factIndex?: number;
   onFactIndexChange?: (index: number) => void;
@@ -34,27 +33,272 @@ const CustomTooltip = React.memo(({ active, payload }: any) => {
   return null;
 });
 
+const FactTextOverlay = (props: any) => {
+  const {
+    chartWidth, pieCy, size, data, total, factIndex,
+    isFullscreen, textColor, textMainColor, onFactIndexChange
+  } = props;
+  
+  const cx = chartWidth / 2;
+  const cy = pieCy;
+  const innerR = size * 0.20;
+  
+  const maxItem = data && data.length > 0 ? data.reduce((prev: any, current: any) => (prev.value > current.value) ? prev : current) : null;
+  const minItem = data && data.length > 0 ? data.reduce((prev: any, current: any) => (prev.value < current.value) ? prev : current) : null;
+  
+  let factTitle = "Total";
+  let factValue = total.toLocaleString();
+  let factColor = textMainColor;
+  let factLabel = "";
+  
+  if (factIndex === 1 && maxItem) {
+    factTitle = "The most";
+    factValue = maxItem.value.toLocaleString();
+    factColor = maxItem.color;
+    factLabel = maxItem.label;
+  } else if (factIndex === 2 && minItem) {
+    factTitle = "The Lowest";
+    factValue = minItem.value.toLocaleString();
+    factColor = minItem.color;
+    factLabel = minItem.label;
+  }
+  
+  const handlePrev = (e: React.MouseEvent) => { 
+    e.stopPropagation(); 
+    if (onFactIndexChange) onFactIndexChange((factIndex - 1 + 3) % 3);
+  };
+  const handleNext = (e: React.MouseEvent) => { 
+    e.stopPropagation(); 
+    if (onFactIndexChange) onFactIndexChange((factIndex + 1) % 3);
+  };
+
+  const maxTitleSize = isFullscreen ? 16 : 12;
+  const maxValueSize = isFullscreen ? 36 : 22;
+  const maxLabelSize = isFullscreen ? 14 : 11;
+  
+  const totalTextHeight = maxTitleSize + maxValueSize + maxLabelSize + 20;
+  const safeHeight = innerR * 1.6;
+  const scaleFactor = Math.min(1, safeHeight / totalTextHeight);
+  
+  const titleSize = maxTitleSize * scaleFactor;
+  const valueSize = maxValueSize * scaleFactor;
+  const labelSize = maxLabelSize * scaleFactor;
+
+  let titleYOffset, valueYOffset, labelYOffset;
+  if (factLabel) {
+    titleYOffset = isFullscreen ? -28 : -22;
+    valueYOffset = isFullscreen ? 6 : 4;
+    labelYOffset = isFullscreen ? 32 : 26;
+  } else {
+    titleYOffset = isFullscreen ? -14 : -10;
+    valueYOffset = isFullscreen ? 18 : 14;
+    labelYOffset = 0;
+  }
+  
+  const arrowY = cy - 16;
+
+  return (
+    <g className="group" style={{ pointerEvents: 'all' }}>
+      <circle cx={cx} cy={cy} r={innerR} fill="transparent" />
+      
+      <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle" className="pointer-events-none select-none">
+        <tspan
+          x={cx}
+          y={cy + titleYOffset * scaleFactor}
+          fill={textColor} 
+          fontSize={titleSize}
+          fontWeight="500"
+        >
+          {factTitle}
+        </tspan>
+        <tspan
+          x={cx}
+          y={cy + valueYOffset * scaleFactor}
+          fill={factColor}
+          fontSize={valueSize}
+          fontWeight="bold" 
+        >
+          {factValue}
+        </tspan>
+        {factLabel && (
+          <tspan
+            x={cx}
+            y={cy + labelYOffset * scaleFactor}
+            fill={factColor}
+            fontSize={labelSize}
+            fontWeight="500"
+            opacity={0.8}
+          >
+            {factLabel}
+          </tspan>
+        )}
+      </text>
+      
+      <svg 
+        x={cx - innerR + (isFullscreen ? 30 : 10)} 
+        y={arrowY} 
+        width={32} height={32} 
+        onClick={handlePrev} 
+        className="opacity-0 group-hover:opacity-100 cursor-pointer pointer-events-auto text-muted-foreground transition-opacity"
+        color="currentColor"
+        data-hide-on-copy="true"
+      >
+        <rect width="32" height="32" fill="transparent" />
+        <ChevronLeft x={4} y={4} width={24} height={24} strokeWidth={2.5} />
+      </svg>
+
+      <svg 
+        x={cx + innerR - 32 - (isFullscreen ? 30 : 10)} 
+        y={arrowY} 
+        width={32} height={32} 
+        onClick={handleNext} 
+        className="opacity-0 group-hover:opacity-100 cursor-pointer pointer-events-auto text-muted-foreground transition-opacity"
+        color="currentColor"
+        data-hide-on-copy="true"
+      >
+        <rect width="32" height="32" fill="transparent" />
+        <ChevronRight x={4} y={4} width={24} height={24} strokeWidth={2.5} />
+      </svg>
+    </g>
+  );
+};
 
 
-export const PieChart = React.memo(function PieChart({ data, total, containerRef, isFullscreen = false,  showLabels = false,
-  showLegend = false,
+const InnerRechartsPie = React.memo(({ size, data, pieCy, isFullscreen, renderCustomLabel, renderCustomLabelLine, top4Ids, targetFocusIndex, renderSvgLegend }: any) => {
+  const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  const onPieMouseEnter = React.useCallback((_: any, index: number) => {
+    if (targetFocusIndex !== -1) return;
+
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    
+    document.querySelectorAll('.my-hovered-sector').forEach(el => el.classList.remove('my-hovered-sector'));
+    document.querySelectorAll(`.my-sector-${index}`).forEach(el => el.classList.add('my-hovered-sector'));
+  }, [targetFocusIndex]);
+
+  const onPieMouseLeave = React.useCallback(() => {
+    if (targetFocusIndex !== -1) return;
+
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      document.querySelectorAll('.my-hovered-sector').forEach(el => el.classList.remove('my-hovered-sector'));
+    }, 4000);
+  }, [targetFocusIndex]);
+
+  const cells = React.useMemo(() => {
+    return data.map((item: Datum, index: number) => {
+      const isFocused = index === targetFocusIndex;
+      return (
+        <Cell 
+          key={item.id} 
+          fill={item.color} 
+          stroke="none"
+          className={`my-sector my-sector-${index} ${isFocused ? 'my-hovered-sector-static' : ''}`}
+          style={{ transformOrigin: `50% ${pieCy}px` }}
+        />
+      );
+    });
+  }, [data, targetFocusIndex, pieCy]);
+  
+  const overlayCells = React.useMemo(() => {
+    return data.map((item: Datum, index: number) => {
+      const isOther = top4Ids && !top4Ids.includes(item.id);
+      const isFocused = index === targetFocusIndex;
+      return (
+        <Cell 
+          key={`overlay-${item.id}`} 
+          fill={isOther ? "rgba(0,0,0,0.4)" : "transparent"} 
+          stroke="none"
+          className={`my-sector my-sector-${index} ${isFocused ? 'my-hovered-sector-static' : ''}`}
+          style={{ transformOrigin: `50% ${pieCy}px` }}
+        />
+      );
+    });
+  }, [data, top4Ids, targetFocusIndex, pieCy]);
+
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <RechartsPieChart style={{ overflow: 'visible' }}>
+        <defs>
+          <style>{`
+            .my-sector {
+              transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            }
+            .my-hovered-sector, .my-hovered-sector-static {
+              transform: scale(1.1);
+            }
+          `}</style>
+        </defs>
+        <Tooltip isAnimationActive={false} content={<CustomTooltip />} />
+        <Pie
+          data={data}
+          dataKey="value"
+          nameKey="label"
+          cx="50%"
+          cy={pieCy}
+          innerRadius={size * 0.20}
+          outerRadius={isFullscreen ? size * 0.30 : size * 0.27}
+          paddingAngle={2}
+          cornerRadius={6}
+          isAnimationActive={true}
+          animationDuration={500}
+          stroke="none"
+          label={renderCustomLabel}
+          labelLine={renderCustomLabelLine}
+          onMouseEnter={onPieMouseEnter}
+          onMouseLeave={onPieMouseLeave}
+          style={{ cursor: 'pointer' }}
+        >
+          {cells}
+        </Pie>
+        
+        <Pie
+          data={data}
+          dataKey="value"
+          nameKey="label"
+          cx="50%"
+          cy={pieCy}
+          innerRadius={size * 0.20}
+          outerRadius={isFullscreen ? size * 0.30 : size * 0.27}
+          paddingAngle={2}
+          cornerRadius={6}
+          isAnimationActive={true}
+          animationDuration={500}
+          stroke="none"
+          style={{ pointerEvents: 'none' }}
+          onMouseEnter={onPieMouseEnter}
+          onMouseLeave={onPieMouseLeave}
+        >
+          {overlayCells}
+        </Pie>
+        
+        {renderSvgLegend()}
+      </RechartsPieChart>
+    </ResponsiveContainer>
+  );
+});
+
+export const PieChart = React.memo(function PieChart({ data, total, containerRef, isFullscreen = false,  
+  
   showFactText = false,
   factIndex = 0,
   onFactIndexChange,
 }: PieChartProps) {
   const [isDark, setIsDark] = React.useState(false);
-  const [isMounted, setIsMounted] = React.useState(false);
   
   React.useEffect(() => {
-    // Small delay ensures the CSS transition fires after initial render
-    const timer = setTimeout(() => setIsMounted(true), 50);
     setIsDark(document.documentElement.classList.contains("dark"));
     const observer = new MutationObserver(() => {
       setIsDark(document.documentElement.classList.contains("dark"));
     });
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
     return () => {
-      clearTimeout(timer);
       observer.disconnect();
     };
   }, []);
@@ -109,6 +353,13 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     return [...data].sort((a, b) => b.value - a.value).slice(0, 4).map(d => d.id);
   }, [data]);
 
+  const maxItem = data && data.length > 0 ? data.reduce((prev: any, current: any) => (prev.value > current.value) ? prev : current) : null;
+  const minItem = data && data.length > 0 ? data.reduce((prev: any, current: any) => (prev.value < current.value) ? prev : current) : null;
+
+  const targetFocusIndex = factIndex === 1 && maxItem ? data.findIndex(d => d.id === maxItem.id) 
+                         : factIndex === 2 && minItem ? data.findIndex(d => d.id === minItem.id) 
+                         : -1;
+
   const otherSum = React.useMemo(() => {
     if (!top4Ids) return 0;
     return data.filter(d => !top4Ids.includes(d.id)).reduce((sum, d) => sum + d.value, 0);
@@ -127,45 +378,63 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
 
   const renderCustomLabelLine = React.useCallback((props: any) => {
     const { payload, points } = props;
+    const datumId = payload?.payload?.id || payload?.id;
     
-    if (top4Ids && !top4Ids.includes(payload.id)) {
-      return null;
+    if (top4Ids && !top4Ids.includes(datumId)) {
+      if (datumId !== lastOtherId) return null;
     }
     
     if (!points || points.length < 3) return null;
     
     const isLeft = points[2].x < points[0].x;
     const isTop = points[2].y < points[0].y;
-    const basePushX = isFullscreen ? 45 : 15; // cleanly extends the horizontal line
-    const basePushY = isFullscreen ? 30 : 5; // vertically push away from pie edge
+    const basePushX = isFullscreen ? 45 : 30; // cleanly extends the horizontal line
+    const basePushY = isFullscreen ? 30 : 20; // vertically push away from pie edge
+    
+    const chartWidth = localRef.current?.clientWidth || 0;
+    const chartHeight = localRef.current?.clientHeight || 0;
+    const boxWidth = isFullscreen ? 160 : 110;
+    const boxHeight = isFullscreen ? 56 : 52;
+    
+    let finalX = points[2].x + (isLeft ? -basePushX : basePushX);
+    let finalY = points[2].y + (isTop ? -basePushY : basePushY);
+    
+    if (chartWidth > 0 && chartHeight > 0) {
+      let fx = isLeft ? finalX - boxWidth : finalX;
+      let fy = finalY - boxHeight / 2;
+      fx = Math.max(10, Math.min(fx, chartWidth - boxWidth - 10));
+      fy = Math.max(10, Math.min(fy, chartHeight - boxHeight - 10));
+      finalX = isLeft ? fx + boxWidth : fx;
+      finalY = fy + boxHeight / 2;
+    }
     
     const newPoints = [
       points[0],
-      { x: points[1].x, y: points[1].y + (isTop ? -basePushY : basePushY) },
-      { x: points[2].x + (isLeft ? -basePushX : basePushX), y: points[2].y + (isTop ? -basePushY : basePushY) }
+      { x: points[1].x, y: finalY },
+      { x: finalX, y: finalY }
     ];
     
     return (
       <polyline
-        points={newPoints.map((p: any) => `${p.x},${p.y}`).join(' ')}
+        points={newPoints.map(p => `${p.x},${p.y}`).join(" ")}
         stroke={textColor}
         strokeWidth={1}
-        className={showLabels ? "animate-in fade-in duration-300" : "opacity-0"}
-        style={{
-          pointerEvents: showLabels ? 'auto' : 'none'
-        }}
+        className="chart-global-label"
       />
     );
-  }, [top4Ids, textColor, isFullscreen, showLabels]);
-
+  }, [isFullscreen, top4Ids, lastOtherId, textColor]);
   const renderCustomLabel = React.useCallback((props: any) => {
     let { x, y, cx, cy, name, value, percent, payload } = props;
-    let color = payload?.color || "#a1a1aa";
+    const datumId = payload?.payload?.id || payload?.id;
+    let color = payload?.payload?.color || payload?.color || "#a1a1aa";
     
-    if (top4Ids && !top4Ids.includes(payload.id)) {
-      if (payload.id !== lastOtherId) return null;
+    if (name === undefined) name = payload?.payload?.label || payload?.label;
+    if (value === undefined) value = payload?.payload?.value || payload?.value;
+    if (percent === undefined && total > 0) percent = (value || 0) / total;
+
+    if (top4Ids && !top4Ids.includes(datumId)) {
+      if (datumId !== lastOtherId) return null;
       
-      // Override for the 'Other' label box
       name = "Other";
       value = otherSum;
       percent = otherSum / total;
@@ -173,16 +442,23 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     }
     const boxWidth = isFullscreen ? 160 : 110;
     const boxHeight = isFullscreen ? 56 : 52;
-    const basePushX = isFullscreen ? 45 : 15;
-    const basePushY = isFullscreen ? 30 : 5;
+    const basePushX = isFullscreen ? 45 : 30;
+    const basePushY = isFullscreen ? 30 : 20;
     const isLeft = x < cx;
     const isTop = y < cy;
     
-    const finalX = x + (isLeft ? -basePushX : basePushX);
-    const finalY = y + (isTop ? -basePushY : basePushY);
+    let finalX = x + (isLeft ? -basePushX : basePushX);
+    let finalY = y + (isTop ? -basePushY : basePushY);
     
-    const fx = isLeft ? finalX - boxWidth : finalX;
-    const fy = finalY - boxHeight / 2;
+    let fx = isLeft ? finalX - boxWidth : finalX;
+    let fy = finalY - boxHeight / 2;
+    
+    const chartWidth = localRef.current?.clientWidth || 0;
+    const chartHeight = localRef.current?.clientHeight || 0;
+    if (chartWidth > 0 && chartHeight > 0) {
+      fx = Math.max(10, Math.min(fx, chartWidth - boxWidth - 10));
+      fy = Math.max(10, Math.min(fy, chartHeight - boxHeight - 10));
+    }
 
     const safeName = String(name || '');
     const maxLen = isFullscreen ? 18 : 12;
@@ -190,11 +466,9 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
 
     return (
       <g 
-        key={showLabels ? "on" : "off"}
-        className={showLabels ? "animate-in fade-in zoom-in-95 duration-300" : "opacity-0"}
+        className="chart-global-label"
         style={{ 
           overflow: 'visible',
-          pointerEvents: showLabels ? 'auto' : 'none',
           transformOrigin: `${fx + boxWidth / 2}px ${fy + boxHeight / 2}px`
         }}
       >
@@ -249,7 +523,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
         </text>
       </g>
     );
-  }, [isFullscreen, isDark, bgColor, borderColor, textMainColor, textColor, top4Ids, lastOtherId, otherSum, total, showLabels]);
+  }, [isFullscreen, isDark, bgColor, borderColor, textMainColor, textColor, top4Ids, lastOtherId, otherSum, total]);
 
   React.useEffect(() => {
     if (!isFullscreen) return;
@@ -276,7 +550,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     data.forEach((item: Datum) => {
       const percentage = total > 0 ? Math.round((Math.max(0, item.value || 0) / total) * 100) : 0;
       const labelText = `${item.label}: ${Number(item.value || 0).toLocaleString()} (${percentage}%)`;
-      const textWidth = labelText.length * (isFullscreen ? 8.5 : 7.5); 
+      const textWidth = labelText.length * (isFullscreen ? 7.5 : 6.5); 
       const itemWidth = rectSize + gap + textWidth + itemMargin;
       const maxItemsPerRow = 4;
 
@@ -302,7 +576,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     };
   }, [data, chartWidth, size, isFullscreen, total]);
 
-  const renderSvgLegend = () => {
+  const renderSvgLegend = React.useCallback(() => {
     if (!chartWidth || !size || legendRows.length === 0) return null;
 
     const spacingY = 25;
@@ -341,177 +615,48 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
         })}
       </g>
     );
-  };
+  }, [chartWidth, size, legendRows, legendHeight, isFullscreen, textMainColor, total]);
 
-  const pieCy = (size - legendHeight) / 2 - (showLabels ? (isFullscreen ? 15 : 0) : 0);
+  // Add extra safe area padding to ensure the bottom labels never overlap the legend
+  const safeAreaPadding = isFullscreen ? 60 : 40;
+  const pieCy = (size - legendHeight - safeAreaPadding) / 2;
 
   return (
-      <div ref={setRefs} className="flex h-full w-full items-center justify-center flex-col">
-        <div className="flex-shrink-0 w-full" style={{ height: size }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <RechartsPieChart style={{ overflow: 'visible' }}>
-              <Tooltip content={<CustomTooltip />} />
-              <Pie
-                data={data}
-                dataKey="value"
-                nameKey="label"
-                cx="50%"
-                cy={pieCy}
-              innerRadius={showLabels ? size * 0.20 : size * 0.28}
-              outerRadius={showLabels ? size * 0.30 : size * 0.42}
-              paddingAngle={2}
-              cornerRadius={6}
-              isAnimationActive={!isMounted}
-              animationDuration={500}
-              stroke="none"
-              label={renderCustomLabel}
-              labelLine={renderCustomLabelLine as any}
-            >
-              {showFactText && (
-                <Label
-                  content={({ viewBox }) => {
-                    if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                      const innerR = showLabels ? size * 0.18 : size * 0.28;
-                      
-                      const maxItem = data.length > 0 ? data.reduce((prev, current) => (prev.value > current.value) ? prev : current) : null;
-                      const minItem = data.length > 0 ? data.reduce((prev, current) => (prev.value < current.value) ? prev : current) : null;
-                      
-                      let factTitle = "Total";
-                      let factValue = total.toLocaleString();
-                      let factColor = textMainColor;
-                      let factLabel = "";
-                      
-                      if (factIndex === 1 && maxItem) {
-                        factTitle = "The most";
-                        factValue = maxItem.value.toLocaleString();
-                        factColor = maxItem.color;
-                        factLabel = maxItem.label;
-                      } else if (factIndex === 2 && minItem) {
-                        factTitle = "The Lowest";
-                        factValue = minItem.value.toLocaleString();
-                        factColor = minItem.color;
-                        factLabel = minItem.label;
-                      }
-                      
-                      const handlePrev = (e: React.MouseEvent) => { 
-                        e.stopPropagation(); 
-                        if (onFactIndexChange) onFactIndexChange((factIndex - 1 + 3) % 3);
-                      };
-                      const handleNext = (e: React.MouseEvent) => { 
-                        e.stopPropagation(); 
-                        if (onFactIndexChange) onFactIndexChange((factIndex + 1) % 3);
-                      };
+      <div ref={setRefs} className={`flex h-full w-full items-center justify-center flex-col `}>
+        <div className="relative flex-shrink-0 w-full" style={{ height: size }}>
+          <InnerRechartsPie
+            size={size}
+            data={data}
+            pieCy={pieCy}
+            isFullscreen={isFullscreen}
+            renderCustomLabel={renderCustomLabel}
+            renderCustomLabelLine={renderCustomLabelLine as any}
+            top4Ids={top4Ids}
+            targetFocusIndex={targetFocusIndex}
+            renderSvgLegend={renderSvgLegend}
+          />
 
-                      return (
-                        <g className="group">
-                          <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle" className="pointer-events-none select-none">
-                            <tspan
-                              x={viewBox.cx}
-                              y={(viewBox.cy || 0) - (isFullscreen ? 25 : 18)}
-                              fill={textColor} 
-                              fontSize={isFullscreen ? 16 : 12}
-                              fontWeight="500"
-                            >
-                              {factTitle}
-                            </tspan>
-                            <tspan
-                              x={viewBox.cx}
-                              y={(viewBox.cy || 0) + (isFullscreen ? 15 : 10)}
-                              fill={factColor}
-                              fontSize={isFullscreen ? 36 : 22}
-                              fontWeight="bold" 
-                            >
-                              {factValue}
-                            </tspan>
-                            {factLabel && (
-                              <tspan
-                                x={viewBox.cx}
-                                y={(viewBox.cy || 0) + (isFullscreen ? 45 : 28)}
-                                fill={factColor}
-                                fontSize={isFullscreen ? 14 : 11}
-                                fontWeight="500"
-                                opacity={0.8}
-                              >
-                                {factLabel}
-                              </tspan>
-                            )}
-                          </text>
-                          
-                          {/* Prev Button */}
-                          <svg 
-                            x={(viewBox.cx || 0) - innerR + (isFullscreen ? 30 : 10)} 
-                            y={(viewBox.cy || 0) - 16} 
-                            width={32} height={32} 
-                            onClick={handlePrev} 
-                            className="opacity-0 group-hover:opacity-100 cursor-pointer pointer-events-auto text-muted-foreground transition-opacity"
-                            color="currentColor"
-                            data-hide-on-copy="true"
-                          >
-                            <rect width="32" height="32" fill="transparent" />
-                            <ChevronLeft x={4} y={4} width={24} height={24} strokeWidth={2.5} />
-                          </svg>
-
-                          {/* Next Button */}
-                          <svg 
-                            x={(viewBox.cx || 0) + innerR - 32 - (isFullscreen ? 30 : 10)} 
-                            y={(viewBox.cy || 0) - 16} 
-                            width={32} height={32} 
-                            onClick={handleNext} 
-                            className="opacity-0 group-hover:opacity-100 cursor-pointer pointer-events-auto text-muted-foreground transition-opacity"
-                            color="currentColor"
-                            data-hide-on-copy="true"
-                          >
-                            <rect width="32" height="32" fill="transparent" />
-                            <ChevronRight x={4} y={4} width={24} height={24} strokeWidth={2.5} />
-                          </svg>
-                        </g>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-              )}
-              {data.map((item: Datum) => (
-                <Cell key={item.id} fill={item.color} stroke="none" />
-              ))}
-            </Pie>
-            
-            {/* Black Overlay Pie for 'Other' slices */}
-            <Pie
+        {showFactText && (
+          <svg className="fact-text-overlay absolute inset-0" width="100%" height="100%" style={{ overflow: 'visible', pointerEvents: 'none' }}>
+            <FactTextOverlay
+              chartWidth={chartWidth}
+              pieCy={pieCy}
+              size={size}
+              
               data={data}
-              dataKey="value"
-              nameKey="label"
-              cx="50%"
-              cy={pieCy}
-              innerRadius={showLabels ? size * 0.20 : size * 0.28}
-              outerRadius={showLabels ? size * 0.30 : size * 0.42}
-              paddingAngle={2}
-              cornerRadius={6}
-              isAnimationActive={!isMounted}
-              animationDuration={500}
-              stroke="none"
-              style={{ pointerEvents: 'none' }}
-            >
-              {data.map((item: Datum) => {
-                const isOther = top4Ids && !top4Ids.includes(item.id);
-                return (
-                  <Cell 
-                    key={`overlay-${item.id}`} 
-                    fill={isOther ? "rgba(0,0,0,0.5)" : "transparent"} 
-                    stroke="none" 
-                  />
-                );
-              })}
-            </Pie>
-            
-            {showLegend && renderSvgLegend()}
-          </RechartsPieChart>
-        </ResponsiveContainer>
+              total={total}
+              factIndex={factIndex}
+              isFullscreen={isFullscreen}
+              textColor={textColor}
+              textMainColor={textMainColor}
+              onFactIndexChange={onFactIndexChange}
+            />
+          </svg>
+        )}
       </div>
     </div>
   );
 }, (prevProps, nextProps) => {
-  // ... (memo comparison คงเดิม)
   return (
     prevProps.isFullscreen === nextProps.isFullscreen &&
     prevProps.total === nextProps.total &&
@@ -521,8 +666,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
       item.value === nextProps.data[idx]?.value &&
       item.color === nextProps.data[idx]?.color
     ) &&
-    prevProps.showLabels === nextProps.showLabels &&
-    prevProps.showLegend === nextProps.showLegend &&
+    
     prevProps.showFactText === nextProps.showFactText &&
     prevProps.factIndex === nextProps.factIndex
   );
