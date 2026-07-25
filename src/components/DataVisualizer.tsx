@@ -263,7 +263,7 @@ export default function DataVisualizer() {
         >
           {/* Paper Panel */}
           <div 
-            className={`pointer-events-auto bg-background/95 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-border/50 rounded-2xl overflow-hidden transition-all duration-300 origin-bottom flex flex-col ${
+            className={`pointer-events-auto bg-background/90 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-border/50 rounded-2xl overflow-hidden transition-all duration-300 origin-bottom flex flex-col transform-gpu isolate ${
               isDockOpen ? "w-[95vw] sm:w-[85vw] md:w-[800px] h-[75vh] max-h-[750px] opacity-100 mb-4 scale-100" : "w-0 h-0 opacity-0 mb-0 scale-95"
             }`}
           >
@@ -381,7 +381,7 @@ export default function DataVisualizer() {
 
           {/* Toggle Buttons */}
           <div className="pointer-events-auto flex flex-wrap justify-center items-center gap-2 sm:gap-3 w-full px-2">
-            <div className="flex flex-wrap justify-center items-center gap-3 sm:gap-4 bg-background/95 backdrop-blur-xl shadow-xl border border-border/50 px-4 sm:px-5 py-2 sm:py-0 min-h-[56px] rounded-3xl sm:rounded-full transition-all duration-300 hover:shadow-2xl max-w-[95vw]">
+            <div className="flex flex-wrap justify-center items-center gap-3 sm:gap-4 bg-background/90 backdrop-blur-xl shadow-xl border border-border/50 px-4 sm:px-5 py-2 sm:py-0 min-h-[56px] rounded-3xl sm:rounded-full transition-all duration-300 hover:shadow-2xl max-w-[95vw] transform-gpu isolate">
               {/* Sort Dropdown */}
               <div className="flex items-center gap-2">
                 <button
