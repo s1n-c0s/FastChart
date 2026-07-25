@@ -411,7 +411,7 @@ export const StackedChart = React.memo(function StackedChart({
   // Horizontal mode: bars grow to the right
   if (isHorizontal) {
     return (
-      <div ref={setRefs} className="h-full w-full">
+      <div ref={setRefs} className={`h-full w-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
         <ResponsiveContainer width="100%" height="100%">
           <RechartsBarChart
             key="horizontal-stacked-chart"
@@ -464,7 +464,7 @@ export const StackedChart = React.memo(function StackedChart({
 
   // Vertical mode: bars grow upward
   return (
-    <div ref={setRefs} className="h-full w-full">
+    <div ref={setRefs} className={`h-full w-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
       <ResponsiveContainer width="100%" height="100%">
         <RechartsBarChart
           key="vertical-stacked-chart"
