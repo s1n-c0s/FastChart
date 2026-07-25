@@ -416,12 +416,12 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
 
                       let titleYOffset, valueYOffset, labelYOffset;
                       if (factLabel) {
-                        titleYOffset = isFullscreen ? -28 : -18;
-                        valueYOffset = isFullscreen ? 6 : 4;
-                        labelYOffset = isFullscreen ? 36 : 22;
+                        titleYOffset = isFullscreen ? -20 : -14;
+                        valueYOffset = isFullscreen ? 14 : 10;
+                        labelYOffset = isFullscreen ? 44 : 28;
                       } else {
-                        titleYOffset = isFullscreen ? -18 : -12;
-                        valueYOffset = isFullscreen ? 16 : 10;
+                        titleYOffset = isFullscreen ? -8 : -6;
+                        valueYOffset = isFullscreen ? 24 : 16;
                         labelYOffset = 0;
                       }
 
