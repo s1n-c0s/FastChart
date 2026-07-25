@@ -278,9 +278,13 @@ export const StackedChart = React.memo(function StackedChart({
 
   // Render radial chart
   if (showRadial) {
-    const innerRadius = isFullscreen ? 300 : 150
-    const outerRadius = isFullscreen ? 600 : 350
-    
+    const baseWidth = dimensions.width || (isFullscreen ? 1200 : 400);
+    const baseHeight = dimensions.height || (isFullscreen ? 800 : 300);
+    // cy="75%" means we have 75% of height available above the center.
+    // Use 70% of height or 90% of half-width, whichever is smaller, to fit perfectly.
+    const calculatedOuter = Math.min((baseWidth / 2) * 0.9, baseHeight * 0.7);
+    const outerRadius = Math.max(100, isFullscreen ? calculatedOuter * 1.5 : calculatedOuter);
+    const innerRadius = outerRadius * 0.45;
     return (
       <div ref={setRefs} className="h-full w-full flex flex-col items-center justify-center overflow-hidden">
         <div className="w-full flex-1 min-h-[300px]">
