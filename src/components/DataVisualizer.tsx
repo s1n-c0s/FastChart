@@ -233,6 +233,12 @@ export default function DataVisualizer() {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
       
+      // If the target is no longer in the document, it was likely a portal/popover 
+      // (like a Radix Select item) that unmounted itself synchronously on click.
+      if (!document.body.contains(target)) {
+        return;
+      }
+      
       // Prevent closing when clicking inside a Radix Select dropdown (which renders in a portal outside the dock)
       if (target.closest('[data-radix-popper-content-wrapper]') || target.closest('[role="listbox"]') || target.closest('[data-slot="select-content"]')) {
         return;
