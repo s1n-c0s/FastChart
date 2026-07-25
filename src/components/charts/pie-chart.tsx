@@ -164,6 +164,53 @@ const FactTextOverlay = (props: any) => {
   );
 };
 
+
+const InnerRechartsPie = React.memo(({ size, data, pieCy, showLabels, renderCustomLabel, renderCustomLabelLine, cells, overlayCells, showLegend, renderSvgLegend }: any) => {
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <RechartsPieChart style={{ overflow: 'visible' }}>
+        <Tooltip content={<CustomTooltip />} />
+        <Pie
+          data={data}
+          dataKey="value"
+          nameKey="label"
+          cx="50%"
+          cy={pieCy}
+          innerRadius={showLabels ? size * 0.20 : size * 0.28}
+          outerRadius={showLabels ? size * 0.30 : size * 0.42}
+          paddingAngle={2}
+          cornerRadius={6}
+          animationDuration={500}
+          stroke="none"
+          label={renderCustomLabel}
+          labelLine={renderCustomLabelLine}
+        >
+          {cells}
+        </Pie>
+        
+        <Pie
+          data={data}
+          dataKey="value"
+          nameKey="label"
+          cx="50%"
+          cy={pieCy}
+          innerRadius={showLabels ? size * 0.20 : size * 0.28}
+          outerRadius={showLabels ? size * 0.30 : size * 0.42}
+          paddingAngle={2}
+          cornerRadius={6}
+          animationDuration={500}
+          stroke="none"
+          style={{ pointerEvents: 'none' }}
+        >
+          {overlayCells}
+        </Pie>
+        
+        {showLegend && renderSvgLegend()}
+      </RechartsPieChart>
+    </ResponsiveContainer>
+  );
+});
+
 export const PieChart = React.memo(function PieChart({ data, total, containerRef, isFullscreen = false,  showLabels = false,
   showLegend = false,
   showFactText = false,
@@ -444,7 +491,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     };
   }, [data, chartWidth, size, isFullscreen, total]);
 
-  const renderSvgLegend = () => {
+  const renderSvgLegend = React.useCallback(() => {
     if (!chartWidth || !size || legendRows.length === 0) return null;
 
     const spacingY = 25;
@@ -483,54 +530,25 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
         })}
       </g>
     );
-  };
+  }, [chartWidth, size, legendRows, legendHeight, isFullscreen, textMainColor, total]);
 
   const pieCy = (size - legendHeight) / 2 - (showLabels ? (isFullscreen ? 15 : 0) : 0);
 
   return (
       <div ref={setRefs} className="flex h-full w-full items-center justify-center flex-col">
         <div className="relative flex-shrink-0 w-full" style={{ height: size }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <RechartsPieChart style={{ overflow: 'visible' }}>
-              <Tooltip content={<CustomTooltip />} />
-              <Pie
-                data={data}
-                dataKey="value"
-                nameKey="label"
-                cx="50%"
-                cy={pieCy}
-                innerRadius={showLabels ? size * 0.20 : size * 0.28}
-                outerRadius={showLabels ? size * 0.30 : size * 0.42}
-                paddingAngle={2}
-                cornerRadius={6}
-                animationDuration={500}
-                stroke="none"
-                label={renderCustomLabel}
-                labelLine={renderCustomLabelLine as any}
-              >
-              {cells}
-            </Pie>
-            
-            <Pie
-              data={data}
-              dataKey="value"
-              nameKey="label"
-              cx="50%"
-              cy={pieCy}
-              innerRadius={showLabels ? size * 0.20 : size * 0.28}
-              outerRadius={showLabels ? size * 0.30 : size * 0.42}
-              paddingAngle={2}
-              cornerRadius={6}
-              animationDuration={500}
-              stroke="none"
-              style={{ pointerEvents: 'none' }}
-            >
-              {overlayCells}
-            </Pie>
-            
-            {showLegend && renderSvgLegend()}
-          </RechartsPieChart>
-        </ResponsiveContainer>
+          <InnerRechartsPie
+            size={size}
+            data={data}
+            pieCy={pieCy}
+            showLabels={showLabels}
+            renderCustomLabel={renderCustomLabel}
+            renderCustomLabelLine={renderCustomLabelLine as any}
+            cells={cells}
+            overlayCells={overlayCells}
+            showLegend={showLegend}
+            renderSvgLegend={renderSvgLegend}
+          />
 
         {showFactText && (
           <svg className="fact-text-overlay absolute inset-0" width="100%" height="100%" style={{ overflow: 'visible', pointerEvents: 'none' }}>
