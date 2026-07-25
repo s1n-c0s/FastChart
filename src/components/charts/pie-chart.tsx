@@ -165,7 +165,6 @@ const FactTextOverlay = (props: any) => {
 
 
 const InnerRechartsPie = React.memo(({ size, data, pieCy, isFullscreen, renderCustomLabel, renderCustomLabelLine, top4Ids, targetFocusIndex, renderSvgLegend }: any) => {
-  const [hoverIndex, setHoverIndex] = React.useState<number | undefined>(undefined);
   const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   React.useEffect(() => {
@@ -175,36 +174,34 @@ const InnerRechartsPie = React.memo(({ size, data, pieCy, isFullscreen, renderCu
   }, []);
 
   const onPieMouseEnter = React.useCallback((_: any, index: number) => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-    setHoverIndex(index);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    
+    document.querySelectorAll('.my-hovered-sector-static').forEach(el => el.classList.remove('my-hovered-sector-static'));
+    document.querySelectorAll('.my-hovered-sector').forEach(el => el.classList.remove('my-hovered-sector'));
+    document.querySelectorAll(`.my-sector-${index}`).forEach(el => el.classList.add('my-hovered-sector'));
   }, []);
 
   const onPieMouseLeave = React.useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
-      setHoverIndex(undefined);
-      timeoutRef.current = null;
+      document.querySelectorAll('.my-hovered-sector').forEach(el => el.classList.remove('my-hovered-sector'));
     }, 4000);
   }, []);
 
-  const combinedActiveIndex = hoverIndex !== undefined ? hoverIndex : targetFocusIndex;
-
   const cells = React.useMemo(() => {
     return data.map((item: Datum, index: number) => {
+      const isFocused = index === targetFocusIndex;
       return (
         <Cell 
           key={item.id} 
           fill={item.color} 
-          stroke="none" 
+          stroke="none"
+          className={`my-sector my-sector-${index} ${isFocused ? 'my-hovered-sector-static' : ''}`}
+          style={{ transformOrigin: `50% ${pieCy}px` }}
         />
       );
     });
-  }, [data]);
+  }, [data, targetFocusIndex, pieCy]);
   
   const overlayCells = React.useMemo(() => {
     return data.map((item: Datum, index: number) => {
@@ -213,28 +210,25 @@ const InnerRechartsPie = React.memo(({ size, data, pieCy, isFullscreen, renderCu
         <Cell 
           key={`overlay-${item.id}`} 
           fill={isOther ? "rgba(0,0,0,0.4)" : "transparent"} 
-          stroke="none" 
+          stroke="none"
+          className={`my-sector my-sector-${index}`}
+          style={{ transformOrigin: `50% ${pieCy}px` }}
         />
       );
     });
-  }, [data, top4Ids]);
-
-  const focusCells = React.useMemo(() => {
-    return data.map((item: Datum, index: number) => {
-      const isFocused = index === combinedActiveIndex;
-      return (
-        <Cell 
-          key={`focus-${item.id}`} 
-          fill={isFocused ? item.color : "transparent"} 
-          stroke="none" 
-        />
-      );
-    });
-  }, [data, combinedActiveIndex]);
+  }, [data, top4Ids, pieCy]);
 
   return (
     <ResponsiveContainer width="100%" height="100%">
       <RechartsPieChart style={{ overflow: 'visible' }}>
+        <style>{`
+          .my-sector {
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+          }
+          .my-hovered-sector, .my-hovered-sector-static {
+            transform: scale(1.06);
+          }
+        `}</style>
         <Tooltip isAnimationActive={false} content={<CustomTooltip />} />
         <Pie
           data={data}
@@ -272,25 +266,10 @@ const InnerRechartsPie = React.memo(({ size, data, pieCy, isFullscreen, renderCu
           animationDuration={500}
           stroke="none"
           style={{ pointerEvents: 'none' }}
+          onMouseEnter={onPieMouseEnter}
+          onMouseLeave={onPieMouseLeave}
         >
           {overlayCells}
-        </Pie>
-        
-        <Pie
-          data={data}
-          dataKey="value"
-          nameKey="label"
-          cx="50%"
-          cy={pieCy}
-          innerRadius={size * 0.20}
-          outerRadius={isFullscreen ? size * 0.33 : size * 0.30}
-          paddingAngle={2}
-          cornerRadius={6}
-          isAnimationActive={false}
-          stroke="none"
-          style={{ pointerEvents: 'none' }}
-        >
-          {focusCells}
         </Pie>
         
         {renderSvgLegend()}
