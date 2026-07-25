@@ -602,13 +602,32 @@ export default function DataVisualizer() {
                     <label htmlFor="line-color" className="text-xs text-muted-foreground cursor-pointer">
                       Line Color
                     </label>
-                    <input
-                      id="line-color"
-                      type="color"
-                      value={lineColor || sortedData[0]?.color || "#3b82f6"}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLineColor(e.target.value)}
-                      className="w-5 h-5 p-0 cursor-pointer rounded-md border-border/50"
-                    />
+                    <Select value={lineColor || sortedData[0]?.color || "#3b82f6"} onValueChange={(color) => setLineColor(color)}>
+                      <SelectTrigger id="line-color" className="w-fit h-7 gap-2 px-2">
+                        <SelectValue asChild>
+                          <div className="flex items-center gap-2 w-full text-left">
+                            <div 
+                              className="w-3 h-3 rounded-full shadow-inner shrink-0" 
+                              style={{ backgroundColor: lineColor || sortedData[0]?.color || "#3b82f6" }} 
+                            />
+                            <span className="truncate text-xs">{lineColor || sortedData[0]?.color || "#3b82f6"}</span>
+                          </div>
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PRESET_COLORS.map((c) => (
+                          <SelectItem key={c} value={c} className="pr-4">
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-3 h-3 rounded-full shadow-inner shrink-0"
+                                style={{ backgroundColor: c }}
+                              />
+                              <span className="font-mono text-xs">{c}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="flex items-center gap-2">
                     <label htmlFor="show-gradient" className="text-xs text-muted-foreground cursor-pointer">
@@ -738,13 +757,32 @@ export default function DataVisualizer() {
               <label htmlFor="fullscreen-line-color" className="text-xs text-muted-foreground cursor-pointer">
                 Line Color
               </label>
-              <input
-                id="fullscreen-line-color"
-                type="color"
-                value={lineColor || sortedData[0]?.color || "#3b82f6"}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLineColor(e.target.value)}
-                className="w-5 h-5 p-0 cursor-pointer rounded-md border-border/50"
-              />
+              <Select value={lineColor || sortedData[0]?.color || "#3b82f6"} onValueChange={(color) => setLineColor(color)}>
+                <SelectTrigger id="fullscreen-line-color" className="w-fit h-7 gap-2 px-2">
+                  <SelectValue asChild>
+                    <div className="flex items-center gap-2 w-full text-left">
+                      <div 
+                        className="w-3 h-3 rounded-full shadow-inner shrink-0" 
+                        style={{ backgroundColor: lineColor || sortedData[0]?.color || "#3b82f6" }} 
+                      />
+                      <span className="truncate text-xs">{lineColor || sortedData[0]?.color || "#3b82f6"}</span>
+                    </div>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {PRESET_COLORS.map((c) => (
+                    <SelectItem key={c} value={c} className="pr-4">
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full shadow-inner shrink-0"
+                          style={{ backgroundColor: c }}
+                        />
+                        <span className="font-mono text-xs">{c}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex items-center gap-2">
               <label htmlFor="fullscreen-show-gradient" className="text-xs text-muted-foreground cursor-pointer">
