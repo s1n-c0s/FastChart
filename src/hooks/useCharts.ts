@@ -16,6 +16,9 @@ export function useCharts() {
 
   const copyChartSvg = useCallback(async (containerEl: HTMLElement | null) => {
     try {
+      // Ensure the chart has fully rendered (especially after toggling axis) before we grab the SVG.
+      // A short async pause gives the browser a chance to finish layout and paint.
+      await new Promise(res => setTimeout(res, 80));
       // Target the recharts-surface specifically so we don't accidentally copy UI icons like the fullscreen/copy buttons.
       const svg = containerEl?.querySelector("svg.recharts-surface") as SVGSVGElement | null;
       if (!svg) return;
