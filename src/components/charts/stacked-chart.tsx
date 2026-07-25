@@ -8,9 +8,9 @@ import {
   Tooltip,
   ResponsiveContainer,
   LabelList,
-  Pie,
-  PieChart,
-  Cell,
+  RadialBar,
+  RadialBarChart,
+  PolarRadiusAxis,
   Label as RechartsLabel
 } from "recharts"
 import {
@@ -90,7 +90,7 @@ const CustomStackedLabel = (props: any) => {
   const fontSizeRaw = isFullscreen ? 24 : (isHorizontal ? 16 : 12);
   
   return (
-    <g className="chart-global-label">
+    <g>
       <text x={cx} y={cy} fill="#ffffff" textAnchor="middle" dominantBaseline="central">
         <tspan fontSize={fontSizePercent} fontWeight="500">
           {barDataKey}
@@ -107,7 +107,7 @@ export const StackedChart = React.memo(function StackedChart({
   data,
   isHorizontal = true,
   containerRef,
-
+  showLabels = false,
   showRadial = false,
   isFullscreen = false,
   showLegend = true,
@@ -166,6 +166,17 @@ export const StackedChart = React.memo(function StackedChart({
           [d.label]: Math.max(0, d.value || 0) / (total || 1)
         }), {})
       }
+    ]
+  }, [data])
+
+  // Transform data for radial chart
+  const radialData = React.useMemo(() => {
+    const total = data.reduce((sum, d) => sum + Math.max(0, d.value || 0), 0)
+    return [
+      data.reduce((acc, d) => ({
+        ...acc,
+        [d.label]: Math.max(0, d.value || 0) / (total || 1)
+      }), {})
     ]
   }, [data])
 
@@ -297,25 +308,21 @@ export const StackedChart = React.memo(function StackedChart({
       <div ref={setRefs} className="h-full w-full flex flex-col items-center justify-center overflow-hidden">
         <div className="w-full flex-1 min-h-[300px]">
           <ChartContainer config={chartConfig} className="w-full h-full">
-            <PieChart
-              style={{ overflow: 'visible' }}
-            >
-            <ChartTooltip
-              cursor={false}
-              content={<ChartTooltipContent hideLabel />}
-            />
-            <Pie
-              data={data}
-              dataKey="value"
-              nameKey="label"
+            <RadialBarChart
+              data={radialData}
               startAngle={180}
               endAngle={0}
               cx="50%"
               cy="80%"
               innerRadius={innerRadius}
               outerRadius={outerRadius}
-              stroke="none"
+              style={{ overflow: 'visible' }}
             >
+            <ChartTooltip
+              cursor={false}
+              content={<ChartTooltipContent hideLabel />}
+            />
+            <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
               <RechartsLabel
                 content={({ viewBox }) => {
                   if (viewBox && "cx" in viewBox && "cy" in viewBox) {
@@ -352,11 +359,19 @@ export const StackedChart = React.memo(function StackedChart({
                   return null;
                 }}
               />
-              {data.map((d, index) => (
-                <Cell key={`cell-${index}`} fill={d.color} />
-              ))}
-            </Pie>
-            </PieChart>
+            </PolarRadiusAxis>
+            {data.map((d) => (
+              <RadialBar
+                key={d.id}
+                dataKey={d.label}
+                name={d.label}
+                stackId="a"
+                cornerRadius={5}
+                fill={d.color}
+                className="stroke-transparent stroke-2"
+              />
+            ))}
+          </RadialBarChart>
           </ChartContainer>
         </div>
         {showLegend && (
@@ -407,10 +422,12 @@ export const StackedChart = React.memo(function StackedChart({
                 name={d.label}
                 isAnimationActive={true}
               >
-                <LabelList
-                  dataKey={d.label}
-                  content={<CustomStackedLabel rawData={data} isFullscreen={isFullscreen} isHorizontal={isHorizontal} barDataKey={d.label} />}
-                />
+                {showLabels && (
+                  <LabelList
+                    dataKey={d.label}
+                    content={<CustomStackedLabel rawData={data} isFullscreen={isFullscreen} isHorizontal={isHorizontal} barDataKey={d.label} />}
+                  />
+                )}
               </Bar>
             ))}
             {showLegend && renderSvgLegend()}
@@ -459,10 +476,12 @@ export const StackedChart = React.memo(function StackedChart({
               name={d.label}
               isAnimationActive={true}
             >
-              <LabelList
-                dataKey={d.label}
-                content={<CustomStackedLabel rawData={data} isFullscreen={isFullscreen} isHorizontal={isHorizontal} barDataKey={d.label} />}
-              />
+              {showLabels && (
+                <LabelList
+                  dataKey={d.label}
+                  content={<CustomStackedLabel rawData={data} isFullscreen={isFullscreen} isHorizontal={isHorizontal} barDataKey={d.label} />}
+                />
+              )}
             </Bar>
           ))}
           {showLegend && renderSvgLegend()}
@@ -473,6 +492,7 @@ export const StackedChart = React.memo(function StackedChart({
 }, (prevProps, nextProps) => {
   return (
     prevProps.isHorizontal === nextProps.isHorizontal &&
+    prevProps.showLabels === nextProps.showLabels &&
     prevProps.showLegend === nextProps.showLegend &&
     prevProps.showRadial === nextProps.showRadial &&
     prevProps.isFullscreen === nextProps.isFullscreen &&
