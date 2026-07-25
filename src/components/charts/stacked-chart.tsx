@@ -384,10 +384,10 @@ export const StackedChart = React.memo(function StackedChart({
             <PolarAngleAxis type="number" domain={[0, 1]} tick={false} axisLine={false} />
             <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
               <RechartsLabel
-                key={factIndex}
-                factIndex={factIndex}
-                showFactText={showFactText}
+                key={`${factIndex}-${showFactText}`}
                 content={({ viewBox }) => {
+                  if (!showFactText) return null;
+                  
                   if (viewBox && "cx" in viewBox && "cy" in viewBox) {
                     const cx = viewBox.cx || 0;
                     const cy = viewBox.cy || 0;

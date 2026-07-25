@@ -67,6 +67,7 @@ export default function DataVisualizer() {
   const [showFactText, setShowFactText] = useState(true);
   const [pieFactIndex, setPieFactIndex] = useState(0);
   const [radialFactIndex, setRadialFactIndex] = useState(0);
+  const [showRadialFactText, setShowRadialFactText] = useState(true);
   const [showGradientArea, setShowGradientArea] = useState(true);
   const [lineColor, setLineColor] = useState<string | undefined>(undefined);
   const [isDockOpen, setIsDockOpen] = useState(false);
@@ -554,11 +555,24 @@ export default function DataVisualizer() {
                     checked={stackedRadial}
                     onCheckedChange={setStackedRadial}
                   />
+                  {stackedRadial && (
+                    <>
+                      <div className="w-px h-4 bg-border mx-1" />
+                      <label htmlFor="show-radial-fact-text" className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap">
+                        Fact Text
+                      </label>
+                      <Switch
+                        id="show-radial-fact-text"
+                        checked={showRadialFactText}
+                        onCheckedChange={setShowRadialFactText}
+                      />
+                    </>
+                  )}
                 </div>
               }
             >
               <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
-                <StackedChart data={sortedData} isHorizontal={stackedHorizontal} containerRef={stackedCardRef as React.Ref<HTMLDivElement>} showLabels={showLabels} showRadial={stackedRadial} showFactText={showFactText} factIndex={radialFactIndex} onFactIndexChange={setRadialFactIndex} />
+                <StackedChart data={sortedData} isHorizontal={stackedHorizontal} containerRef={stackedCardRef as React.Ref<HTMLDivElement>} showLabels={showLabels} showRadial={stackedRadial} showFactText={showRadialFactText} factIndex={radialFactIndex} onFactIndexChange={setRadialFactIndex} />
               </div>
             </ChartCard>
 
@@ -678,11 +692,24 @@ export default function DataVisualizer() {
               checked={stackedRadial}
               onCheckedChange={setStackedRadial}
             />
+            {stackedRadial && (
+              <>
+                <div className="w-px h-4 bg-border mx-1" />
+                <label htmlFor="fs-show-radial-fact-text" className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap">
+                  Fact Text
+                </label>
+                <Switch
+                  id="fs-show-radial-fact-text"
+                  checked={showRadialFactText}
+                  onCheckedChange={setShowRadialFactText}
+                />
+              </>
+            )}
           </div>
         }
       >
         <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
-          <StackedChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} isHorizontal={stackedHorizontal} showLabels={showLabels} showRadial={stackedRadial} isFullscreen={fullscreenChart === "stacked"} showFactText={showFactText} factIndex={radialFactIndex} onFactIndexChange={setRadialFactIndex} />
+          <StackedChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} isHorizontal={stackedHorizontal} showLabels={showLabels} showRadial={stackedRadial} isFullscreen={fullscreenChart === "stacked"} showFactText={showRadialFactText} factIndex={radialFactIndex} onFactIndexChange={setRadialFactIndex} />
         </div>
       </FullscreenModal>
 
