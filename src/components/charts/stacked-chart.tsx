@@ -11,6 +11,7 @@ import {
   RadialBar,
   RadialBarChart,
   PolarRadiusAxis,
+  PolarAngleAxis,
   Label as RechartsLabel
 } from "recharts"
 import {
@@ -326,6 +327,7 @@ export const StackedChart = React.memo(function StackedChart({
               cursor={false}
               content={<StackedTooltip rawData={data} />}
             />
+            <PolarAngleAxis type="number" domain={[0, 1]} tick={false} axisLine={false} />
             <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
               <RechartsLabel
                 content={({ viewBox }) => {
