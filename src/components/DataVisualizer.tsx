@@ -66,7 +66,7 @@ export default function DataVisualizer() {
   const [showLegend, setShowLegend] = useState(true);
   const [showFactText, setShowFactText] = useState(true);
   const [pieFactIndex, setPieFactIndex] = useState(0);
-  const [pieActiveIndex, setPieActiveIndex] = useState<number | undefined>(undefined);
+
   const [radialFactIndex, setRadialFactIndex] = useState(0);
   const [showRadialFactText, setShowRadialFactText] = useState(true);
   const [showGradientArea, setShowGradientArea] = useState(true);
@@ -530,7 +530,7 @@ export default function DataVisualizer() {
               onFullscreen={() => openFullscreen("pie")}
             >
               <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
-                <PieChart data={sortedData} total={total} containerRef={pieCardRef as React.RefObject<HTMLDivElement>} showFactText={showFactText} factIndex={pieFactIndex} onFactIndexChange={setPieFactIndex} activeIndex={pieActiveIndex} onActiveIndexChange={setPieActiveIndex} />
+                <PieChart data={sortedData} total={total} containerRef={pieCardRef as React.RefObject<HTMLDivElement>} showFactText={showFactText} factIndex={pieFactIndex} onFactIndexChange={setPieFactIndex} />
               </div>
             </ChartCard>
           </div>
@@ -669,7 +669,7 @@ export default function DataVisualizer() {
       >
         {fullscreenChart === "pie" && (
           <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
-            <PieChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} total={total} showFactText={showFactText} isFullscreen={fullscreenChart === "pie"} factIndex={pieFactIndex} onFactIndexChange={setPieFactIndex} activeIndex={pieActiveIndex} onActiveIndexChange={setPieActiveIndex} />
+            <PieChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} total={total} showFactText={showFactText} isFullscreen={fullscreenChart === "pie"} factIndex={pieFactIndex} onFactIndexChange={setPieFactIndex} />
           </div>
         )}
       </FullscreenModal>

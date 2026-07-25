@@ -1,6 +1,6 @@
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { PieChart as RechartsPieChart, Pie, Cell, Tooltip, ResponsiveContainer, Sector } from "recharts";
+import { PieChart as RechartsPieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
 import type { Datum } from "@/types";
 
@@ -360,19 +360,6 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
                          : factIndex === 2 && minItem ? data.findIndex(d => d.id === minItem.id) 
                          : -1;
 
-  const overlayCells = React.useMemo(() => {
-    return data.map((item: Datum) => {
-      const isOther = top4Ids && !top4Ids.includes(item.id);
-      return (
-        <Cell 
-          key={`overlay-${item.id}`} 
-          fill={isOther ? "rgba(0,0,0,0.5)" : "transparent"} 
-          stroke="none" 
-        />
-      );
-    });
-  }, [data, top4Ids]);
-
   const otherSum = React.useMemo(() => {
     if (!top4Ids) return 0;
     return data.filter(d => !top4Ids.includes(d.id)).reduce((sum, d) => sum + d.value, 0);
@@ -404,8 +391,8 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     const basePushX = isFullscreen ? 45 : 30; // cleanly extends the horizontal line
     const basePushY = isFullscreen ? 30 : 20; // vertically push away from pie edge
     
-    const chartWidth = containerRef?.current?.clientWidth || 0;
-    const chartHeight = containerRef?.current?.clientHeight || 0;
+    const chartWidth = localRef.current?.clientWidth || 0;
+    const chartHeight = localRef.current?.clientHeight || 0;
     const boxWidth = isFullscreen ? 160 : 110;
     const boxHeight = isFullscreen ? 56 : 52;
     
@@ -466,8 +453,8 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     let fx = isLeft ? finalX - boxWidth : finalX;
     let fy = finalY - boxHeight / 2;
     
-    const chartWidth = containerRef?.current?.clientWidth || 0;
-    const chartHeight = containerRef?.current?.clientHeight || 0;
+    const chartWidth = localRef.current?.clientWidth || 0;
+    const chartHeight = localRef.current?.clientHeight || 0;
     if (chartWidth > 0 && chartHeight > 0) {
       fx = Math.max(10, Math.min(fx, chartWidth - boxWidth - 10));
       fy = Math.max(10, Math.min(fy, chartHeight - boxHeight - 10));
