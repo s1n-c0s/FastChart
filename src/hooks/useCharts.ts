@@ -16,7 +16,8 @@ export function useCharts() {
 
   const copyChartSvg = useCallback(async (containerEl: HTMLElement | null) => {
     try {
-      const svg = containerEl?.querySelector("svg") as SVGSVGElement | null;
+      // Target the recharts-surface specifically so we don't accidentally copy UI icons like the fullscreen/copy buttons.
+      const svg = containerEl?.querySelector("svg.recharts-surface") as SVGSVGElement | null;
       if (!svg) return;
       const clone = svg.cloneNode(true) as SVGSVGElement;
       
