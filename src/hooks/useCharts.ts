@@ -83,6 +83,23 @@ export function useCharts() {
       `;
       cloneTemp.appendChild(styleNode);
 
+      // Explicitly inline transform on focused pie segments.
+      // getComputedStyle().transform on SVG elements can return 'none' even when
+      // a CSS stylesheet transform is active, so we must set it by class name.
+      const origFocused = Array.from(svg.querySelectorAll('.my-hovered-sector, .my-hovered-sector-static'));
+      const cloneFocused = Array.from(cloneTemp.querySelectorAll('.my-hovered-sector, .my-hovered-sector-static'));
+      cloneFocused.forEach((el, i) => {
+        const svgEl = el as SVGElement;
+        svgEl.style.transform = 'scale(1.1)';
+        // Grab the transform-origin from the matching original element so the
+        // segment scales from the pie centre, not from (0,0).
+        const origEl = origFocused[i];
+        if (origEl) {
+          const originVal = window.getComputedStyle(origEl).transformOrigin;
+          if (originVal) svgEl.style.transformOrigin = originVal;
+        }
+      });
+
       const xml = new XMLSerializer().serializeToString(cloneTemp);
       await navigator.clipboard.writeText(xml);
       toast.success("SVG Copied to Clipboard!", {
