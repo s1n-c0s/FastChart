@@ -477,7 +477,7 @@ export const StackedChart = React.memo(function StackedChart({
                         {showFactText && (
                           <g>
                             <svg 
-                              x={cx - innerRadius + (isFullscreen ? 30 : 10)} 
+                              x={cx - innerRadius + (isFullscreen ? 60 : 35)} 
                               y={arrowY} 
                               width={32} height={32} 
                               onClick={handlePrev} 
@@ -490,7 +490,7 @@ export const StackedChart = React.memo(function StackedChart({
                             </svg>
 
                             <svg 
-                              x={cx + innerRadius - 32 - (isFullscreen ? 30 : 10)} 
+                              x={cx + innerRadius - 32 - (isFullscreen ? 60 : 35)} 
                               y={arrowY} 
                               width={32} height={32} 
                               onClick={handleNext} 
