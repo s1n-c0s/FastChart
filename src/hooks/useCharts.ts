@@ -90,6 +90,15 @@ export function useCharts() {
         hiddenInOverlay.forEach((el: Element) => el.remove());
         cloneTemp.innerHTML += overlayClone.innerHTML;
       }
+      
+      // Explicitly inject required CSS classes for exported charts (e.g. pie chart hover states)
+      // since Recharts sometimes strips unrecognized children like <style> tags from its React tree.
+      const styleNode = document.createElementNS("http://www.w3.org/2000/svg", "style");
+      styleNode.textContent = `
+        .my-sector { transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .my-hovered-sector, .my-hovered-sector-static { transform: scale(1.1); }
+      `;
+      cloneTemp.appendChild(styleNode);
 
       const xml = new XMLSerializer().serializeToString(cloneTemp);
       await navigator.clipboard.writeText(xml);
