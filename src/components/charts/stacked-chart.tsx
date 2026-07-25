@@ -91,8 +91,26 @@ const CustomStackedLabel = (props: any) => {
   const cx = x + width / 2;
   const cy = y + height / 2;
   
-  const fontSizePercent = isFullscreen ? 64 : (isHorizontal ? 32 : 24);
-  const fontSizeRaw = isFullscreen ? 24 : (isHorizontal ? 16 : 12);
+  const baseFontSizePercent = isFullscreen ? 32 : (isHorizontal ? 18 : 14);
+  const baseFontSizeRaw = isFullscreen ? 16 : (isHorizontal ? 12 : 10);
+  
+  // Calculate text width approximately (0.6 is typical average character width ratio)
+  const textStr = `${barDataKey} (${percent}%)`;
+  const approxTextWidth = textStr.length * (baseFontSizePercent * 0.55);
+  const approxTextHeight = baseFontSizePercent;
+
+  // Scale factor to fit inside the bar with some padding (4px each side minimum)
+  const paddingX = 8;
+  const paddingY = 4;
+  const scaleX = Math.min(1, Math.max(0.1, (width - paddingX) / approxTextWidth));
+  const scaleY = Math.min(1, Math.max(0.1, (height - paddingY) / approxTextHeight));
+  const scale = Math.min(scaleX, scaleY);
+
+  const fontSizePercent = baseFontSizePercent * scale;
+  const fontSizeRaw = baseFontSizeRaw * scale;
+  
+  // If the bar is so tiny that scale drops below 0.3, just hide it to avoid illegible microscopic text
+  if (scale < 0.3) return null;
   
   return (
     <g>
@@ -100,7 +118,7 @@ const CustomStackedLabel = (props: any) => {
         <tspan fontSize={fontSizePercent} fontWeight="500">
           {barDataKey}
         </tspan>
-        <tspan fontSize={fontSizeRaw} fontWeight="500" dx={isFullscreen ? 8 : 4} dy={isFullscreen ? -8 : -4}>
+        <tspan fontSize={fontSizeRaw} fontWeight="500" dx={isFullscreen ? 6 * scale : 4 * scale} dy={isFullscreen ? -4 * scale : -2 * scale}>
           ({percent}%)
         </tspan>
       </text>
@@ -337,24 +355,28 @@ export const StackedChart = React.memo(function StackedChart({
                     
                     // Dynamically scale text to fit inside the innerRadius hole
                     const availableHeight = innerRadius; 
-                    const scaleFactor = Math.min(1, availableHeight / (maxTextSize + maxLabelSize + 20));
+                    const scaleFactor = Math.min(1, availableHeight / (maxTextSize + maxLabelSize + 12));
                     
                     const textSize = maxTextSize * scaleFactor;
                     const labelSize = maxLabelSize * scaleFactor;
-                    const offsetY = -(labelSize + 4); // Position the number just above the label
+                    
+                    // Label sits slightly above the baseline (cy)
+                    const labelY = (viewBox.cy || 0) - (8 * scaleFactor);
+                    // Number sits above the label with some spacing
+                    const numberY = labelY - labelSize - (4 * scaleFactor);
                     
                     return (
                       <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle">
                         <tspan
                           x={viewBox.cx}
-                          y={(viewBox.cy || 0) + offsetY}
+                          y={numberY}
                           style={{ fontSize: `${textSize}px`, fontWeight: 'bold', fill: 'currentColor' }}
                         >
                           {totalValue.toLocaleString()}
                         </tspan>
                         <tspan
                           x={viewBox.cx}
-                          y={(viewBox.cy || 0) - 4} // Label sits just above the bottom edge
+                          y={labelY}
                           style={{ fontSize: `${labelSize}px`, fill: 'var(--muted-foreground)' }}
                         >
                           Total
