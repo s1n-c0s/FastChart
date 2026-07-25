@@ -99,7 +99,10 @@ const FactTextOverlay = (props: any) => {
   const arrowY = cy - 16;
 
   return (
-    <g className="group">
+    <g className="group" style={{ pointerEvents: 'all' }}>
+      {/* Invisible hit area for group hover that precisely fills the donut hole */}
+      <circle cx={cx} cy={cy} r={innerR} fill="transparent" />
+      
       <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle" className="pointer-events-none select-none">
         <tspan
           x={cx}
@@ -514,23 +517,6 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
               {cells}
             </Pie>
             
-            {showFactText && (
-              <Customized
-                component={FactTextOverlay}
-                chartWidth={chartWidth}
-                pieCy={pieCy}
-                size={size}
-                showLabels={showLabels}
-                data={data}
-                total={total}
-                factIndex={factIndex}
-                isFullscreen={isFullscreen}
-                textColor={textColor}
-                textMainColor={textMainColor}
-                onFactIndexChange={onFactIndexChange}
-              />
-            )}
-            
             {/* Black Overlay Pie for 'Other' slices */}
             <Pie
               data={data}
@@ -552,6 +538,24 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
             {showLegend && renderSvgLegend()}
           </RechartsPieChart>
         </ResponsiveContainer>
+
+        {showFactText && (
+          <svg className="fact-text-overlay absolute inset-0" width="100%" height="100%" style={{ overflow: 'visible', pointerEvents: 'none' }}>
+            <FactTextOverlay
+              chartWidth={chartWidth}
+              pieCy={pieCy}
+              size={size}
+              showLabels={showLabels}
+              data={data}
+              total={total}
+              factIndex={factIndex}
+              isFullscreen={isFullscreen}
+              textColor={textColor}
+              textMainColor={textMainColor}
+              onFactIndexChange={onFactIndexChange}
+            />
+          </svg>
+        )}
       </div>
     </div>
   );

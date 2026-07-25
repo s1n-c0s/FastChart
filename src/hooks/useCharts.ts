@@ -99,6 +99,12 @@ export function useCharts() {
       if (!cloneTemp.getAttribute("xmlns")) {
         cloneTemp.setAttribute("xmlns", "http://www.w3.org/2000/svg");
       }
+      
+      // Inject fact text overlay if it exists
+      const factOverlayEl = containerEl.querySelector('.fact-text-overlay') as SVGSVGElement;
+      if (factOverlayEl) {
+        cloneTemp.innerHTML += factOverlayEl.innerHTML;
+      }
 
       const xml = new XMLSerializer().serializeToString(cloneTemp);
       await navigator.clipboard.writeText(xml);
