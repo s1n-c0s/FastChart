@@ -278,13 +278,21 @@ export const StackedChart = React.memo(function StackedChart({
 
   // Render radial chart
   if (showRadial) {
-    const baseWidth = dimensions.width || (isFullscreen ? 1200 : 400);
-    const baseHeight = dimensions.height || (isFullscreen ? 800 : 300);
-    // cy="75%" means we have 75% of height available above the center.
-    // Use 60% of height or 75% of half-width, whichever is smaller, to give more safe area.
-    const calculatedOuter = Math.min((baseWidth / 2) * 0.75, baseHeight * 0.6);
-    const outerRadius = Math.max(100, isFullscreen ? calculatedOuter * 1.5 : calculatedOuter);
-    const innerRadius = outerRadius * 0.45;
+    const baseWidth = dimensions.width || (isFullscreen ? 800 : 400);
+    const baseHeight = dimensions.height || (isFullscreen ? 500 : 300);
+    
+    // We want the chart to fit nicely in the top part of the container.
+    // The cx="50%" cy="80%" means the center of the half circle is very low.
+    // So the height of the chart is actually mostly its radius.
+    // Let's ensure it doesn't overflow horizontally or vertically.
+    
+    const availableRadiusW = (baseWidth / 2) * 0.8; 
+    const availableRadiusH = baseHeight * 0.7; // since cy=80%, we have 80% height available
+    const maxRadius = Math.min(availableRadiusW, availableRadiusH);
+    
+    const outerRadius = Math.max(100, isFullscreen ? maxRadius * 0.9 : maxRadius * 0.9);
+    const innerRadius = outerRadius * 0.55;
+    
     return (
       <div ref={setRefs} className="h-full w-full flex flex-col items-center justify-center overflow-hidden">
         <div className="w-full flex-1 min-h-[300px]">
@@ -303,7 +311,7 @@ export const StackedChart = React.memo(function StackedChart({
               startAngle={180}
               endAngle={0}
               cx="50%"
-              cy="75%"
+              cy="80%"
               innerRadius={innerRadius}
               outerRadius={outerRadius}
               stroke="none"
@@ -313,7 +321,7 @@ export const StackedChart = React.memo(function StackedChart({
                   if (viewBox && "cx" in viewBox && "cy" in viewBox) {
                     const textSize = isFullscreen ? 80 : 32
                     const labelSize = isFullscreen ? 24 : 16
-                    const offsetY = isFullscreen ? -24 : -16
+                    const offsetY = isFullscreen ? -30 : -20
                     
                     return (
                       <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle">
@@ -326,7 +334,7 @@ export const StackedChart = React.memo(function StackedChart({
                         </tspan>
                         <tspan
                           x={viewBox.cx}
-                          y={(viewBox.cy || 0) + 8}
+                          y={(viewBox.cy || 0) + offsetY + (isFullscreen ? 45 : 30)}
                           style={{ fontSize: `${labelSize}px`, fill: 'var(--muted-foreground)' }}
                         >
                           Total
