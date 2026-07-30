@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import DataVisualizer from '@/components/DataVisualizer'
 import MoneyFlow from '@/pages/MoneyFlow'
+import EmbedChart from '@/pages/EmbedChart'
 import { Toaster } from 'react-hot-toast'
 import { Switch } from '@/components/ui/switch'
 
@@ -176,6 +177,7 @@ function App() {
         <Routes>
           <Route path="/" element={<DataVisualizer />} />
           <Route path="/money-flow" element={<MoneyFlow />} />
+          <Route path="/embed" element={<EmbedChart />} />
         </Routes>
       </main>
       
