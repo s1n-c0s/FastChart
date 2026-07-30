@@ -174,75 +174,19 @@ export function useCharts() {
     }
   }, []);
 
-  const copyChartHtml = useCallback(async (containerEl: HTMLElement | null) => {
-    if (!containerEl) return;
+  const copyChartEmbed = useCallback(async (config: any) => {
     try {
-      const clone = containerEl.cloneNode(true) as HTMLElement;
-      const allTempElements = clone.querySelectorAll('*');
-      const origTempElements = containerEl.querySelectorAll('*');
+      const serialized = encodeURIComponent(JSON.stringify(config));
+      const url = `${window.location.origin}/embed?config=${serialized}`;
+      const iframeCode = `<iframe src="${url}" width="100%" height="400" frameborder="0" style="border-radius: 8px; overflow: hidden; background: transparent;"></iframe>`;
       
-      allTempElements.forEach((el, index) => {
-        const origEl = origTempElements[index] as Element;
-        if (!origEl) return;
-        const computedStyle = window.getComputedStyle(origEl);
-        
-        if (el instanceof HTMLElement) {
-          el.style.color = computedStyle.color;
-          el.style.backgroundColor = computedStyle.backgroundColor !== 'rgba(0, 0, 0, 0)' ? computedStyle.backgroundColor : 'transparent';
-          el.style.fontFamily = computedStyle.fontFamily;
-          el.style.fontSize = computedStyle.fontSize;
-          el.style.fontWeight = computedStyle.fontWeight;
-          el.style.display = computedStyle.display;
-          if (computedStyle.display === 'flex') {
-            el.style.flexDirection = computedStyle.flexDirection;
-            el.style.alignItems = computedStyle.alignItems;
-            el.style.justifyContent = computedStyle.justifyContent;
-            el.style.gap = computedStyle.gap;
-          }
-          el.style.padding = computedStyle.padding;
-          el.style.margin = computedStyle.margin;
-          el.style.border = computedStyle.border;
-          el.style.borderRadius = computedStyle.borderRadius;
-          el.style.position = computedStyle.position;
-          if (computedStyle.position === 'absolute') {
-            el.style.top = computedStyle.top;
-            el.style.left = computedStyle.left;
-            el.style.right = computedStyle.right;
-            el.style.bottom = computedStyle.bottom;
-          }
-        } else if (el instanceof SVGElement) {
-          if (computedStyle.fill) el.setAttribute('fill', computedStyle.fill);
-          if (computedStyle.stroke) el.setAttribute('stroke', computedStyle.stroke);
-          if (computedStyle.color) el.setAttribute('color', computedStyle.color);
-          if (computedStyle.fontFamily) el.setAttribute('font-family', computedStyle.fontFamily);
-          if (computedStyle.fontSize) el.setAttribute('font-size', computedStyle.fontSize);
-          if (computedStyle.fontWeight) el.setAttribute('font-weight', computedStyle.fontWeight);
-        }
-      });
+      await navigator.clipboard.writeText(iframeCode);
       
-      const hiddenElements = clone.querySelectorAll('[data-hide-on-copy="true"]');
-      hiddenElements.forEach(el => el.remove());
-
-      const rootStyle = window.getComputedStyle(containerEl);
-      clone.style.backgroundColor = rootStyle.backgroundColor !== 'rgba(0, 0, 0, 0)' ? rootStyle.backgroundColor : 'transparent';
-      clone.style.color = rootStyle.color;
-      clone.style.fontFamily = rootStyle.fontFamily;
-      clone.style.display = rootStyle.display;
-      clone.style.width = rootStyle.width;
-      clone.style.height = rootStyle.height;
-
-      const htmlString = clone.outerHTML;
-      
-      // We write as plain text so that website builders (like WordPress) 
-      // don't try to parse and strip the SVG/styles during a rich-text paste.
-      // The user can then paste this raw code into a 'Custom HTML' block.
-      await navigator.clipboard.writeText(htmlString);
-      
-      toast.success("HTML Code Copied!", {
+      toast.success("Embed Code Copied!", {
         duration: 850,
       });
     } catch {
-      toast.error("Failed to copy HTML.");
+      toast.error("Failed to copy embed code.");
     }
   }, []);
 
@@ -268,7 +212,7 @@ export function useCharts() {
     lineCardRef,
     copyChartSvg,
     copyChartPng,
-    copyChartHtml,
+    copyChartEmbed,
     openFullscreen,
     closeFullscreen
   };
