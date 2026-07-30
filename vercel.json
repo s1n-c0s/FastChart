@@ -9,7 +9,11 @@
         },
         {
           "key": "X-Frame-Options",
-          "value": ""
+          "value": "ALLOWALL"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
         }
       ]
     }
