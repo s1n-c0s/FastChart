@@ -56,7 +56,7 @@ export default function DataVisualizer() {
     stackedHorizontal, setStackedHorizontal,
     stackedRadial, setStackedRadial,
     fullscreenChart, openFullscreen, closeFullscreen,
-    copyChartSvg, copyChartPng, copyChartEmbed,
+    copyChartSvg, copyChartPng, copyChartHtml,
     barCardRef, pieCardRef, stackedCardRef, lineCardRef
   } = useCharts();
 
@@ -496,7 +496,7 @@ export default function DataVisualizer() {
               chartRef={barCardRef}
               onCopySvg={() => copyChartSvg(barCardRef.current)}
               onCopyPng={() => copyChartPng(barCardRef.current)}
-              onCopyHtml={() => copyChartEmbed({ type: 'bar', data: sortedData, options: { isHorizontal: barHorizontal, showLabels } })}
+              onCopyHtml={() => copyChartHtml(barCardRef.current)}
               onFullscreen={() => openFullscreen("bar")}
               showOrientation
               isHorizontal={barHorizontal}
@@ -538,7 +538,7 @@ export default function DataVisualizer() {
               }
               onCopySvg={() => copyChartSvg(pieCardRef.current)}
               onCopyPng={() => copyChartPng(pieCardRef.current)}
-              onCopyHtml={() => copyChartEmbed({ type: 'pie', data: sortedData, total, options: { showFactText, factIndex: pieFactIndex, showLegend } })}
+              onCopyHtml={() => copyChartHtml(pieCardRef.current)}
               onFullscreen={() => openFullscreen("pie")}
             >
               <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
@@ -553,7 +553,7 @@ export default function DataVisualizer() {
               chartRef={stackedCardRef}
               onCopySvg={() => copyChartSvg(stackedCardRef.current)}
               onCopyPng={() => copyChartPng(stackedCardRef.current)}
-              onCopyHtml={() => copyChartEmbed({ type: 'stacked', data: sortedData, options: { isHorizontal: stackedHorizontal, showLabels, showRadial: stackedRadial, showFactText: showRadialFactText, factIndex: radialFactIndex, showLegend } })}
+              onCopyHtml={() => copyChartHtml(stackedCardRef.current)}
               onFullscreen={() => openFullscreen("stacked")}
               showOrientation={!stackedRadial}
               isHorizontal={stackedHorizontal}
@@ -594,7 +594,7 @@ export default function DataVisualizer() {
               chartRef={lineCardRef}
               onCopySvg={() => copyChartSvg(lineCardRef.current)}
               onCopyPng={() => copyChartPng(lineCardRef.current)}
-              onCopyHtml={() => copyChartEmbed({ type: 'line', data: sortedData, options: { showLabels, showGradientArea, lineColor, showLegend } })}
+              onCopyHtml={() => copyChartHtml(lineCardRef.current)}
               onFullscreen={() => openFullscreen("line")}
               customActions={
                 <div className="flex flex-wrap items-center gap-4">
