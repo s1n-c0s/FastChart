@@ -255,14 +255,20 @@ export const StackedChart = React.memo(function StackedChart({
     return data.reduce((sum, d) => sum + Math.max(0, d.value || 0), 0)
   }, [data])
 
-  const { legendRows, legendHeight } = React.useMemo(() => {
-    const { width } = dimensions;
-    if (!width) return { legendRows: [], legendHeight: 0 };
+  const { legendRows, legendHeight, legendConfig } = React.useMemo(() => {
+    const { width, height } = dimensions;
+    if (!width) return { legendRows: [], legendHeight: 0, legendConfig: { fontSize: 12, rectSize: 14, gap: 8, spacingY: 25 } };
     
-    const spacingY = 25;
-    const rectSize = 14; 
-    const gap = 8;
-    const itemMargin = 20;
+    const effectiveSize = Math.max(width || 0, height || 0);
+    const scale = isFullscreen 
+      ? Math.min(1.6, Math.max(1.2, effectiveSize / 600))
+      : 1;
+
+    const fontSize = Math.round(12 * scale);
+    const rectSize = Math.round(14 * scale);
+    const gap = Math.round(8 * scale);
+    const itemMargin = Math.round(20 * scale);
+    const spacingY = Math.round(26 * scale);
     
     const rows: { items: Datum[]; width: number; itemWidths: number[] }[] = [];
     let currentRow: Datum[] = [];
@@ -272,10 +278,11 @@ export const StackedChart = React.memo(function StackedChart({
     data.forEach((item: Datum) => {
       const percentage = totalValue > 0 ? Math.round((Math.max(0, item.value || 0) / totalValue) * 100) : 0;
       const labelText = `${item.label}: ${Number(item.value || 0).toLocaleString()} (${percentage}%)`;
-      const textWidth = labelText.length * (isFullscreen ? 8.5 : 7.5); 
+      const textWidth = labelText.length * (fontSize * 0.62); 
       const itemWidth = rectSize + gap + textWidth + itemMargin;
+      const maxItemsPerRow = isFullscreen && width > 700 ? 5 : 4;
 
-      if (currentRowWidth + itemWidth - itemMargin > width && currentRow.length > 0) {
+      if ((currentRowWidth + itemWidth - itemMargin > width && currentRow.length > 0) || currentRow.length >= maxItemsPerRow) {
         rows.push({ items: currentRow, width: currentRowWidth - itemMargin, itemWidths: currentRowItemWidths });
         currentRow = [item];
         currentRowWidth = itemWidth;
@@ -293,19 +300,18 @@ export const StackedChart = React.memo(function StackedChart({
 
     return { 
       legendRows: rows, 
-      legendHeight: rows.length * spacingY 
+      legendHeight: rows.length * spacingY,
+      legendConfig: { fontSize, rectSize, gap, spacingY }
     };
-  }, [data, dimensions, isFullscreen]);
+  }, [data, dimensions, isFullscreen, totalValue]);
 
   const renderSvgLegend = (isStandalone = false) => {
     if (!dimensions.width || !dimensions.height || legendRows.length === 0) return null;
 
-    const spacingY = 25;
-    const rectSize = 14; 
-    const gap = 8;
+    const { fontSize, rectSize, gap, spacingY } = legendConfig;
     const textColor = isDark ? "#e4e4e7" : "#3f3f46"; 
     
-    const startY = isStandalone ? 12 : (dimensions.height ? dimensions.height - legendHeight : 0);
+    const startY = isStandalone ? 12 : Math.max(0, (dimensions.height || 384) - legendHeight - 8);
 
     return (
       <g className="svg-legend">
@@ -321,17 +327,17 @@ export const StackedChart = React.memo(function StackedChart({
               <g key={`legend-${item.id}`}>
                 <rect 
                   x={x} 
-                  y={y - 12} 
+                  y={y - rectSize + 2} 
                   width={rectSize} 
                   height={rectSize} 
                   fill={item.color} 
-                  rx={3}
+                  rx={Math.max(3, Math.round(rectSize * 0.25))}
                 />
                 <text
                   x={x + rectSize + gap}
                   y={y}
                   fill={textColor}
-                  fontSize={isFullscreen ? 14 : 12}
+                  fontSize={fontSize}
                   fontWeight="500"
                   fontFamily="sans-serif"
                   style={{ pointerEvents: 'none' }}
@@ -349,18 +355,24 @@ export const StackedChart = React.memo(function StackedChart({
   // Render radial chart
   if (showRadial) {
     const baseWidth = dimensions.width || (isFullscreen ? 800 : 400);
-    const baseHeight = dimensions.height || (isFullscreen ? 500 : 300);
+    const baseHeight = dimensions.height || (isFullscreen ? 500 : 384);
     
-    // We want the chart to fit nicely in the top part of the container.
-    // The cx="50%" cy="80%" means the center of the half circle is very low.
-    // So the height of the chart is actually mostly its radius.
-    // Let's ensure it doesn't overflow horizontally or vertically.
+    const legendBottomMargin = 8;
+    const legendStartY = Math.max(
+      120,
+      baseHeight - legendHeight - legendBottomMargin
+    );
+
+    // Radial semi-circle ends at cy. All content (arc, text, arrows) sits strictly ABOVE cy.
+    // Ensure safe area padding between radialCy and legendStartY
+    const radialGap = legendRows.length > 0 ? 18 : 0;
+    const radialCy = Math.max(120, legendStartY - radialGap);
     
-    const availableRadiusW = (baseWidth / 2) * 0.8; 
-    const availableRadiusH = baseHeight * 0.7; // since cy=80%, we have 80% height available
+    const availableRadiusW = (baseWidth / 2) * 0.85; 
+    const availableRadiusH = (radialCy - 20) * 0.95; 
     const maxRadius = Math.min(availableRadiusW, availableRadiusH);
     
-    const outerRadius = Math.max(100, isFullscreen ? maxRadius * 0.9 : maxRadius * 0.9);
+    const outerRadius = Math.max(70, isFullscreen ? maxRadius * 0.95 : maxRadius);
     const innerRadius = outerRadius * 0.55;
     
     return (
@@ -372,7 +384,7 @@ export const StackedChart = React.memo(function StackedChart({
               startAngle={180}
               endAngle={0}
               cx="50%"
-              cy="80%"
+              cy={radialCy}
               innerRadius={innerRadius}
               outerRadius={outerRadius}
               style={{ overflow: 'visible' }}
@@ -539,7 +551,7 @@ export const StackedChart = React.memo(function StackedChart({
             data={stackedData}
             stackOffset="expand"
             layout="vertical"
-            margin={{ top: 5, right: 15, bottom: legendHeight + 10, left: 5 }}
+            margin={{ top: 5, right: 15, bottom: legendHeight + (legendRows.length > 0 ? 16 : 10), left: 5 }}
           >
             <CartesianGrid className="stroke-border opacity-80" strokeDasharray="4 4" />
             <YAxis
@@ -592,7 +604,7 @@ export const StackedChart = React.memo(function StackedChart({
           data={stackedData}
           stackOffset="expand"
           layout="horizontal"
-          margin={{ top: 5, right: 15, bottom: legendHeight + 10, left: 5 }}
+          margin={{ top: 5, right: 15, bottom: legendHeight + (legendRows.length > 0 ? 16 : 10), left: 5 }}
         >
           <CartesianGrid className="stroke-border opacity-80" strokeDasharray="4 4" />
           <XAxis
