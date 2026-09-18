@@ -417,7 +417,22 @@ export default function DataVisualizer() {
                   {sortConfig?.direction === "asc" && <ArrowUp className="w-3.5 h-3.5" />}
                   {sortConfig?.direction === "desc" && <ArrowDown className="w-3.5 h-3.5" />}
                 </button>
-                <span className="text-sm font-medium select-none hidden sm:inline ml-1">Sort:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (sortConfig === null) {
+                      setSortConfig({ key: "label", direction: "asc" });
+                    } else if (sortConfig.key === "label") {
+                      setSortConfig({ key: "value", direction: "desc" });
+                    } else {
+                      setSortConfig(null);
+                    }
+                  }}
+                  className="text-sm font-medium select-none hidden sm:inline ml-1 cursor-pointer hover:text-primary transition-colors"
+                  title="Click to cycle sort: Name → Value → None"
+                >
+                  Sort:
+                </button>
                 <Select
                   value={sortConfig === null ? "none" : sortConfig.key}
                   onValueChange={(val) => {
