@@ -30,19 +30,28 @@ export const BarChart = React.memo(function BarChart({
 
 }: BarChartProps) {
   const chartConfig = React.useMemo(() => {
-    return data.reduce((acc, item) => {
-      acc[item.id] = {
+    const config: Record<string, { label: string; color: string }> = {}
+    for (let i = 0; i < data.length; i++) {
+      const item = data[i]
+      config[item.id] = {
         label: item.label,
         color: item.color,
       }
-      return acc
-    }, {} as Record<string, { label: string; color: string }>)
+    }
+    return config
   }, [data])
 
   // Calculate dynamic margins based on label lengths
   const maxLabelLength = React.useMemo(() => {
-    return Math.max(...data.map(d => d.label.length))
+    let max = 0
+    for (let i = 0; i < data.length; i++) {
+      const len = data[i].label?.length || 0
+      if (len > max) max = len
+    }
+    return max
   }, [data])
+
+  const isAnimationActive = data.length <= 15
 
   // Horizontal mode: bars grow to the right
   if (isHorizontal) {
@@ -94,7 +103,7 @@ export const BarChart = React.memo(function BarChart({
                 return null
               }}
             />
-            <Bar dataKey="value" radius={[0, 6, 6, 0]} maxBarSize={50}>
+            <Bar dataKey="value" radius={[0, 6, 6, 0]} maxBarSize={50} isAnimationActive={isAnimationActive}>
               {data.map((item) => (
                 <Cell key={item.id} fill={item.color} />
               ))}
@@ -168,6 +177,7 @@ export const BarChart = React.memo(function BarChart({
             dataKey="value" 
             radius={[6, 6, 0, 0]}
             maxBarSize={80}
+            isAnimationActive={isAnimationActive}
           >
             {data.map((item) => (
               <Cell key={item.id} fill={item.color} />
@@ -194,6 +204,7 @@ export const BarChart = React.memo(function BarChart({
     prevProps.data.every((item, idx) => 
       item.id === nextProps.data[idx]?.id &&
       item.value === nextProps.data[idx]?.value &&
+      item.label === nextProps.data[idx]?.label &&
       item.color === nextProps.data[idx]?.color
     )
   )

@@ -35,16 +35,14 @@ const CustomTooltip = React.memo(({ active, payload }: any) => {
 
 const FactTextOverlay = (props: any) => {
   const {
-    chartWidth, pieCy, innerRadius, size, data, total, factIndex,
-    isFullscreen, textColor, textMainColor, onFactIndexChange
+    chartWidth, pieCy, innerRadius, size, total, factIndex,
+    isFullscreen, textColor, textMainColor, onFactIndexChange,
+    maxItem, minItem
   } = props;
   
   const cx = chartWidth / 2;
   const cy = pieCy;
   const innerR = innerRadius || (size ? size * 0.20 : 50);
-  
-  const maxItem = data && data.length > 0 ? data.reduce((prev: any, current: any) => (prev.value > current.value) ? prev : current) : null;
-  const minItem = data && data.length > 0 ? data.reduce((prev: any, current: any) => (prev.value < current.value) ? prev : current) : null;
   
   let factTitle = "Total";
   let factValue = total.toLocaleString();
@@ -184,13 +182,16 @@ const InnerRechartsPie = React.memo(({
     };
   }, []);
 
+  const pieContainerRef = React.useRef<HTMLDivElement | null>(null);
+
   const onPieMouseEnter = React.useCallback((_: any, index: number) => {
     if (targetFocusIndex !== -1) return;
 
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     
-    document.querySelectorAll('.my-hovered-sector').forEach(el => el.classList.remove('my-hovered-sector'));
-    document.querySelectorAll(`.my-sector-${index}`).forEach(el => el.classList.add('my-hovered-sector'));
+    const root = pieContainerRef.current || document;
+    root.querySelectorAll('.my-hovered-sector').forEach(el => el.classList.remove('my-hovered-sector'));
+    root.querySelectorAll(`.my-sector-${index}`).forEach(el => el.classList.add('my-hovered-sector'));
   }, [targetFocusIndex]);
 
   const onPieMouseLeave = React.useCallback(() => {
@@ -198,103 +199,74 @@ const InnerRechartsPie = React.memo(({
 
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
-      document.querySelectorAll('.my-hovered-sector').forEach(el => el.classList.remove('my-hovered-sector'));
+      const root = pieContainerRef.current || document;
+      root.querySelectorAll('.my-hovered-sector').forEach(el => el.classList.remove('my-hovered-sector'));
     }, 4000);
   }, [targetFocusIndex]);
 
   const cells = React.useMemo(() => {
     return data.map((item: Datum, index: number) => {
       const isFocused = index === targetFocusIndex;
+      const isOther = top4Ids && !top4Ids.includes(item.id);
       return (
         <Cell 
           key={item.id} 
           fill={item.color} 
+          opacity={isOther ? 0.55 : 1}
           stroke="none"
           className={`my-sector my-sector-${index} ${isFocused ? 'my-hovered-sector-static' : ''}`}
           style={{ transformOrigin: `50% ${pieCy}px` }}
         />
       );
     });
-  }, [data, targetFocusIndex, pieCy]);
-  
-  const overlayCells = React.useMemo(() => {
-    return data.map((item: Datum, index: number) => {
-      const isOther = top4Ids && !top4Ids.includes(item.id);
-      const isFocused = index === targetFocusIndex;
-      return (
-        <Cell 
-          key={`overlay-${item.id}`} 
-          fill={isOther ? "rgba(0,0,0,0.4)" : "transparent"} 
-          stroke="none"
-          className={`my-sector my-sector-${index} ${isFocused ? 'my-hovered-sector-static' : ''}`}
-          style={{ transformOrigin: `50% ${pieCy}px` }}
-        />
-      );
-    });
-  }, [data, top4Ids, targetFocusIndex, pieCy]);
+  }, [data, targetFocusIndex, top4Ids, pieCy]);
 
   const actualInnerR = innerRadius || (size ? size * 0.20 : 50);
   const actualOuterR = outerRadius || (isFullscreen ? (size ? size * 0.30 : 100) : (size ? size * 0.27 : 85));
+  const isAnimationActive = data.length <= 15;
 
   return (
-    <ResponsiveContainer width="100%" height="100%">
-      <RechartsPieChart style={{ overflow: 'visible' }}>
-        <defs>
-          <style>{`
-            .my-sector {
-              transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            }
-            .my-hovered-sector, .my-hovered-sector-static {
-              transform: scale(1.1);
-            }
-          `}</style>
-        </defs>
-        <Tooltip isAnimationActive={false} content={<CustomTooltip />} />
-        <Pie
-          data={data}
-          dataKey="value"
-          nameKey="label"
-          cx="50%"
-          cy={pieCy}
-          innerRadius={actualInnerR}
-          outerRadius={actualOuterR}
-          paddingAngle={2}
-          cornerRadius={6}
-          isAnimationActive={true}
-          animationDuration={500}
-          stroke="none"
-          label={renderCustomLabel}
-          labelLine={false}
-          onMouseEnter={onPieMouseEnter}
-          onMouseLeave={onPieMouseLeave}
-          style={{ cursor: 'pointer' }}
-        >
-          {cells}
-        </Pie>
-        
-        <Pie
-          data={data}
-          dataKey="value"
-          nameKey="label"
-          cx="50%"
-          cy={pieCy}
-          innerRadius={actualInnerR}
-          outerRadius={actualOuterR}
-          paddingAngle={2}
-          cornerRadius={6}
-          isAnimationActive={true}
-          animationDuration={500}
-          stroke="none"
-          style={{ pointerEvents: 'none' }}
-          onMouseEnter={onPieMouseEnter}
-          onMouseLeave={onPieMouseLeave}
-        >
-          {overlayCells}
-        </Pie>
-        
-        {renderSvgLegend()}
-      </RechartsPieChart>
-    </ResponsiveContainer>
+    <div ref={pieContainerRef} className="w-full h-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <RechartsPieChart style={{ overflow: 'visible' }}>
+          <defs>
+            <style>{`
+              .my-sector {
+                transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s ease;
+              }
+              .my-hovered-sector, .my-hovered-sector-static {
+                transform: scale(1.08);
+                opacity: 1 !important;
+              }
+            `}</style>
+          </defs>
+          <Tooltip isAnimationActive={false} content={<CustomTooltip />} />
+          <Pie
+            data={data}
+            dataKey="value"
+            nameKey="label"
+            cx="50%"
+            cy={pieCy}
+            innerRadius={actualInnerR}
+            outerRadius={actualOuterR}
+            paddingAngle={2}
+            cornerRadius={6}
+            isAnimationActive={isAnimationActive}
+            animationDuration={400}
+            stroke="none"
+            label={renderCustomLabel}
+            labelLine={false}
+            onMouseEnter={onPieMouseEnter}
+            onMouseLeave={onPieMouseLeave}
+            style={{ cursor: 'pointer' }}
+          >
+            {cells}
+          </Pie>
+          
+          {renderSvgLegend()}
+        </RechartsPieChart>
+      </ResponsiveContainer>
+    </div>
   );
 });
 
@@ -340,13 +312,12 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
   React.useEffect(() => {
     const node = localRef.current;
     if (node) {
-      setDimensions({ width: node.clientWidth, height: node.clientHeight });
+      setDimensions({ width: Math.round(node.clientWidth), height: Math.round(node.clientHeight) });
       const observer = new ResizeObserver((entries) => {
         if (entries[0]) {
-          setDimensions({
-            width: entries[0].contentRect.width,
-            height: entries[0].contentRect.height,
-          });
+          const w = Math.round(entries[0].contentRect.width);
+          const h = Math.round(entries[0].contentRect.height);
+          setDimensions((prev) => (prev.width === w && prev.height === h ? prev : { width: w, height: h }));
         }
       });
       observer.observe(node);
@@ -367,22 +338,35 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     return [...data].sort((a, b) => b.value - a.value).slice(0, 4).map(d => d.id);
   }, [data]);
 
-  const maxItem = data && data.length > 0 ? data.reduce((prev: any, current: any) => (prev.value > current.value) ? prev : current) : null;
-  const minItem = data && data.length > 0 ? data.reduce((prev: any, current: any) => (prev.value < current.value) ? prev : current) : null;
+  const { maxItem, minItem } = React.useMemo(() => {
+    if (!data || data.length === 0) return { maxItem: null, minItem: null };
+    let max = data[0];
+    let min = data[0];
+    for (let i = 1; i < data.length; i++) {
+      const item = data[i];
+      if (item.value > max.value) max = item;
+      if (item.value < min.value) min = item;
+    }
+    return { maxItem: max, minItem: min };
+  }, [data]);
 
   const targetFocusIndex = factIndex === 1 && maxItem ? data.findIndex(d => d.id === maxItem.id) 
                          : factIndex === 2 && minItem ? data.findIndex(d => d.id === minItem.id) 
                          : -1;
 
-  const otherSum = React.useMemo(() => {
-    if (!top4Ids) return 0;
-    return data.filter(d => !top4Ids.includes(d.id)).reduce((sum, d) => sum + d.value, 0);
-  }, [data, top4Ids]);
-
-  const lastOtherId = React.useMemo(() => {
-    if (!top4Ids) return null;
-    const others = data.filter(d => !top4Ids.includes(d.id));
-    return others.length > 0 ? others[others.length - 1].id : null;
+  const { otherSum, lastOtherId } = React.useMemo(() => {
+    if (!top4Ids) return { otherSum: 0, lastOtherId: null };
+    const top4Set = new Set(top4Ids);
+    let sum = 0;
+    let lastId: string | number | null = null;
+    for (let i = 0; i < data.length; i++) {
+      const item = data[i];
+      if (!top4Set.has(item.id)) {
+        sum += item.value;
+        lastId = item.id;
+      }
+    }
+    return { otherSum: sum, lastOtherId: lastId };
   }, [data, top4Ids]);
 
   const prevDataRef = React.useRef(data);
@@ -789,6 +773,8 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
               textColor={textColor}
               textMainColor={textMainColor}
               onFactIndexChange={onFactIndexChange}
+              maxItem={maxItem}
+              minItem={minItem}
             />
           </svg>
         )}
@@ -803,6 +789,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     prevProps.data.every((item, idx) => 
       item.id === nextProps.data[idx]?.id &&
       item.value === nextProps.data[idx]?.value &&
+      item.label === nextProps.data[idx]?.label &&
       item.color === nextProps.data[idx]?.color
     ) &&
     

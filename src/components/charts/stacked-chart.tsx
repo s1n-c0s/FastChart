@@ -75,11 +75,13 @@ const StackedTooltip = React.memo(function StackedTooltip({ active, payload, raw
 StackedTooltip.displayName = "StackedTooltip";
 
 const CustomStackedLabel = (props: any) => {
-  const { x, y, width, height, value, rawData, barDataKey, isFullscreen, isHorizontal } = props;
+  const { x, y, width, height, value, rawData, top4KeysSet, barDataKey, isFullscreen, isHorizontal } = props;
   
   if (width < 15 || height < 15) return null;
 
-  if (rawData && rawData.length > 4) {
+  if (top4KeysSet) {
+    if (!top4KeysSet.has(barDataKey)) return null;
+  } else if (rawData && rawData.length > 4) {
     const top4Keys = [...rawData]
       .sort((a, b) => (b.value || 0) - (a.value || 0))
       .slice(0, 4)
@@ -200,13 +202,12 @@ export const StackedChart = React.memo(function StackedChart({
   React.useEffect(() => {
     const node = localRef.current;
     if (node) {
-      setDimensions({ width: node.clientWidth, height: node.clientHeight });
+      setDimensions({ width: Math.round(node.clientWidth), height: Math.round(node.clientHeight) });
       const observer = new ResizeObserver((entries) => {
         if (entries[0]) {
-          setDimensions({
-            width: entries[0].contentRect.width,
-            height: entries[0].contentRect.height,
-          });
+          const w = Math.round(entries[0].contentRect.width);
+          const h = Math.round(entries[0].contentRect.height);
+          setDimensions((prev) => (prev.width === w && prev.height === h ? prev : { width: w, height: h }));
         }
       });
       observer.observe(node);
@@ -214,46 +215,71 @@ export const StackedChart = React.memo(function StackedChart({
     }
   }, []);
 
-  // Transform data for stacked chart
-  const stackedData = React.useMemo(() => {
-    const total = data.reduce((sum, d) => sum + Math.max(0, d.value || 0), 0)
-    return [
-      {
-        name: "All",
-        ...data.reduce((acc, d) => ({
-          ...acc,
-          [d.label]: Math.max(0, d.value || 0) / (total || 1)
-        }), {})
-      }
-    ]
+  // Calculate total for radial chart
+  const totalValue = React.useMemo(() => {
+    let sum = 0;
+    for (let i = 0; i < data.length; i++) {
+      const v = data[i].value;
+      if (isFinite(v) && v > 0) sum += v;
+    }
+    return sum;
   }, [data])
 
-  // Transform data for radial chart
+  const { maxItem, minItem } = React.useMemo(() => {
+    if (!data || data.length === 0) return { maxItem: null, minItem: null };
+    let max = data[0];
+    let min = data[0];
+    for (let i = 1; i < data.length; i++) {
+      const item = data[i];
+      if (item.value > max.value) max = item;
+      if (item.value < min.value) min = item;
+    }
+    return { maxItem: max, minItem: min };
+  }, [data]);
+
+  // Transform data for stacked chart (O(N) with single object)
+  const stackedData = React.useMemo(() => {
+    const row: Record<string, any> = { name: "All" };
+    const divisor = totalValue || 1;
+    data.forEach((d) => {
+      row[d.label] = Math.max(0, d.value || 0) / divisor;
+    });
+    return [row];
+  }, [data, totalValue]);
+
+  // Transform data for radial chart (O(N) with single object)
   const radialData = React.useMemo(() => {
-    const total = data.reduce((sum, d) => sum + Math.max(0, d.value || 0), 0)
-    return [
-      data.reduce((acc, d) => ({
-        ...acc,
-        [d.label]: Math.max(0, d.value || 0) / (total || 1)
-      }), {})
-    ]
-  }, [data])
+    const row: Record<string, any> = {};
+    const divisor = totalValue || 1;
+    data.forEach((d) => {
+      row[d.label] = Math.max(0, d.value || 0) / divisor;
+    });
+    return [row];
+  }, [data, totalValue]);
 
   // Build chart config for radial
   const chartConfig = React.useMemo(() => {
-    return data.reduce((acc, d) => ({
-      ...acc,
-      [d.label]: {
+    const cfg: ChartConfig = {};
+    data.forEach((d) => {
+      cfg[d.label] = {
         label: d.label,
         color: d.color,
-      }
-    }), {}) as ChartConfig
-  }, [data])
+      };
+    });
+    return cfg;
+  }, [data]);
 
-  // Calculate total for radial chart
-  const totalValue = React.useMemo(() => {
-    return data.reduce((sum, d) => sum + Math.max(0, d.value || 0), 0)
-  }, [data])
+  const top4KeysSet = React.useMemo(() => {
+    if (!data || data.length <= 4) return null;
+    return new Set(
+      [...data]
+        .sort((a, b) => (b.value || 0) - (a.value || 0))
+        .slice(0, 4)
+        .map(d => d.label)
+    );
+  }, [data]);
+
+  const isAnimationActive = data.length <= 15;
 
   const { legendRows, legendHeight, legendConfig } = React.useMemo(() => {
     const { width, height } = dimensions;
@@ -417,9 +443,6 @@ export const StackedChart = React.memo(function StackedChart({
                     const labelSize = maxLabelSize * scaleFactor;
                     const titleSize = labelSize * 0.9;
                     
-                    const maxItem = data && data.length > 0 ? data.reduce((prev: any, current: any) => (prev.value > current.value) ? prev : current) : null;
-                    const minItem = data && data.length > 0 ? data.reduce((prev: any, current: any) => (prev.value < current.value) ? prev : current) : null;
-                    
                     let factTitle = "Total";
                     let factValue = totalValue.toLocaleString();
                     let factColor = "var(--muted-foreground)";
@@ -525,7 +548,8 @@ export const StackedChart = React.memo(function StackedChart({
               />
             </PolarRadiusAxis>
             {data.map((d) => (
-              <RadialBar isAnimationActive={true}
+              <RadialBar 
+                isAnimationActive={isAnimationActive}
                 key={d.id}
                 dataKey={d.label}
                 name={d.label}
@@ -581,12 +605,12 @@ export const StackedChart = React.memo(function StackedChart({
                 stackId="stacked" 
                 fill={d.color} 
                 name={d.label}
-                isAnimationActive={true}
+                isAnimationActive={isAnimationActive}
               >
                 {showLabels && (
                   <LabelList
                     dataKey={d.label}
-                    content={<CustomStackedLabel rawData={data} isFullscreen={isFullscreen} isHorizontal={isHorizontal} barDataKey={d.label} />}
+                    content={<CustomStackedLabel rawData={data} top4KeysSet={top4KeysSet} isFullscreen={isFullscreen} isHorizontal={isHorizontal} barDataKey={d.label} />}
                   />
                 )}
               </Bar>
@@ -635,12 +659,12 @@ export const StackedChart = React.memo(function StackedChart({
               stackId="stacked" 
               fill={d.color} 
               name={d.label}
-              isAnimationActive={true}
+              isAnimationActive={isAnimationActive}
             >
               {showLabels && (
                 <LabelList
                   dataKey={d.label}
-                  content={<CustomStackedLabel rawData={data} isFullscreen={isFullscreen} isHorizontal={isHorizontal} barDataKey={d.label} />}
+                  content={<CustomStackedLabel rawData={data} top4KeysSet={top4KeysSet} isFullscreen={isFullscreen} isHorizontal={isHorizontal} barDataKey={d.label} />}
                 />
               )}
             </Bar>
@@ -662,6 +686,7 @@ export const StackedChart = React.memo(function StackedChart({
     prevProps.data.every((item, idx) => 
       item.id === nextProps.data[idx]?.id &&
       item.value === nextProps.data[idx]?.value &&
+      item.label === nextProps.data[idx]?.label &&
       item.color === nextProps.data[idx]?.color
     )
   )

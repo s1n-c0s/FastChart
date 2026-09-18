@@ -698,7 +698,9 @@ export default function DataVisualizer() {
         isHorizontal={barHorizontal}
         onToggleOrientation={() => setBarHorizontal(!barHorizontal)}
       >
-        <BarChart containerRef={fsRef} data={sortedData} isHorizontal={barHorizontal} showLabels={showLabels} />
+        {fullscreenChart === "bar" && (
+          <BarChart containerRef={fsRef} data={sortedData} isHorizontal={barHorizontal} showLabels={showLabels} />
+        )}
       </FullscreenModal>
 
       <FullscreenModal showLabels={showLabels}
@@ -773,9 +775,11 @@ export default function DataVisualizer() {
           </div>
         }
       >
-        <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
-          <StackedChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} isHorizontal={stackedHorizontal} showLabels={showLabels} showRadial={stackedRadial} isFullscreen={fullscreenChart === "stacked"} showFactText={showRadialFactText} factIndex={radialFactIndex} onFactIndexChange={setRadialFactIndex} />
-        </div>
+        {fullscreenChart === "stacked" && (
+          <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
+            <StackedChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} isHorizontal={stackedHorizontal} showLabels={showLabels} showRadial={stackedRadial} isFullscreen={fullscreenChart === "stacked"} showFactText={showRadialFactText} factIndex={radialFactIndex} onFactIndexChange={setRadialFactIndex} />
+          </div>
+        )}
       </FullscreenModal>
 
       <FullscreenModal showLabels={showLabels}
@@ -830,7 +834,9 @@ export default function DataVisualizer() {
           </div>
         }
       >
-        <LineChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} showLabels={showLabels} showGradientArea={showGradientArea} lineColor={lineColor} />
+        {fullscreenChart === "line" && (
+          <LineChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} showLabels={showLabels} showGradientArea={showGradientArea} lineColor={lineColor} />
+        )}
       </FullscreenModal>
     </>
   );

@@ -63,20 +63,23 @@ export const LineChart = React.memo(function LineChart({
 }: LineChartProps) {
   
   const chartConfig = React.useMemo(() => {
-    const uniqueIds = Array.from(new Set(data.map(d => d.id)))
-    return uniqueIds.reduce((acc, id) => {
-      const firstItem = data.find(d => d.id === id)!
-      acc[id] = {
-        label: firstItem.id.charAt(0).toUpperCase() + firstItem.id.slice(1),
-        color: firstItem.color,
+    const config: Record<string, { label: string; color: string }> = {}
+    for (let i = 0; i < data.length; i++) {
+      const item = data[i]
+      if (!config[item.id]) {
+        config[item.id] = {
+          label: item.id.charAt(0).toUpperCase() + item.id.slice(1),
+          color: item.color,
+        }
       }
-      return acc
-    }, {} as Record<string, { label: string; color: string }>)
+    }
+    return config
   }, [data])
 
   const seriesId = data[0]?.id || "value"
   const lineColor = customLineColor || data[0]?.color || "#3b82f6"
   const gradientId = React.useMemo(() => `gradient-${seriesId}`, [seriesId])
+  const isAnimationActive = data.length <= 25
 
   return (
     /* FIX: We force a specific height on mobile (h-[300px]) and h-full for desktop.
@@ -127,7 +130,7 @@ export const LineChart = React.memo(function LineChart({
                   dataKey="value"
                   fill={`url(#${gradientId})`}
                   stroke="none"
-                  isAnimationActive={true}
+                  isAnimationActive={isAnimationActive}
                 />
               )}
               <Line
@@ -137,7 +140,7 @@ export const LineChart = React.memo(function LineChart({
                 strokeWidth={2}
                 dot={{ r: 4, strokeWidth: 2, fill: lineColor }}
                 activeDot={{ r: 6, fill: lineColor }}
-                isAnimationActive={true}
+                isAnimationActive={isAnimationActive}
               >
                 <LabelList
                   dataKey="value"
@@ -156,9 +159,20 @@ export const LineChart = React.memo(function LineChart({
     </div>
   )
 }, (prevProps, nextProps) => {
-  return (
-    prevProps.showGradientArea === nextProps.showGradientArea &&
-    prevProps.lineColor === nextProps.lineColor &&
-    prevProps.data === nextProps.data
-  )
+  if (
+    prevProps.showGradientArea !== nextProps.showGradientArea ||
+    prevProps.lineColor !== nextProps.lineColor
+  ) {
+    return false
+  }
+  if (prevProps.data === nextProps.data) return true
+  if (prevProps.data.length !== nextProps.data.length) return false
+  for (let i = 0; i < prevProps.data.length; i++) {
+    const p = prevProps.data[i]
+    const n = nextProps.data[i]
+    if (p.id !== n.id || p.value !== n.value || p.label !== n.label || p.color !== n.color) {
+      return false
+    }
+  }
+  return true
 })
