@@ -1,21 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { RemoveButton } from "@/components/ui/RemoveButton";
-import toast, { Toaster } from "react-hot-toast";
+import { Switch } from "@/components/ui/switch";
+import toast from "react-hot-toast";
 import { generateId } from "@/lib/utils/data-parser";
+import { PRESET_COLORS, INITIAL_DATA, INITIAL_MARKDOWN } from "@/config/constants";
 import type { Datum } from "@/types";
-import styles from "./DataVisualizer.module.css";
-
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
 import {
   DndContext,
   closestCenter,
@@ -30,500 +21,161 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
-  useSortable,
 } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-
+import { useCharts } from "@/hooks/useCharts";
+import { useDataManipulation, useSort } from "@/hooks/useData";
+import { SortableRow } from "./SortableRow";
+import { ChartCard } from "./ChartCard";
+import { FullscreenModal } from "./FullscreenModal";
 import {
-  Bar,
-  CartesianGrid,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-  BarChart as RechartsBarChart,
-  PieChart as RechartsParChart,
-  Pie,
-  Line,
-  Label,
-  LineChart as RechartsLineChart
-} from "recharts";
-import { X, Maximize2 } from "lucide-react";
-
-import { 
   BarChart,
   PieChart,
   LineChart,
-} from "@/components/ui/datavisual";
-
-// 💡 SortableRow is already a good component separation.
-function SortableRow({
-  row,
-  onUpdateLabel,
-  onUpdateValue,
-  onUpdateColor,
-  onRemove,
-  presetColors,
-}: {
-  row: Datum;
-  onUpdateLabel: (id: string, label: string) => void;
-  onUpdateValue: (id: string, value: string) => void;
-  onUpdateColor: (id: string, color: string) => void;
-  onRemove: (id: string) => void;
-  presetColors: string[];
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id: row.id });
-
-  const [localLabel, setLocalLabel] = useState(row.label);
-  const [localValue, setLocalValue] = useState<number | "">(row.value);
-
-  useEffect(() => {
-    setLocalLabel(row.label);
-  }, [row.label]);
-
-  useEffect(() => {
-    setLocalValue(row.value);
-  }, [row.value]);
-
-
-
-  const cssVars = transform || transition 
-    ? {
-      '--transform': transform ? CSS.Transform.toString(transform) : '',
-      '--transition': transition || '',
-    } as React.CSSProperties
-    : undefined;
-
-  return (
-    <tr
-      ref={setNodeRef}
-      className={styles.sortableRow}
-      style={cssVars}
-      {...attributes}
-    >
-      <td className="py-2 pr-2">
-        <div className="flex items-center gap-2">
-          <button
-            {...listeners}
-            className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded"
-            aria-label={`Drag to reorder ${row.label}`}
-          >
-            ⋮⋮
-          </button>
-          <input
-            className="w-full rounded-md border bg-background px-2 py-1"
-            aria-label={`Label for row ${row.label}`}
-            placeholder="Label"
-            value={localLabel}
-            onChange={(e) => setLocalLabel(e.target.value)}
-            onBlur={() => onUpdateLabel(row.id, localLabel)}
-            onMouseDown={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
-          />
-        </div>
-      </td>
-      <td className="py-2 pr-2">
-        <input
-          className="w-full rounded-md border bg-background px-2 py-1"
-          type="number"
-          aria-label={`Value for ${row.label}`}
-          placeholder="0"
-          value={localValue}
-          onChange={(e) =>
-            setLocalValue(e.target.value === "" ? "" : Number(e.target.value))
-          }
-          onBlur={() =>
-            onUpdateValue(row.id, String(localValue === "" ? 0 : localValue))
-          }
-          onMouseDown={(e) => e.stopPropagation()}
-          onTouchStart={(e) => e.stopPropagation()}
-        />
-      </td>
-
-      {/* TD Color: ใช้ Shadcn Select */}
-      <td className="py-2 pr-2">
-        <div className="flex items-center gap-2">
-          <Select
-            value={row.color}
-            onValueChange={(newColor) => onUpdateColor(row.id, newColor)}
-          >
-            <SelectTrigger className="w-full h-9">
-              <SelectValue asChild>
-                <div className="flex items-center gap-2 w-full text-left">
-                  <div
-                    className={styles.colorCircle}
-                    style={{ '--dot-color': row.color } as React.CSSProperties}
-                  />
-                  <span className="truncate text-sm">{row.color}</span>
-                </div>
-              </SelectValue>
-            </SelectTrigger>
-
-            <SelectContent>
-              {presetColors.map((c) => (
-                <SelectItem key={c} value={c} className="pr-4">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className={styles.colorPreview}
-                      style={{ '--preview-color': c } as React.CSSProperties}
-                    />
-                    <span className="font-mono text-xs">{c}</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </td>
-
-      <td className="py-2 pr-2">
-        <RemoveButton onClick={() => onRemove(row.id)} label={row.label} />
-      </td>
-    </tr>
-  );
-}
+  StackedChart
+} from "../components/charts";
+import { Database, X, ChevronDown, Copy, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function DataVisualizer() {
-  const presetColors = [
-    "#3b82f6", // blue-500
-    "#22c55e", // green-500
-    "#ef4444", // red-500
-    "#f59e0b", // amber-500
-    "#a855f7", // purple-500
-    "#06b6d4", // cyan-500
-  ];
+  // --- 1. จัดการข้อมูล (Data Layer) ---
+  const { 
+    data, setData, total, updateLabel, updateValue, updateColor, removeRow 
+  } = useDataManipulation(INITIAL_DATA);
+  
+  const { sortedData, sortConfig, requestSort, setSortConfig } = useSort(data);
 
-  const [data, setData] = useState<Datum[]>([
-    { id: generateId(), label: "A", value: 12, color: presetColors[0] },
-    { id: generateId(), label: "B", value: 30, color: presetColors[1] },
-    { id: generateId(), label: "C", value: 18, color: presetColors[2] },
-  ]);
-  const [stackedHorizontal, setStackedHorizontal] = useState(true);
-  const [barHorizontal, setBarHorizontal] = useState(true);
-  const [fullscreenChart, setFullscreenChart] = useState<string | null>(null);
-  const [markdownInput, setMarkdownInput] = useState<string>(
-    `Label,Value,Color\nitem1,"5",#F032E6\nitem2,"4",#46F0F0\nitem3,"5",#06b6d4`
-  );
+  // --- 2. จัดการแผนภูมิ (Chart Layer) ---
+  const {
+    barHorizontal, setBarHorizontal,
+    stackedHorizontal, setStackedHorizontal,
+    stackedRadial, setStackedRadial,
+    fullscreenChart, openFullscreen, closeFullscreen,
+    copyChartSvg, copyChartPng, copyChartEmbed,
+    barCardRef, pieCardRef, stackedCardRef, lineCardRef
+  } = useCharts();
 
-  const [sortConfig, setSortConfig] = useState<{
-    key: "label" | "value";
-    direction: "asc" | "desc";
-  } | null>(null);
+  // --- 3. Local UI State ---
+  const [markdownInput, setMarkdownInput] = useState(INITIAL_MARKDOWN);
+  const [showLabels, setShowLabels] = useState(true);
+  const [showLegend, setShowLegend] = useState(true);
+  const [showFactText, setShowFactText] = useState(true);
+  const [pieFactIndex, setPieFactIndex] = useState(0);
 
-  const barCardRef = useRef<HTMLDivElement>(null!);
-  const pieCardRef = useRef<HTMLDivElement>(null!);
-  const stackedCardRef = useRef<HTMLDivElement>(null!);
-  const lineCardRef = useRef<HTMLDivElement>(null!);
+  const [radialFactIndex, setRadialFactIndex] = useState(0);
+  const [showRadialFactText, setShowRadialFactText] = useState(true);
+  const [showGradientArea, setShowGradientArea] = useState(true);
+  const [lineColor, setLineColor] = useState<string | undefined>(undefined);
+  const [isDockOpen, setIsDockOpen] = useState(false);
+  
+  const fsRef = useRef<HTMLDivElement>(null);
 
-  const copyChartSvg = useCallback(async (containerEl: HTMLElement | null) => {
-    if (!containerEl) {
-      console.error("Container element is null");
-      toast.error("Cannot copy chart: Container not found");
-      return;
-    }
-
-    try {
-      // Maximum retry attempts
-      const maxRetries = 3;
-      let chartSvg: SVGSVGElement | null = null;
-      
-      // Try to find the chart SVG with retries
-      for (let i = 0; i < maxRetries; i++) {
-        // Wait between attempts
-        await new Promise(resolve => setTimeout(resolve, 100 * (i + 1)));
-        
-        // Find the recharts wrapper and SVG
-        const wrapper = containerEl.querySelector('.recharts-wrapper');
-        if (wrapper) {
-          chartSvg = wrapper.querySelector('svg');
-          if (chartSvg) break;
-        }
-      }
-
-      if (!chartSvg) {
-        console.error("No chart SVG found after retries");
-        toast.error("Cannot find chart to copy");
-        return;
-      }
-
-      // Get accurate dimensions
-      const box = chartSvg.getBoundingClientRect();
-      const width = Math.round(box.width);
-      const height = Math.round(box.height);
-      
-      // Create new SVG element with namespace
-      const newSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      newSvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-      newSvg.setAttribute("width", width.toString());
-      newSvg.setAttribute("height", height.toString());
-      newSvg.setAttribute("viewBox", `0 0 ${width} ${height}`);
-      
-      // Copy all child nodes
-      Array.from(chartSvg.childNodes).forEach(node => {
-        newSvg.appendChild(node.cloneNode(true));
-      });
-      
-      // Convert to string
-      const svgString = newSvg.outerHTML;
-      
-      // Copy to clipboard
-      await navigator.clipboard.writeText(svgString);
-      
-      toast.success("Chart copied!", {
-        duration: 850,
-        style: {
-          background: "#0EC04F",
-          color: "#ffffff",
-        },
-      });
-
-    } catch (error) {
-      console.error("SVG Copy Error:", error);
-      if (error instanceof Error) {
-        console.error(error.message);
-      }
-      toast.error("Failed to copy chart");
-    }
-  }, []);
-
-  function parseMarkdownTable(md: string): Datum[] {
-    const lines = md
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter(Boolean);
-    if (lines.length === 0) return [];
+  // --- 6. Handlers for data transformation ---
+  const parseMarkdownTable = useCallback((md: string): Datum[] => {
+    const lines = md.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    if (!lines.length) return [];
 
     const result: Datum[] = [];
     let itemCount = 0;
-
     const isMarkdownTable = lines.some((l) => l.includes("|"));
 
     if (!isMarkdownTable) {
-      // LOGIC: ประมวลผลเป็น CSV
-
       const headerLine = lines[0]?.toLowerCase().replace(/\s/g, "") || "";
-      const dataLines = lines.slice(1);
+      const hasHeader = headerLine.includes("label") && headerLine.includes("value");
+      const dataLines = hasHeader ? lines.slice(1) : lines;
 
-      let labelIndex = 0;
-      let valueIndex = 1;
-      let colorIndexCSV = 2;
-      let hasHeader = false;
-
-      if (headerLine.includes("label") && headerLine.includes("value")) {
-        const headerParts = headerLine.split(",").map((s) => s.trim());
-        labelIndex = headerParts.indexOf("label");
-        valueIndex = headerParts.indexOf("value");
-        colorIndexCSV = headerParts.indexOf("color");
-        hasHeader = true;
+      let labelIndex = 0, valueIndex = 1, colorIndex = 2;
+      if (hasHeader) {
+        const parts = headerLine.split(",").map((s) => s.trim());
+        labelIndex = parts.indexOf("label");
+        valueIndex = parts.indexOf("value");
+        colorIndex = parts.indexOf("color");
       }
 
-      const linesToProcess = hasHeader ? dataLines : lines;
-
-      linesToProcess.forEach((line) => {
+      dataLines.forEach((line) => {
         const parts = line.split(",").map((s) => s.trim());
-
         if (parts.length >= 2) {
-          const rawLabel = parts[labelIndex] || "";
-          const rawValue = parts[valueIndex] || "";
-          const rawColor = parts[colorIndexCSV] || "";
-
-          const label = hasHeader ? rawLabel : parts[0];
-          const valueStr = hasHeader ? rawValue : parts[1];
-          const colorStr =
-            hasHeader && parts.length > 2 ? rawColor : parts[2] || "";
-
-          const value = Number(valueStr.replace(/["\s,]/g, ""));
+          const label = parts[labelIndex] || `Item ${itemCount + 1}`;
+          const value = Number(parts[valueIndex]?.replace(/["\s,]/g, ""));
+          const color = parts[colorIndex] || PRESET_COLORS[itemCount % PRESET_COLORS.length];
 
           if (isFinite(value)) {
-            const color =
-              colorStr || presetColors[itemCount % presetColors.length];
-
-            result.push({
-              id: generateId(),
-              label: label || `Item ${itemCount + 1}`,
-              value: Math.max(0, value),
-              color,
-            });
-            itemCount++;
-          }
-        } else if (
-          parts.length === 1 &&
-          isFinite(Number(parts[0].replace(/["\s,]/g, "")))
-        ) {
-          // รองรับกรณีพิเศษ: หากมีแค่ค่าเดียว (value)
-          const value = Number(parts[0].replace(/["\s,]/g, ""));
-          if (isFinite(value)) {
-            const color = presetColors[itemCount % presetColors.length];
-            result.push({
-              id: generateId(),
-              label: `Item ${itemCount + 1}`,
-              value: Math.max(0, value),
-              color,
-            });
+            result.push({ id: generateId(), label, value: Math.max(0, value), color });
             itemCount++;
           }
         }
       });
 
-      if (result.length > 0) return result;
+      if (result.length) return result;
     }
 
-    // LOGIC: ประมวลผล Markdown Table
-    let startIdx = 0;
-    if (lines.length > 1 && /-\s*-/.test(lines[1])) {
-      startIdx = 2;
-    } else if (lines.length > 0 && /\|/.test(lines[0])) {
-      startIdx = 1;
-    }
-
-    itemCount = 0;
-    const markdownResult: Datum[] = [];
-
+    const startIdx = lines.length > 1 && /-\s*-/.test(lines[1]) ? 2 : 1;
     for (let i = startIdx; i < lines.length; i++) {
       const row = lines[i];
       if (!row.includes("|")) continue;
-      const parts = row
-        .split("|")
-        .map((s) => s.trim())
-        .filter(
-          (s, idx, arr) =>
-            !(idx === 0 && s === "") && !(idx === arr.length - 1 && s === "")
-        );
+
+      const parts = row.split("|").map((s) => s.trim()).filter((s, idx, arr) => 
+        !(idx === 0 && s === "") && !(idx === arr.length - 1 && s === "")
+      );
       if (parts.length < 2) continue;
 
-      const valueStr = parts[1] || "0";
-      const value = Number(valueStr.replace(/["\s,]/g, ""));
-
+      const value = Number(parts[1]?.replace(/["\s,]/g, ""));
       if (isFinite(value)) {
-        const label = parts[0] || `Item ${itemCount + 1}`;
-        const colorStr = parts[2] || "";
-        const color = colorStr || presetColors[itemCount % presetColors.length];
-
-        markdownResult.push({
+        result.push({
           id: generateId(),
-          label,
+          label: parts[0] || `Item ${itemCount + 1}`,
           value: Math.max(0, value),
-          color,
+          color: parts[2] || PRESET_COLORS[itemCount % PRESET_COLORS.length],
         });
         itemCount++;
       }
     }
 
-    if (markdownResult.length > 0) return markdownResult;
-
     return result;
-  }
+  }, []);
 
-  // 💡 Optimization: useMemo hooks help prevent re-calculation unless dependencies change
-  const total = useMemo(
-    () => data.reduce((sum, d) => sum + (isFinite(d.value) ? d.value : 0), 0),
-    [data]
-  );
-
-  const sortedData = useMemo(() => {
-    const sortableData = [...data];
-
-    if (sortConfig !== null) {
-      sortableData.sort((a, b) => {
-        if (a[sortConfig.key] < b[sortConfig.key]) {
-          return sortConfig.direction === "asc" ? -1 : 1;
-        }
-        if (a[sortConfig.key] > b[sortConfig.key]) {
-          return sortConfig.direction === "asc" ? 1 : -1;
-        }
-        return 0;
-      });
+  const transformData = useCallback(() => {
+    const rows = parseMarkdownTable(markdownInput);
+    if (rows.length) {
+      setData(() => rows);
+      toast.success("Data transformed successfully!", { duration: 900 });
+    } else {
+      toast.error("Error: Invalid data format or no data found.");
     }
-    return sortableData;
-  }, [data, sortConfig]);
+  }, [markdownInput, parseMarkdownTable, setData]);
 
-  const requestSort = (key: "label" | "value") => {
-    let direction: "asc" | "desc" = "asc";
-    if (
-      sortConfig &&
-      sortConfig.key === key &&
-      sortConfig.direction === "asc"
-    ) {
-      direction = "desc";
-    } else if (
-      sortConfig &&
-      sortConfig.key === key &&
-      sortConfig.direction === "desc"
-    ) {
-      setSortConfig(null);
-      return;
-    }
-    setSortConfig({ key, direction });
-  };
+  const loadExample = useCallback((type: "csv" | "markdown") => {
+    const examples = {
+      csv: `Label,Value,Color\nA, 12, #3b82f6\nB, 30, #22c55e\nC, 18, #ef4444`,
+      markdown: "| Label | Value | Color |\n|------:|------:|:-----:|\n| A     | 12    | #3b82f6 |\n| B     | 30    | #22c55e |\n| C     | 18    | #ef4444 |"
+    };
+    setMarkdownInput(examples[type]);
+    toast.success(`${type.toUpperCase()} Example loaded!`, { duration: 900 });
+  }, []);
 
-  // Memoized data for stacked chart
-  const stackedData = useMemo(() => {
-    const total = sortedData.reduce((sum, d) => sum + Math.max(0, isFinite(d.value) ? d.value : 0), 0);
-    return [
-      {
-        name: "All",
-        ...sortedData.reduce((acc, d) => ({
-          ...acc,
-          [d.id]: Math.max(0, isFinite(d.value) ? d.value : 0) / (total || 1)
-        }), {})
-      }
-    ];
+  const exportToMarkdown = useCallback(() => {
+    const header = "| Label | Value | Color |";
+    const separator = "|------:|------:|:-----:|";
+    const rows = sortedData.map(d => `| ${d.label} | ${d.value} | ${d.color} |`).join("\n");
+    const markdown = `${header}\n${separator}\n${rows}`;
+    setMarkdownInput(markdown);
+    toast.success("Data exported to Markdown!", { duration: 900 });
   }, [sortedData]);
 
-  function StackedTooltip({
-    active,
-    payload,
-  }: {
-    active?: boolean;
-    payload?: Array<{ name?: string; value: number; fill?: string } & Record<string, unknown>>;
-  }) {
-    if (!active || !payload || payload.length === 0) return null;
-    
+  const exportToCSV = useCallback(() => {
+    const header = "Label,Value,Color";
+    const rows = sortedData.map(d => `${d.label},${d.value},${d.color}`).join("\n");
+    const csv = `${header}\n${rows}`;
+    setMarkdownInput(csv);
+    toast.success("Data exported to CSV!", { duration: 900 });
+  }, [sortedData]);
 
-    
-    return (
-      <div className="rounded-md border bg-background p-2 text-xs shadow-sm">
-        <div className="font-medium mb-1">Details</div>
-        <div className="space-y-0.5">
-          {payload.map((entry, idx) => (
-            <div
-              key={idx}
-              className="flex items-center justify-between gap-4"
-            >
-              <div className="flex items-center gap-2">
-                <div
-                  className={`w-2 h-2 rounded-full ${styles.colorCircle}`}
-                  style={{"--dot-color": entry.fill} as React.CSSProperties}
-                />
-                <span>{entry.name}</span>
-              </div>
-              <span>{Math.round(entry.value * 100)}%</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  // 💡 Refactored to use useCallback for stable function references
-  const updateLabel = useCallback((id: string, label: string) => {
-    setData((prev) => prev.map((d) => (d.id === id ? { ...d, label } : d)));
-  }, []);
-  const updateValue = useCallback((id: string, next: string) => {
-    const parsed = Number(next);
-    setData((prev) =>
-      prev.map((d) =>
-        d.id === id ? { ...d, value: isFinite(parsed) ? parsed : 0 } : d
-      )
-    );
-  }, []);
-  const updateColor = useCallback((id: string, color: string) => {
-    setData((prev) => prev.map((d) => (d.id === id ? { ...d, color } : d)));
-  }, []);
-
-  function addRow() {
+  const addRow = useCallback(() => {
     const nextIndex = data.length;
     setData((prev) => [
       ...prev,
@@ -531,21 +183,20 @@ export default function DataVisualizer() {
         id: generateId(),
         label: `Item ${nextIndex + 1}`,
         value: 0,
-        color: presetColors[nextIndex % presetColors.length],
+        color: PRESET_COLORS[nextIndex % PRESET_COLORS.length],
       },
     ]);
-    // ✅ Add Row: ใช้ toast ธรรมดา + ไอคอน ✅ (Black Version)
     toast.success("Row added!", { duration: 900 });
-  }
+  }, [data.length, setData]);
 
-  function removeRow(id: string) {
-    setData((prev) =>
-      prev.length > 1 ? prev.filter((d) => d.id !== id) : prev
-    );
-  }
+  // --- 7. Drag and Drop Sensors ---
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
-  function handleDragEnd(event: DragEndEvent) {
-    if (sortConfig !== null) return;
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    if (sortConfig) return;
 
     const { active, over } = event;
     if (over && active.id !== over.id) {
@@ -555,40 +206,17 @@ export default function DataVisualizer() {
         return arrayMove(prev, oldIndex, newIndex);
       });
     }
-  }
+  }, [sortConfig, setData]);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
-  const isDndEnabled = sortConfig === null;
-
-  // Full-screen functions
-  const openFullscreen = (chartType: string) => {
-    setFullscreenChart(chartType);
-  };
-
-  const closeFullscreen = () => {
-    setFullscreenChart(null);
-  };
-
-  // Handle escape key to close fullscreen and body scroll lock
+  // --- 8. Fullscreen escape key handler ---
   useEffect(() => {
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && fullscreenChart) {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && fullscreenChart) {
         closeFullscreen();
       }
     };
 
     if (fullscreenChart) {
-      // Prevent body scroll when modal is open
       document.body.style.overflow = 'hidden';
       document.addEventListener("keydown", handleEscape);
       return () => {
@@ -596,627 +224,614 @@ export default function DataVisualizer() {
         document.removeEventListener("keydown", handleEscape);
       };
     }
-  }, [fullscreenChart]);
+  }, [fullscreenChart, closeFullscreen]);
 
-  // Full-screen modal component
-  const FullscreenModal = ({ chartType, children }: { chartType: string; children: React.ReactNode }) => {
-    if (fullscreenChart !== chartType) return null;
+  // --- 9. Click outside dock handler ---
+  const dockRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      
+      // If the target is no longer in the document, it was likely a portal/popover 
+      // (like a Radix Select item) that unmounted itself synchronously on click.
+      if (!document.body.contains(target)) {
+        return;
+      }
+      
+      // Prevent closing when clicking inside a Radix Select dropdown (which renders in a portal outside the dock)
+      if (target.closest('[data-radix-popper-content-wrapper]') || target.closest('[role="listbox"]') || target.closest('[data-slot="select-content"]')) {
+        return;
+      }
 
-    return (
-      <div 
-        className={styles.fullscreenModal}
-        onClick={(e) => e.target === e.currentTarget && closeFullscreen()}
-      >
-        <div         className={styles.fullscreenContent}>
-          <div className="flex items-center justify-between p-4 border-b">
-            <h2 className="text-xl font-semibold capitalize">{chartType} Chart - Full Screen</h2>
-            <div className="flex items-center gap-2">
-              {(chartType === "bar" || chartType === "stacked") && (
-                <Button
-                  variant="secondary"
-                  aria-label={`Toggle ${chartType} chart orientation`}
-                  onClick={() => {
-                    if (chartType === "bar") {
-                      setBarHorizontal((v) => !v);
-                    } else if (chartType === "stacked") {
-                      setStackedHorizontal((v) => !v);
-                    }
-                  }}
-                >
-                  {chartType === "bar" 
-                    ? (barHorizontal ? "Vertical" : "Horizontal")
-                    : (stackedHorizontal ? "Vertical" : "Horizontal")
-                  }
-                </Button>
-              )}
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => {
-                  const refs = {
-                    bar: barCardRef,
-                    pie: pieCardRef,
-                    stacked: stackedCardRef,
-                    line: lineCardRef
-                  };
-                  const ref = refs[chartType as keyof typeof refs];
-                  if (ref?.current) {
-                    copyChartSvg(ref.current);
-                  }
-                }}
-                aria-label={`Copy ${chartType} chart as SVG`}
-              >
-                Copy SVG
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={closeFullscreen}
-                className="h-8 w-8 p-0"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          <div           className={styles.chartContent}>
-            {children}
-          </div>
-        </div>
-      </div>
-    );
-  };
+      if (isDockOpen && dockRef.current && !dockRef.current.contains(target)) {
+        setIsDockOpen(false);
+      }
+    };
+    
+    const handleEscapeDock = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isDockOpen) {
+        setIsDockOpen(false);
+      }
+    };
+
+    if (isDockOpen) {
+      document.addEventListener("mousedown", handleClickOutside, true);
+      document.addEventListener("keydown", handleEscapeDock);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside, true);
+      document.removeEventListener("keydown", handleEscapeDock);
+    };
+  }, [isDockOpen]);
+
+
 
   return (
     <>
       <div className="p-4 space-y-6" data-testid="data-visualizer">
-        <div>
-          <h1 className="text-2xl font-semibold">Data Visualizer</h1>
-          <p className="text-sm text-muted-foreground">
-            Edit values in either panel to update the charts live. Click
-            Label/Value headers to sort.
-          </p>
-        </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Data Tables */}
-        <div className="rounded-lg border p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-medium">
-              Data Table{" "}
-              {sortConfig && (
-                <span className="text-sm text-primary">(Sorted)</span>
-              )}
-            </h2>
-            <div className="flex items-center gap-2">
-              <div className="text-sm text-muted-foreground">
-                Total: {total.toLocaleString()}
-              </div>
-              <Button variant="secondary" onClick={addRow}>
-                Add Row
+
+        {/* --- Data Input Section (Float Dock) --- */}
+        <div 
+          ref={dockRef}
+          className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center transition-all duration-300 pointer-events-none`}
+        >
+          {/* Paper Panel */}
+          <div 
+            className={`pointer-events-auto bg-background/90 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-border/50 rounded-2xl overflow-hidden transition-all duration-300 origin-bottom flex flex-col transform-gpu isolate ${
+              isDockOpen ? "w-[95vw] sm:w-[85vw] md:w-[800px] h-[75vh] max-h-[750px] opacity-100 mb-4 scale-100" : "w-0 h-0 opacity-0 mb-0 scale-95"
+            }`}
+          >
+            <div className="flex items-center justify-between p-4 border-b bg-muted/40">
+              <h2 className="font-semibold text-lg flex items-center gap-2">
+                <Database className="w-5 h-5 text-primary" /> Data Manager
+              </h2>
+              <Button variant="ghost" size="icon" onClick={() => setIsDockOpen(false)} className="rounded-full h-8 w-8 hover:bg-muted">
+                <X className="w-4 h-4" />
               </Button>
             </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2 pr-2 min-w-[160px]">
-                    <button
-                      className="inline-flex items-center gap-1 font-semibold hover:text-foreground/80 transition-colors"
-                      onClick={() => requestSort("label")}
-                      aria-label="Sort by Label"
-                    >
-                      Label
-                      {sortConfig?.key === "label" && (
-                        <span aria-hidden="true">
-                          {sortConfig.direction === "asc" ? "↑" : "↓"}
-                        </span>
-                      )}
-                      {isDndEnabled && (
-                        <span className="text-xs text-muted-foreground ml-1">
-                          (Drag)
-                        </span>
-                      )}
-                    </button>
-                  </th>
-                  <th className="text-left py-2 pr-2 min-w-[120px]">
-                    <button
-                      className="inline-flex items-center gap-1 font-semibold hover:text-foreground/80 transition-colors"
-                      onClick={() => requestSort("value")}
-                      aria-label="Sort by Value"
-                    >
-                      Value
-                      {sortConfig?.key === "value" && (
-                        <span aria-hidden="true">
-                          {sortConfig.direction === "asc" ? "↑" : "↓"}
-                        </span>
-                      )}
-                    </button>
-                  </th>
-                  <th className="text-left py-2 pr-2 min-w-[120px]">Color</th>
-                  <th className="text-left py-2 pr-2">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={handleDragEnd}
-                >
-                  <SortableContext
-                    items={sortedData.map((d) => d.id)}
-                    strategy={verticalListSortingStrategy}
+            
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-6">
+              {/* Data Table */}
+              <div className="rounded-xl border bg-card p-4 sm:p-5 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+                  <h3 className="text-base font-medium flex items-center gap-2">
+                    Data Table {sortConfig && <span className="text-xs text-primary font-normal bg-primary/10 px-2 py-0.5 rounded-full">Sorted</span>}
+                  </h3>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="text-sm font-medium text-muted-foreground mr-1">Total: {total.toLocaleString()}</div>
+                    <Button variant="outline" size="sm" className="h-8" onClick={exportToCSV}>CSV</Button>
+                    <Button variant="outline" size="sm" className="h-8" onClick={exportToMarkdown}>MD</Button>
+                    <Button variant="default" size="sm" className="h-8 shadow-sm" onClick={addRow}>Add Row</Button>
+                  </div>
+                </div>
+                <div className="overflow-x-auto rounded-lg border bg-background/50">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b bg-muted/50">
+                        <th className="text-left py-3 px-3 min-w-[160px] font-medium text-muted-foreground">
+                          <button
+                            className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+                            onClick={() => requestSort("label")}
+                          >
+                            Label
+                            {sortConfig?.key === "label" && (
+                              <span className="text-primary">{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
+                            )}
+                            {!sortConfig && <span className="text-[10px] uppercase tracking-wider ml-1 opacity-60">(Drag)</span>}
+                          </button>
+                        </th>
+                        <th className="text-left py-3 px-3 min-w-[120px] font-medium text-muted-foreground">
+                          <button
+                            className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+                            onClick={() => requestSort("value")}
+                          >
+                            Value
+                            {sortConfig?.key === "value" && (
+                              <span className="text-primary">{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
+                            )}
+                          </button>
+                        </th>
+                        <th className="text-left py-3 px-3 min-w-[120px] font-medium text-muted-foreground">Color</th>
+                        <th className="text-left py-3 px-3 w-[100px] font-medium text-muted-foreground">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                        <SortableContext items={data.map((d) => d.id)} strategy={verticalListSortingStrategy}>
+                          {sortedData.map((row) => (
+                            <SortableRow
+                              key={row.id}
+                              row={row}
+                              onUpdateLabel={updateLabel}
+                              onUpdateValue={updateValue}
+                              onUpdateColor={updateColor}
+                              onRemove={removeRow}
+                              presetColors={PRESET_COLORS}
+                            />
+                          ))}
+                        </SortableContext>
+                      </DndContext>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Markdown Input */}
+              <div className="rounded-xl border bg-card p-4 sm:p-5 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-base font-medium">Paste Data</h3>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 gap-1.5 shadow-sm hover:bg-muted/50"
+                    onClick={() => {
+                      navigator.clipboard.writeText(markdownInput);
+                      toast.success("Data copied to clipboard!", { duration: 900 });
+                    }}
                   >
-                    {sortedData.map((row) => (
-                      <SortableRow
-                        key={row.id}
-                        row={row}
-                        onUpdateLabel={updateLabel}
-                        onUpdateValue={updateValue}
-                        onUpdateColor={updateColor}
-                        onRemove={removeRow}
-                        presetColors={presetColors}
-                      />
-                    ))}
-                  </SortableContext>
-                </DndContext>
-              </tbody>
-            </table>
+                    <Copy className="w-3.5 h-3.5" /> 
+                    <span className="hidden sm:inline">Copy Data</span>
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 gap-4">
+                  <textarea
+                    className="min-h-[140px] w-full rounded-xl border bg-background/50 px-4 py-3 font-mono text-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary focus-visible:outline-none resize-y placeholder:text-muted-foreground/50 transition-shadow"
+                    aria-label="Paste CSV or Markdown data"
+                    placeholder="Paste your data here (CSV or Markdown Table)..."
+                    value={markdownInput}
+                    onChange={(e) => setMarkdownInput(e.target.value)}
+                  />
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <Button onClick={transformData} className="w-full sm:w-auto shadow-sm">Transform to Table</Button>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                      <Button variant="secondary" size="sm" className="flex-1 sm:flex-none" onClick={() => loadExample("csv")}>CSV Example</Button>
+                      <Button variant="secondary" size="sm" className="flex-1 sm:flex-none" onClick={() => loadExample("markdown")}>MD Example</Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Toggle Buttons */}
+          <div className="pointer-events-auto flex flex-wrap justify-center items-center gap-2 sm:gap-3 w-full px-2">
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-y-3 sm:gap-4 bg-background/90 backdrop-blur-xl shadow-xl border border-border/50 py-3 sm:py-0 px-4 sm:px-5 min-h-[56px] rounded-[24px] sm:rounded-full transition-all duration-300 hover:shadow-2xl max-w-[95vw] transform-gpu isolate">
+              {/* Sort Dropdown */}
+              <div className="flex items-center gap-2 justify-between sm:justify-center w-[160px] sm:w-auto">
+                <button
+                  onClick={() => {
+                    if (sortConfig) {
+                      setSortConfig({ ...sortConfig, direction: sortConfig.direction === "asc" ? "desc" : "asc" });
+                    }
+                  }}
+                  disabled={!sortConfig}
+                  className={`flex items-center justify-center w-7 h-7 rounded-full transition-colors ${
+                    sortConfig 
+                      ? "hover:bg-muted/80 text-foreground cursor-pointer shadow-sm border border-border/40" 
+                      : "text-muted-foreground opacity-50 cursor-default"
+                  }`}
+                  title={sortConfig ? `Switch to ${sortConfig.direction === 'asc' ? 'descending' : 'ascending'}` : "Select a sort method first"}
+                >
+                  {!sortConfig && <ArrowUpDown className="w-3.5 h-3.5" />}
+                  {sortConfig?.direction === "asc" && <ArrowUp className="w-3.5 h-3.5" />}
+                  {sortConfig?.direction === "desc" && <ArrowDown className="w-3.5 h-3.5" />}
+                </button>
+                <span className="text-sm font-medium select-none hidden sm:inline ml-1">Sort:</span>
+                <Select
+                  value={sortConfig === null ? "none" : sortConfig.key}
+                  onValueChange={(val) => {
+                    if (val === "none") setSortConfig(null);
+                    if (val === "value") setSortConfig({ key: "value", direction: "desc" });
+                    if (val === "label") setSortConfig({ key: "label", direction: "asc" });
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-[80px] rounded-full text-xs font-medium border-border/50 bg-background/50 shadow-sm hover:bg-muted/50 transition-colors focus:ring-0 focus:ring-offset-0">
+                    <SelectValue placeholder="None" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl shadow-xl border-border/50 min-w-[100px]">
+                    <SelectItem value="none" className="text-sm cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-2">None</SelectItem>
+                    <SelectItem value="value" className="text-sm cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-2">Value</SelectItem>
+                    <SelectItem value="label" className="text-sm cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-2">Name</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="hidden sm:block w-px h-6 bg-border/50" />
+
+              {/* Show Labels Toggle */}
+              <div className="flex items-center gap-2.5 justify-between sm:justify-center w-[160px] sm:w-auto">
+                <label htmlFor="show-labels-dock" className="text-sm font-medium cursor-pointer select-none">
+                  Labels
+                </label>
+                <Switch
+                  id="show-labels-dock"
+                  checked={showLabels}
+                  onCheckedChange={setShowLabels}
+                  className="data-[state=checked]:bg-primary shadow-sm"
+                />
+              </div>
+
+              <div className="hidden sm:block w-px h-6 bg-border/50" />
+
+              {/* Show Legend Toggle */}
+              <div className="flex items-center gap-2.5 justify-between sm:justify-center w-[160px] sm:w-auto">
+                <label htmlFor="show-legend-dock" className="text-sm font-medium cursor-pointer select-none">
+                  Legend
+                </label>
+                <Switch
+                  id="show-legend-dock"
+                  checked={showLegend}
+                  onCheckedChange={setShowLegend}
+                  className="data-[state=checked]:bg-primary shadow-sm"
+                />
+              </div>
+            </div>
+            
+            <Button 
+              size="lg" 
+              className={`rounded-full shadow-xl h-14 px-6 gap-2 font-medium text-base transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 active:scale-95 ${
+                isDockOpen ? "bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-secondary/20" : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/20"
+              }`}
+              onClick={() => setIsDockOpen(!isDockOpen)}
+            >
+              {isDockOpen ? (
+                <>
+                  <ChevronDown className="w-5 h-5" /> Hide Data
+                </>
+              ) : (
+                <>
+                  <Database className="w-5 h-5" /> Edit Data
+                </>
+              )}
+            </Button>
           </div>
         </div>
 
-        {/* --- Right Panel: Markdown Input --- */}
-        <div className="rounded-lg border p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-medium">Paste Data</h2>
-          </div>
-          <div className="grid grid-cols-1 gap-3">
-            <textarea
-              className="min-h-[160px] w-full rounded-md border bg-background px-3 py-2 font-mono text-xs"
-              aria-label="Markdown table input"
-              value={markdownInput}
-              onChange={(e) => setMarkdownInput(e.target.value)}
-            />
-            <div className="flex items-center justify-between gap-2">
-              <Button
-                onClick={() => {
-                  const rows = parseMarkdownTable(markdownInput);
-                  if (rows.length) {
-                    setData(rows);
-                    // ✅ Transform: ใช้ toast ธรรมดา + ไอคอน ✅ (Black Version)
-                    toast.success("Data transformed successfully!", {
-                      duration: 900,
-                    });
-                  } else {
-                    // ✅ Error: ใช้ toast.error ดึงสไตล์สีดำ/ไอคอนแดง
-                    toast.error("Error: Invalid data format or no data found.");
-                  }
-                  setSortConfig(null);
-                }}
-              >
-                Transform to Table
-              </Button>
+        {/* --- Charts Section --- */}
+        <div className={`space-y-6 ${showLabels ? 'fast-chart-labels-visible' : 'fast-chart-labels-hidden'}`}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <ChartCard
+              title="Bar Chart"
+              chartRef={barCardRef}
+              onCopySvg={() => copyChartSvg(barCardRef.current)}
+              onCopyPng={() => copyChartPng(barCardRef.current)}
+              onCopyHtml={() => copyChartEmbed({ type: 'bar', data: sortedData, options: { isHorizontal: barHorizontal, showLabels } })}
+              onFullscreen={() => openFullscreen("bar")}
+              showOrientation
+              isHorizontal={barHorizontal}
+              onToggleOrientation={() => setBarHorizontal(!barHorizontal)}
+            >
+              <BarChart 
+                data={sortedData} 
+                containerRef={barCardRef as React.RefObject<HTMLDivElement>}
+                isHorizontal={barHorizontal}
+                showLabels={showLabels}
+              />
+            </ChartCard>
 
-              {/* Grouped Buttons (ButtonGroup Style) */}
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setMarkdownInput(
-                      `Label,Value,Color\nA, 12, #3b82f6\nB, 30, #22c55e\nC, 18, #ef4444`
-                    );
-                    setSortConfig(null);
-                    // ✅ Load CSV: ใช้ toast ธรรมดา + ไอคอน ✅ (Black Version)
-                    toast.success("CSV Example loaded!", { duration: 900 });
-                  }}
-                  aria-label="Load CSV Example"
-                >
-                  CSV Example
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setMarkdownInput(
-                      "| Label | Value | Color |\n|------:|------:|:-----:|\n| A     | 12    | #3b82f6 |\n| B     | 30    | #22c55e |\n| C     | 18    | #ef4444 |"
-                    );
-                    setSortConfig(null);
-                    // ✅ Load Markdown: ใช้ toast ธรรมดา + ไอคอน ✅ (Black Version)
-                    toast.success("Markdown Example loaded!", {
-                      duration: 900,
-                    });
-                  }}
-                  aria-label="Load Markdown Example"
-                >
-                  Markdown Example
-                </Button>
+            <ChartCard
+              title="Donut Chart"
+              chartRef={pieCardRef}
+              customActions={
+                <div className="flex flex-wrap items-center gap-2">
+                  
+            <Select value={pieFactIndex.toString()} onValueChange={(val) => setPieFactIndex(Number(val))}>
+                    <SelectTrigger className="h-8 w-32 bg-transparent text-xs" style={{ fontSize: 12 }}>
+                      <SelectValue placeholder="Fact Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">Total</SelectItem>
+                      <SelectItem value="1">The most</SelectItem>
+                      <SelectItem value="2">The Lowest</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <label htmlFor="show-fact-text" className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap">
+                    Fact Text
+                  </label>
+                  <Switch
+                    id="show-fact-text"
+                    checked={showFactText}
+                    onCheckedChange={setShowFactText}
+                  />
+                </div>
+              }
+              onCopySvg={() => copyChartSvg(pieCardRef.current)}
+              onCopyPng={() => copyChartPng(pieCardRef.current)}
+              onCopyHtml={() => copyChartEmbed({ type: 'pie', data: sortedData, total, options: { showFactText, factIndex: pieFactIndex, showLegend } })}
+              onFullscreen={() => openFullscreen("pie")}
+            >
+              <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
+                <PieChart data={sortedData} total={total} containerRef={pieCardRef as React.RefObject<HTMLDivElement>} showFactText={showFactText} factIndex={pieFactIndex} onFactIndexChange={setPieFactIndex} />
               </div>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Accepts Markdown Table (Label | Value | Color) or **Structured CSV
-              (Label,Value,Color)**.
-            </p>
+            </ChartCard>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <ChartCard
+              title="100% Stacked Chart"
+              chartRef={stackedCardRef}
+              onCopySvg={() => copyChartSvg(stackedCardRef.current)}
+              onCopyPng={() => copyChartPng(stackedCardRef.current)}
+              onCopyHtml={() => copyChartEmbed({ type: 'stacked', data: sortedData, options: { isHorizontal: stackedHorizontal, showLabels, showRadial: stackedRadial, showFactText: showRadialFactText, factIndex: radialFactIndex, showLegend } })}
+              onFullscreen={() => openFullscreen("stacked")}
+              showOrientation={!stackedRadial}
+              isHorizontal={stackedHorizontal}
+              onToggleOrientation={() => setStackedHorizontal(!stackedHorizontal)}
+              customActions={
+                <div className="flex flex-wrap items-center gap-2">
+                  <label htmlFor="show-radial" className="text-xs text-muted-foreground cursor-pointer">
+                    Radial
+                  </label>
+                  <Switch
+                    id="show-radial"
+                    checked={stackedRadial}
+                    onCheckedChange={setStackedRadial}
+                  />
+                  {stackedRadial && (
+                    <>
+                      <div className="w-px h-4 bg-border mx-1" />
+                      <label htmlFor="show-radial-fact-text" className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap">
+                        Fact Text
+                      </label>
+                      <Switch
+                        id="show-radial-fact-text"
+                        checked={showRadialFactText}
+                        onCheckedChange={setShowRadialFactText}
+                      />
+                    </>
+                  )}
+                </div>
+              }
+            >
+              <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
+                <StackedChart data={sortedData} isHorizontal={stackedHorizontal} containerRef={stackedCardRef as React.Ref<HTMLDivElement>} showLabels={showLabels} showRadial={stackedRadial} showFactText={showRadialFactText} factIndex={radialFactIndex} onFactIndexChange={setRadialFactIndex} />
+              </div>
+            </ChartCard>
+
+            <ChartCard
+              title="Line Chart - Linear"
+              chartRef={lineCardRef}
+              onCopySvg={() => copyChartSvg(lineCardRef.current)}
+              onCopyPng={() => copyChartPng(lineCardRef.current)}
+              onCopyHtml={() => copyChartEmbed({ type: 'line', data: sortedData, options: { showLabels, showGradientArea, lineColor, showLegend } })}
+              onFullscreen={() => openFullscreen("line")}
+              customActions={
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="line-color" className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap">
+                      Line Color
+                    </label>
+                    <input
+                      id="line-color"
+                      type="color"
+                      value={lineColor || sortedData[0]?.color || "#3b82f6"}
+                      onChange={(e) => setLineColor(e.target.value)}
+                      className="sr-only opacity-0 absolute pointer-events-none"
+                      tabIndex={-1}
+                    />
+                    <Select 
+                      value={lineColor || sortedData[0]?.color || "#3b82f6"} 
+                      onValueChange={(val) => {
+                        if (val === "custom_trigger") {
+                          document.getElementById('line-color')?.click();
+                        } else {
+                          setLineColor(val);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-fit h-7 gap-2 px-2">
+                        <SelectValue asChild>
+                          <div className="flex items-center gap-2 w-full text-left">
+                            <div 
+                              className="w-3 h-3 rounded-full shadow-inner shrink-0" 
+                              style={{ backgroundColor: lineColor || sortedData[0]?.color || "#3b82f6" }} 
+                            />
+                            <span className="truncate text-xs">{lineColor || sortedData[0]?.color || "#3b82f6"}</span>
+                          </div>
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="custom_trigger" className="pr-4 mb-1 border-b border-border/50 rounded-none cursor-pointer">
+                          <div className="flex items-center gap-2 text-foreground font-medium">
+                            <span className="text-xs">🎨 Custom Color...</span>
+                          </div>
+                        </SelectItem>
+                        {!(PRESET_COLORS as readonly string[]).includes(lineColor || sortedData[0]?.color || "#3b82f6") && (
+                          <SelectItem value={lineColor || sortedData[0]?.color || "#3b82f6"} className="hidden pr-4">
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-3 h-3 rounded-full shadow-inner shrink-0"
+                                style={{ backgroundColor: lineColor || sortedData[0]?.color || "#3b82f6" }}
+                              />
+                              <span className="font-mono text-xs">{lineColor || sortedData[0]?.color || "#3b82f6"}</span>
+                            </div>
+                          </SelectItem>
+                        )}
+                        {PRESET_COLORS.map((c) => (
+                          <SelectItem key={c} value={c} className="pr-4 cursor-pointer">
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-3 h-3 rounded-full shadow-inner shrink-0"
+                                style={{ backgroundColor: c }}
+                              />
+                              <span className="font-mono text-xs">{c}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="show-gradient" className="text-xs text-muted-foreground cursor-pointer">
+                      Gradient area
+                    </label>
+                    <Switch
+                      id="show-gradient"
+                      checked={showGradientArea}
+                      onCheckedChange={setShowGradientArea}
+                    />
+                  </div>
+                </div>
+              }
+            >
+              <LineChart 
+                data={sortedData} 
+                containerRef={lineCardRef as React.Ref<HTMLDivElement>}
+                showLabels={showLabels}
+                showGradientArea={showGradientArea}
+                lineColor={lineColor}
+              />
+            </ChartCard>
           </div>
         </div>
       </div>
 
-      {/* --- Charts Section --- */}
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div ref={barCardRef} className="rounded-lg border p-4 min-h-[380px]">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-base font-medium">Bar Chart</h3>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="secondary"
-                  aria-label="Toggle bar chart orientation"
-                  onClick={() => setBarHorizontal((v) => !v)}
-                >
-                  {barHorizontal ? "Vertical" : "Horizontal"}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={async () => {
-                    await copyChartSvg(barCardRef.current);
-                  }}
-                  aria-label="Copy Bar Chart as SVG"
-                >
-                  Copy SVG
-                </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => openFullscreen("bar")}
-                  aria-label="Open Bar Chart in full screen"
-                >
-                  <Maximize2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            <div className="h-[calc(100%-3rem)]">
-              <BarChart
-                data={sortedData}
-                containerRef={barCardRef}
-                isHorizontal={barHorizontal}
-              />
-            </div>
-          </div>
+      {/* --- Fullscreen Modals --- */}
+      <FullscreenModal showLabels={showLabels}
+        isOpen={fullscreenChart === "bar"}
+        onClose={closeFullscreen}
+        chartType="bar"
+        onCopySvg={() => copyChartSvg(fsRef.current)}
+        onCopyPng={() => copyChartPng(fsRef.current)}
+        showOrientation
+        isHorizontal={barHorizontal}
+        onToggleOrientation={() => setBarHorizontal(!barHorizontal)}
+      >
+        <BarChart containerRef={fsRef} data={sortedData} isHorizontal={barHorizontal} showLabels={showLabels} />
+      </FullscreenModal>
 
-          <div ref={pieCardRef} className="rounded-lg border p-4 min-h-[380px]">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-base font-medium">
-                Pie Chart - Donut with Total
-              </h3>
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => copyChartSvg(pieCardRef.current)}
-                  aria-label="Copy Pie Chart as SVG"
-                >
-                  Copy SVG
-                </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => openFullscreen("pie")}
-                  aria-label="Open Pie Chart in full screen"
-                >
-                  <Maximize2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            <div className="h-[calc(100%-3rem)]">
-              <PieChart
-                data={sortedData}
-                total={total}
-                containerRef={pieCardRef}
-              />
-            </div>
-          </div>
-        </div>
-        </div>
-
-        <div ref={stackedCardRef} className="rounded-lg border p-4 h-[320px]">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-base font-medium">100% Stacked Chart</h3>
+      <FullscreenModal showLabels={showLabels}
+        isOpen={fullscreenChart === "pie"}
+        onClose={closeFullscreen}
+        chartType="pie"
+        onCopySvg={() => copyChartSvg(fsRef.current)}
+        onCopyPng={() => copyChartPng(fsRef.current)}
+        customActions={
           <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              aria-label="Toggle stacked chart orientation"
-              onClick={() => setStackedHorizontal((v) => !v)}
-            >
-              {stackedHorizontal ? "Vertical" : "Horizontal"}
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => copyChartSvg(stackedCardRef.current)}
-              aria-label="Copy Stacked Chart as SVG"
-            >
-              Copy SVG
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => openFullscreen("stacked")}
-              aria-label="Open Stacked Chart in full screen"
-            >
-              <Maximize2 className="h-4 w-4" />
-            </Button>
+            
+            <Select value={pieFactIndex.toString()} onValueChange={(val) => setPieFactIndex(Number(val))}>
+              <SelectTrigger className="h-8 w-32 bg-transparent text-xs" style={{ fontSize: 12 }}>
+                <SelectValue placeholder="Fact Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">Total</SelectItem>
+                <SelectItem value="1">The most</SelectItem>
+                <SelectItem value="2">The Lowest</SelectItem>
+              </SelectContent>
+            </Select>
+            <label htmlFor="fs-show-fact-text" className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap">
+              Fact Text
+            </label>
+            <Switch
+              id="fs-show-fact-text"
+              checked={showFactText}
+              onCheckedChange={setShowFactText}
+            />
           </div>
-        </div>
-        <ResponsiveContainer width="100%" height="90%">
-          <RechartsBarChart
-            data={stackedData}
-            stackOffset="expand"
-            margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
-            layout={stackedHorizontal ? "vertical" : "horizontal"}
-          >
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-            {stackedHorizontal ? (
+        }
+      >
+        {fullscreenChart === "pie" && (
+          <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
+            <PieChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} total={total} showFactText={showFactText} isFullscreen={fullscreenChart === "pie"} factIndex={pieFactIndex} onFactIndexChange={setPieFactIndex} />
+          </div>
+        )}
+      </FullscreenModal>
+
+      <FullscreenModal showLabels={showLabels}
+        isOpen={fullscreenChart === "stacked"}
+        onClose={closeFullscreen}
+        chartType="stacked"
+        onCopySvg={() => copyChartSvg(fsRef.current)}
+        onCopyPng={() => copyChartPng(fsRef.current)}
+        showOrientation={!stackedRadial}
+        isHorizontal={stackedHorizontal}
+        onToggleOrientation={() => setStackedHorizontal(!stackedHorizontal)}
+        customActions={
+          <div className="flex items-center gap-2">
+            <label htmlFor="fullscreen-show-radial" className="text-xs text-muted-foreground cursor-pointer">
+              Radial
+            </label>
+            <Switch
+              id="fullscreen-show-radial"
+              checked={stackedRadial}
+              onCheckedChange={setStackedRadial}
+            />
+            {stackedRadial && (
               <>
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  tickLine={false}
-                  axisLine={false}
-                  width={60}
-                />
-                <XAxis
-                  type="number"
-                  domain={[0, 1]}
-                  tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
-                  tickLine={false}
-                  axisLine={false}
-                />
-              </>
-            ) : (
-              <>
-                <XAxis
-                  type="category"
-                  dataKey="name"
-                  tickLine={false}
-                  axisLine={false}
-                  height={60}
-                />
-                <YAxis
-                  type="number"
-                  domain={[0, 1]}
-                  tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
-                  tickLine={false}
-                  axisLine={false}
+                <div className="w-px h-4 bg-border mx-1" />
+                <label htmlFor="fs-show-radial-fact-text" className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap">
+                  Fact Text
+                </label>
+                <Switch
+                  id="fs-show-radial-fact-text"
+                  checked={showRadialFactText}
+                  onCheckedChange={setShowRadialFactText}
                 />
               </>
             )}
-            <Tooltip content={<StackedTooltip />} />
-            {sortedData.map((d) => (
-              <Bar key={d.id} dataKey={d.id} stackId="stacked" fill={d.color} name={d.label} />
-            ))}
-          </RechartsBarChart>
-        </ResponsiveContainer>
-      </div>
+          </div>
+        }
+      >
+        <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
+          <StackedChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} isHorizontal={stackedHorizontal} showLabels={showLabels} showRadial={stackedRadial} isFullscreen={fullscreenChart === "stacked"} showFactText={showRadialFactText} factIndex={radialFactIndex} onFactIndexChange={setRadialFactIndex} />
+        </div>
+      </FullscreenModal>
 
-        <div ref={lineCardRef} className="rounded-lg border p-4 min-h-[320px]">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-base font-medium">Line Chart - Linear</h3>
+      <FullscreenModal showLabels={showLabels}
+        isOpen={fullscreenChart === "line"}
+        onClose={closeFullscreen}
+        chartType="line"
+        onCopySvg={() => copyChartSvg(fsRef.current)}
+        onCopyPng={() => copyChartPng(fsRef.current)}
+        customActions={
+          <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => copyChartSvg(lineCardRef.current)}
-                aria-label="Copy Line Chart as SVG"
-              >
-                Copy SVG
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => openFullscreen("line")}
-                aria-label="Open Line Chart in full screen"
-              >
-                <Maximize2 className="h-4 w-4" />
-              </Button>
+              <label htmlFor="fullscreen-line-color" className="text-xs text-muted-foreground cursor-pointer">
+                Line Color
+              </label>
+              <Select value={lineColor || sortedData[0]?.color || "#3b82f6"} onValueChange={(color) => setLineColor(color)}>
+                <SelectTrigger id="fullscreen-line-color" className="w-fit h-7 gap-2 px-2">
+                  <SelectValue asChild>
+                    <div className="flex items-center gap-2 w-full text-left">
+                      <div 
+                        className="w-3 h-3 rounded-full shadow-inner shrink-0" 
+                        style={{ backgroundColor: lineColor || sortedData[0]?.color || "#3b82f6" }} 
+                      />
+                      <span className="truncate text-xs">{lineColor || sortedData[0]?.color || "#3b82f6"}</span>
+                    </div>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {PRESET_COLORS.map((c) => (
+                    <SelectItem key={c} value={c} className="pr-4">
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full shadow-inner shrink-0"
+                          style={{ backgroundColor: c }}
+                        />
+                        <span className="font-mono text-xs">{c}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <label htmlFor="fullscreen-show-gradient" className="text-xs text-muted-foreground cursor-pointer">
+                Gradient area
+              </label>
+              <Switch
+                id="fullscreen-show-gradient"
+                checked={showGradientArea}
+                onCheckedChange={setShowGradientArea}
+              />
             </div>
           </div>
-          <div className="h-[calc(100%-3rem)]">
-            <LineChart
-              data={sortedData}
-              containerRef={lineCardRef}
-            />
-          </div>
-        </div>
-      </div>
-
-      <Toaster
-        position="bottom-center"
-        reverseOrder={false}
-        gutter={3}
-        containerClassName=""
-        containerStyle={{}}
-        toastOptions={{
-          className: "",
-          duration: 900,
-          style: {
-            background: "black",
-            color: "#ffff",
-          },
-          iconTheme: {
-            primary: "white",
-            secondary: "black",
-          },
-          error: {
-            duration: 900,
-            iconTheme: {
-              primary: "#ef4444",
-              secondary: "black",
-            },
-          },
-        }}
-      />
-
-      {/* --- Full-screen Modals --- */}
-      {fullscreenChart === "bar" && (
-        <FullscreenModal chartType="bar">
-          <ResponsiveContainer width="100%" height="100%">
-            <RechartsBarChart
-              data={sortedData}
-              margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
-              layout={barHorizontal ? "horizontal" : "vertical"}
-            >
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              {barHorizontal ? (
-                <>
-                  <XAxis dataKey="label" tickLine={false} axisLine={false} />
-                  <YAxis tickLine={false} axisLine={false} />
-                </>
-              ) : (
-                <>
-                  <XAxis type="number" tickLine={false} axisLine={false} />
-                  <YAxis dataKey="label" type="category" tickLine={false} axisLine={false} />
-                </>
-              )}
-              <Tooltip />
-              <Bar 
-                dataKey="value" 
-                radius={barHorizontal ? [6, 6, 0, 0] : [0, 6, 6, 0]}
-              >
-                {sortedData.map((entry) => (
-                  <Cell key={entry.id} fill={entry.color} />
-                ))}
-              </Bar>
-            </RechartsBarChart>
-          </ResponsiveContainer>
-        </FullscreenModal>
-      )}
-
-      {fullscreenChart === "pie" && (
-        <FullscreenModal chartType="pie">
-          <ResponsiveContainer width="100%" height="100%">
-            <RechartsParChart>
-              <Tooltip />
-              <Pie
-                data={sortedData}
-                dataKey="value"
-                nameKey="label"
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={100}
-                paddingAngle={2}
-                cornerRadius={6}
-                strokeWidth={5}
-              >
-                {sortedData.map((entry) => (
-                  <Cell key={entry.id} fill={entry.color} />
-                ))}
-                <Label
-                  content={({ viewBox }) => {
-                    if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                      return (
-                        <text
-                          x={viewBox.cx}
-                          y={viewBox.cy}
-                          textAnchor="middle"
-                          dominantBaseline="middle"
-                        >
-                          <tspan
-                            x={viewBox.cx}
-                            y={viewBox.cy}
-                            className="fill-foreground text-2xl font-bold"
-                          >
-                            {total.toLocaleString()}
-                          </tspan>
-                          <tspan
-                            x={viewBox.cx}
-                            y={(viewBox.cy || 0) + 24}
-                            className="fill-muted-foreground text-sm"
-                          >
-                            Total
-                          </tspan>
-                        </text>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-              </Pie>
-            </RechartsParChart>
-          </ResponsiveContainer>
-        </FullscreenModal>
-      )}
-
-      {fullscreenChart === "stacked" && (
-        <FullscreenModal chartType="stacked">
-          <ResponsiveContainer width="100%" height="100%">
-            <RechartsBarChart
-              data={stackedData}
-              stackOffset="expand"
-              margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
-              layout={stackedHorizontal ? "vertical" : "horizontal"}
-            >
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              {stackedHorizontal ? (
-                <>
-                  <YAxis
-                    dataKey="name"
-                    type="category"
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <XAxis
-                    type="number"
-                    tickFormatter={(v) => `${Math.round((v as number) * 100)}%`}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                </>
-              ) : (
-                <>
-                  <XAxis dataKey="name" tickLine={false} axisLine={false} />
-                  <YAxis
-                    tickFormatter={(v) => `${Math.round((v as number) * 100)}%`}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                </>
-              )}
-              <Tooltip content={<StackedTooltip />} />
-              {sortedData.map((d) => (
-                <Bar key={d.id} dataKey={d.id} stackId="one" name={d.label}>
-                  <Cell fill={d.color} />
-                </Bar>
-              ))}
-            </RechartsBarChart>
-          </ResponsiveContainer>
-        </FullscreenModal>
-      )}
-
-            {fullscreenChart === "line" && (
-        <FullscreenModal chartType="line">
-          <ResponsiveContainer width="100%" height="100%">
-            <RechartsLineChart margin={{ top: 20, right: 20, left: 20, bottom: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="label"
-                interval={0}
-                angle={-45}
-                textAnchor="end"
-                height={60}
-              />
-              <YAxis width={80} />
-              <Tooltip />
-              <Line
-                type="monotone"
-                dataKey="value"
-                stroke="#8884d8"
-                strokeWidth={2}
-                data={sortedData}
-                dot={{ fill: "#8884d8", strokeWidth: 2 }}
-              />
-            </RechartsLineChart>
-          </ResponsiveContainer>
-        </FullscreenModal>
-      )}
+        }
+      >
+        <LineChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} showLabels={showLabels} showGradientArea={showGradientArea} lineColor={lineColor} />
+      </FullscreenModal>
     </>
   );
 }
