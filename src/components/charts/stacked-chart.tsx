@@ -364,16 +364,18 @@ export const StackedChart = React.memo(function StackedChart({
     );
 
     // Radial semi-circle ends at cy. All content (arc, text, arrows) sits strictly ABOVE cy.
-    // Ensure safe area padding between radialCy and legendStartY
-    const radialGap = legendRows.length > 0 ? 18 : 0;
+    // Ensure safe area padding and clean spacing between radialCy and legendStartY
+    const radialGap = legendRows.length > 0 ? (isFullscreen ? 40 : 32) : 0;
     const radialCy = Math.max(120, legendStartY - radialGap);
     
-    const availableRadiusW = (baseWidth / 2) * 0.85; 
-    const availableRadiusH = (radialCy - 20) * 0.95; 
+    // Give proper headroom above the radial arc so it breathes comfortably
+    const topHeadroom = isFullscreen ? 50 : 35;
+    const availableRadiusW = (baseWidth / 2) * 0.82; 
+    const availableRadiusH = Math.max(60, (radialCy - topHeadroom) * 0.88); 
     const maxRadius = Math.min(availableRadiusW, availableRadiusH);
     
-    const outerRadius = Math.max(70, isFullscreen ? maxRadius * 0.95 : maxRadius);
-    const innerRadius = outerRadius * 0.55;
+    const outerRadius = Math.max(65, isFullscreen ? maxRadius * 0.95 : maxRadius);
+    const innerRadius = Math.round(outerRadius * 0.58);
     
     return (
       <div ref={setRefs} className={`h-full w-full flex flex-col items-center justify-center overflow-hidden `}>
@@ -528,9 +530,10 @@ export const StackedChart = React.memo(function StackedChart({
                 dataKey={d.label}
                 name={d.label}
                 stackId="a"
-                cornerRadius={5}
+                cornerRadius={4}
                 fill={d.color}
-                className="stroke-transparent stroke-2"
+                stroke={isDark ? "#18181b" : "#ffffff"}
+                strokeWidth={2.5}
               />
             ))}
             {renderSvgLegend()}

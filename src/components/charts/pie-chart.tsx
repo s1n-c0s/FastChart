@@ -172,7 +172,6 @@ const InnerRechartsPie = React.memo(({
   outerRadius, 
   isFullscreen, 
   renderCustomLabel, 
-  renderCustomLabelLine, 
   top4Ids, 
   targetFocusIndex, 
   renderSvgLegend 
@@ -265,7 +264,7 @@ const InnerRechartsPie = React.memo(({
           animationDuration={500}
           stroke="none"
           label={renderCustomLabel}
-          labelLine={renderCustomLabelLine}
+          labelLine={false}
           onMouseEnter={onPieMouseEnter}
           onMouseLeave={onPieMouseLeave}
           style={{ cursor: 'pointer' }}
@@ -469,48 +468,143 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
   const outerRadius = Math.max(45, Math.min(baseIdealRadius, maxRadiusVertical, maxRadiusHorizontal));
   const innerRadius = Math.round(outerRadius * (isFullscreen ? 0.62 : 0.60));
 
-  const renderCustomLabelLine = React.useCallback((props: any) => {
-    const { payload, points } = props;
-    const datumId = payload?.payload?.id || payload?.id;
-    
-    if (top4Ids && !top4Ids.includes(datumId)) {
-      if (datumId !== lastOtherId) return null;
-    }
-    
-    if (!points || points.length < 3) return null;
-    
-    const isLeft = points[2].x < points[0].x;
-    const isTop = points[2].y < points[0].y;
-    
-    let finalX = points[2].x + (isLeft ? -basePushX : basePushX);
-    let finalY = points[2].y + (isTop ? -basePushY : basePushY);
-    
-    const maxLineY = legendStartY - boxHeight / 2 - 8;
-    const minLineY = boxHeight / 2 + 8;
-    finalY = Math.max(minLineY, Math.min(finalY, maxLineY));
+  // Precompute non-overlapping positions for visible callout data panels
+  const boxPositionsMap = React.useMemo(() => {
+    const map = new Map<string | number, {
+      fx: number;
+      fy: number;
+      curBoxWidth: number;
+      curBoxHeight: number;
+    }>();
 
-    let fx = isLeft ? finalX - boxWidth : finalX;
-    let fy = finalY - boxHeight / 2;
-    fx = Math.max(8, Math.min(fx, chartWidth - boxWidth - 8));
-    fy = Math.max(8, Math.min(fy, legendStartY - boxHeight - 8));
-    finalX = isLeft ? fx + boxWidth : fx;
-    finalY = fy + boxHeight / 2;
-    
-    const newPoints = [
-      points[0],
-      { x: points[1].x, y: finalY },
-      { x: finalX, y: finalY }
-    ];
-    
-    return (
-      <polyline
-        points={newPoints.map(p => `${p.x},${p.y}`).join(" ")}
-        stroke={textColor}
-        strokeWidth={1}
-        className="chart-global-label"
-      />
-    );
-  }, [basePushX, basePushY, boxWidth, boxHeight, legendStartY, chartWidth, top4Ids, lastOtherId, textColor]);
+    if (!chartWidth || !data || data.length === 0 || total <= 0) return map;
+
+    const RADIAN = Math.PI / 180;
+    const pieCx = chartWidth / 2;
+    let accumulatedAngle = 0;
+    const anchorRadius = outerRadius + 30;
+
+    interface Candidate {
+      id: string | number;
+      isLeft: boolean;
+      fx: number;
+      initialFy: number;
+      fy: number;
+    }
+
+    const leftList: Candidate[] = [];
+    const rightList: Candidate[] = [];
+
+    data.forEach(item => {
+      const val = Math.max(0, item.value || 0);
+      const sliceSpan = (val / total) * 360;
+      const midAngle = accumulatedAngle + sliceSpan / 2;
+      accumulatedAngle += sliceSpan;
+
+      const isTarget = (top4Ids && top4Ids.includes(item.id)) || item.id === lastOtherId;
+      if (!isTarget) return;
+
+      const rad = -midAngle * RADIAN;
+      const x = pieCx + anchorRadius * Math.cos(rad);
+      const y = pieCy + anchorRadius * Math.sin(rad);
+
+      const isLeft = x < pieCx;
+      const isTop = y < pieCy;
+
+      const finalX = x + (isLeft ? -basePushX : basePushX);
+      const finalY = y + (isTop ? -basePushY : basePushY);
+
+      let fx = isLeft ? finalX - boxWidth : finalX;
+      let fy = finalY - boxHeight / 2;
+
+      // Safe horizontal clamping within chart container
+      fx = Math.max(8, Math.min(fx, chartWidth - boxWidth - 8));
+
+      const cand: Candidate = {
+        id: item.id,
+        isLeft,
+        fx,
+        initialFy: fy,
+        fy,
+      };
+
+      if (isLeft) {
+        leftList.push(cand);
+      } else {
+        rightList.push(cand);
+      }
+    });
+
+    const resolveOverlap = (list: Candidate[]) => {
+      if (list.length === 0) return;
+
+      // Sort by initialFy ascending (top to bottom)
+      list.sort((a, b) => a.initialFy - b.initialFy);
+
+      const count = list.length;
+      const minFy = 8;
+      const maxFy = Math.max(minFy, legendStartY - boxHeight - 8);
+      const availableSpan = Math.max(0, maxFy - minFy);
+
+      let curBoxHeight = boxHeight;
+      let minGap = isFullscreen ? 8 : 6;
+      const neededSpan = count * curBoxHeight + (count - 1) * minGap;
+
+      if (neededSpan > availableSpan && count > 1) {
+        minGap = Math.max(3, Math.floor((availableSpan - count * 36) / (count - 1)));
+        curBoxHeight = Math.max(34, Math.floor((availableSpan - (count - 1) * minGap) / count));
+      }
+
+      const step = curBoxHeight + minGap;
+
+      // Initialize with clamped positions
+      list.forEach(c => {
+        c.fy = Math.max(minFy, Math.min(maxFy, c.initialFy));
+      });
+
+      // Forward pass: push down overlapping boxes
+      for (let i = 1; i < count; i++) {
+        if (list[i].fy < list[i - 1].fy + step) {
+          list[i].fy = list[i - 1].fy + step;
+        }
+      }
+
+      // Backward pass: if bottom box exceeds maxFy, push up
+      if (list[count - 1].fy > maxFy) {
+        list[count - 1].fy = maxFy;
+        for (let i = count - 2; i >= 0; i--) {
+          if (list[i].fy > list[i + 1].fy - step) {
+            list[i].fy = list[i + 1].fy - step;
+          }
+        }
+      }
+
+      // Second forward pass: if top box was pushed above minFy
+      if (list[0].fy < minFy) {
+        list[0].fy = minFy;
+        for (let i = 1; i < count; i++) {
+          if (list[i].fy < list[i - 1].fy + step) {
+            list[i].fy = list[i - 1].fy + step;
+          }
+        }
+      }
+
+      // Populate map
+      list.forEach(c => {
+        map.set(c.id, {
+          fx: c.fx,
+          fy: Math.round(c.fy),
+          curBoxWidth: boxWidth,
+          curBoxHeight,
+        });
+      });
+    };
+
+    resolveOverlap(leftList);
+    resolveOverlap(rightList);
+
+    return map;
+  }, [chartWidth, data, total, top4Ids, lastOtherId, outerRadius, pieCy, isFullscreen, legendStartY, basePushX, basePushY, boxWidth, boxHeight]);
 
   const renderCustomLabel = React.useCallback((props: any) => {
     let { x, y, cx, cy, name, value, percent, payload } = props;
@@ -530,36 +624,49 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
       color = isDark ? "#52525b" : "#a1a1aa";
     }
 
-    const isLeft = x < cx;
-    const isTop = y < cy;
-    
-    let finalX = x + (isLeft ? -basePushX : basePushX);
-    let finalY = y + (isTop ? -basePushY : basePushY);
-    
-    let fx = isLeft ? finalX - boxWidth : finalX;
-    let fy = finalY - boxHeight / 2;
-    
-    const maxAllowedY = legendStartY - boxHeight - 8;
-    fx = Math.max(8, Math.min(fx, chartWidth - boxWidth - 8));
-    fy = Math.max(8, Math.min(fy, maxAllowedY));
+    const pos = boxPositionsMap.get(datumId);
+    let fx: number;
+    let fy: number;
+    let curBoxWidth = boxWidth;
+    let curBoxHeight = boxHeight;
+
+    if (pos) {
+      fx = pos.fx;
+      fy = pos.fy;
+      curBoxWidth = pos.curBoxWidth;
+      curBoxHeight = pos.curBoxHeight;
+    } else {
+      const isLeft = x < cx;
+      const isTop = y < cy;
+      const finalX = x + (isLeft ? -basePushX : basePushX);
+      const finalY = y + (isTop ? -basePushY : basePushY);
+      fx = isLeft ? finalX - boxWidth : finalX;
+      fy = finalY - boxHeight / 2;
+      const maxAllowedY = legendStartY - boxHeight - 8;
+      fx = Math.max(8, Math.min(fx, chartWidth - boxWidth - 8));
+      fy = Math.max(8, Math.min(fy, maxAllowedY));
+    }
 
     const safeName = String(name || '');
     const maxLen = isFullscreen ? 16 : 11;
     const displayName = safeName.length > maxLen ? safeName.substring(0, maxLen) + "..." : safeName;
+
+    const textRow1Y = fy + Math.round(curBoxHeight * 0.38);
+    const textRow2Y = fy + Math.round(curBoxHeight * 0.78);
 
     return (
       <g 
         className="chart-global-label"
         style={{ 
           overflow: 'visible',
-          transformOrigin: `${fx + boxWidth / 2}px ${fy + boxHeight / 2}px`
+          transformOrigin: `${fx + curBoxWidth / 2}px ${fy + curBoxHeight / 2}px`
         }}
       >
         <rect 
           x={fx} 
           y={fy} 
-          width={boxWidth} 
-          height={boxHeight} 
+          width={curBoxWidth} 
+          height={curBoxHeight} 
           rx={6} 
           fill={bgColor} 
           stroke={borderColor}
@@ -570,13 +677,13 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
           x={fx} 
           y={fy} 
           width={4} 
-          height={boxHeight} 
+          height={curBoxHeight} 
           fill={color} 
           rx={2} 
         />
         <text 
           x={fx + 10} 
-          y={fy + (isFullscreen ? 20 : 18)} 
+          y={textRow1Y} 
           fill={textColor}
           fontSize={isFullscreen ? 13 : 11} 
           fontWeight="500"
@@ -586,20 +693,20 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
         </text>
         <text 
           x={fx + 10} 
-          y={fy + (isFullscreen ? 40 : 36)} 
+          y={textRow2Y} 
           fill={textMainColor}
-          fontSize={isFullscreen ? 17 : 13} 
+          fontSize={isFullscreen ? 16 : 13} 
           fontWeight="700"
           fontFamily="sans-serif"
         >
           {Number(value || 0).toLocaleString()}
         </text>
         <text 
-          x={fx + boxWidth - 8} 
-          y={fy + (isFullscreen ? 40 : 36)} 
+          x={fx + curBoxWidth - 8} 
+          y={textRow2Y} 
           textAnchor="end"
           fill={textColor}
-          fontSize={isFullscreen ? 15 : 12} 
+          fontSize={isFullscreen ? 14 : 11} 
           fontWeight="500"
           fontFamily="sans-serif"
         >
@@ -607,7 +714,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
         </text>
       </g>
     );
-  }, [basePushX, basePushY, boxWidth, boxHeight, legendStartY, chartWidth, isFullscreen, isDark, bgColor, borderColor, textMainColor, textColor, top4Ids, lastOtherId, otherSum, total]);
+  }, [boxPositionsMap, basePushX, basePushY, boxWidth, boxHeight, legendStartY, chartWidth, isFullscreen, isDark, bgColor, borderColor, textMainColor, textColor, top4Ids, lastOtherId, otherSum, total]);
 
   const renderSvgLegend = React.useCallback(() => {
     if (!chartWidth || !totalHeight || legendRows.length === 0) return null;
@@ -664,7 +771,6 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
           outerRadius={outerRadius}
           isFullscreen={isFullscreen}
           renderCustomLabel={renderCustomLabel}
-          renderCustomLabelLine={renderCustomLabelLine as any}
           top4Ids={top4Ids}
           targetFocusIndex={targetFocusIndex}
           renderSvgLegend={renderSvgLegend}
