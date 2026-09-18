@@ -53,12 +53,45 @@ export const BarChart = React.memo(function BarChart({
 
   const isAnimationActive = data.length <= 15
 
+  const localRef = React.useRef<HTMLDivElement | null>(null);
+  const [dimensions, setDimensions] = React.useState({ width: 0, height: 0 });
+
+  const setRefs = React.useCallback(
+    (node: HTMLDivElement | null) => {
+      localRef.current = node;
+      if (containerRef) {
+        if (typeof containerRef === "function") {
+          containerRef(node);
+        } else {
+          (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+        }
+      }
+    },
+    [containerRef]
+  );
+
+  React.useEffect(() => {
+    const node = localRef.current;
+    if (node) {
+      setDimensions({ width: Math.round(node.clientWidth), height: Math.round(node.clientHeight) });
+      const observer = new ResizeObserver((entries) => {
+        if (entries[0]) {
+          const w = Math.round(entries[0].contentRect.width);
+          const h = Math.round(entries[0].contentRect.height);
+          setDimensions((prev) => (prev.width === w && prev.height === h ? prev : { width: w, height: h }));
+        }
+      });
+      observer.observe(node);
+      return () => observer.disconnect();
+    }
+  }, []);
+
   // Horizontal mode: bars grow to the right
   if (isHorizontal) {
-    const yAxisWidth = Math.min(Math.max(maxLabelLength * 6, 40), 100)
+    const yAxisWidth = Math.min(Math.max(maxLabelLength * 7.5, 45), 140)
     
     return (
-      <div ref={containerRef} className="h-full w-full">
+      <div ref={setRefs} className="h-full w-full">
         <ChartContainer config={chartConfig} className="h-full w-full">
           <RechartsBarChart
             key="horizontal-chart"
@@ -77,10 +110,11 @@ export const BarChart = React.memo(function BarChart({
             <YAxis
               dataKey="label"
               type="category"
+              interval={0}
               tickLine={false}
               axisLine={false}
               width={yAxisWidth}
-              style={{ fontSize: '14px' }}
+              style={{ fontSize: data.length > 20 ? '12px' : '14px' }}
             />
             <ChartTooltip
               cursor={{ fill: 'var(--muted)', opacity: 0.65 }}
@@ -125,25 +159,43 @@ export const BarChart = React.memo(function BarChart({
   }
 
   // Vertical mode: bars grow upward
-  const xAxisHeight = Math.min(Math.max(maxLabelLength * 4, 30), 60)
+  const chartWidth = dimensions.width || 800;
+  const availableWidthPerBar = data.length > 0 ? (chartWidth - 60) / data.length : 80;
+  const approxLabelWidth = maxLabelLength * 7;
+  
+  // If bars are tight and labels are longer than available space, angle them cleanly so they never collide
+  const shouldAngle = availableWidthPerBar < approxLabelWidth && data.length > 6;
+  
+  const tickFontSize = shouldAngle 
+    ? (availableWidthPerBar < 30 ? 11 : 12) 
+    : (data.length > 15 ? 12 : 14);
+
+  const xAxisHeight = shouldAngle 
+    ? Math.min(Math.max(maxLabelLength * 5.5, 45), 90) 
+    : Math.min(Math.max(maxLabelLength * 3.5, 30), 55);
   
   return (
-    <div ref={containerRef} className="h-full w-full">
+    <div ref={setRefs} className="h-full w-full">
       <ChartContainer config={chartConfig} className="h-full w-full">
         <RechartsBarChart
           key="vertical-chart"
           data={data}
           layout="horizontal"
-          margin={{ top: 25, right: 15, bottom: 5, left: 5 }}
+          margin={{ top: 25, right: 15, bottom: shouldAngle ? 10 : 5, left: 5 }}
           barCategoryGap="15%"
         >
           <CartesianGrid className="stroke-border opacity-80" strokeDasharray="4 4" />
           <XAxis
             dataKey="label"
+            interval={0}
             tickLine={false}
             axisLine={false}
             height={xAxisHeight}
-            style={{ fontSize: '14px' }}
+            angle={shouldAngle ? -35 : 0}
+            textAnchor={shouldAngle ? "end" : "middle"}
+            dx={shouldAngle ? -3 : 0}
+            dy={shouldAngle ? 4 : 0}
+            style={{ fontSize: `${tickFontSize}px` }}
           />
           <YAxis
             type="number"

@@ -108,10 +108,11 @@ export const LineChart = React.memo(function LineChart({
               <CartesianGrid className="stroke-border opacity-80" strokeDasharray="4 4" />
               <XAxis
                 dataKey="label"
+                interval={0}
                 tickLine={false}
                 axisLine={false}
                 tickMargin={12}
-                style={{ fontSize: '14px' }}
+                style={{ fontSize: data.length > 15 ? '12px' : '14px' }}
               />
               <YAxis
                 tickLine={false}
