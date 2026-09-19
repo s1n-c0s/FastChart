@@ -5,7 +5,6 @@ import {
   CartesianGrid,
   XAxis,
   YAxis,
-  Tooltip,
   ResponsiveContainer,
   LabelList,
   RadialBar,
@@ -33,106 +32,7 @@ export interface StackedChartProps {
   onFactIndexChange?: (index: number) => void
 }
 
-interface StackedTooltipProps {
-  active?: boolean
-  payload?: Array<{ 
-    name?: string
-    value?: any
-    fill?: string
-    color?: string
-    dataKey?: string
-  } & Record<string, unknown>>
-  rawData?: Datum[]
-  totalValue?: number
-}
 
-const StackedTooltip = React.memo(function StackedTooltip({ active, payload, rawData, totalValue }: StackedTooltipProps) {
-  if (!active || !payload || payload.length === 0) return null
-
-  // Helper to extract datum info
-  const getItemDetails = (entry: any) => {
-    const label = entry.name || (entry.dataKey as string) || ""
-    const rawItem = rawData?.find(d => d.label === label || d.id === label)
-    const fill = entry.fill || entry.color || rawItem?.color || "#3b82f6"
-    const rawVal = rawItem?.value ?? (typeof entry.value === 'number' ? entry.value : 0)
-    
-    let percent = 0
-    if (typeof entry.value === 'number' && entry.value <= 1 && entry.value > 0) {
-      percent = Math.round(entry.value * 100)
-    } else if (totalValue && totalValue > 0) {
-      percent = Math.round((Number(rawVal) / totalValue) * 100)
-    } else if (Array.isArray(entry.value)) {
-      percent = Math.round(Math.abs(entry.value[1] - entry.value[0]) * 100)
-    }
-
-    return { label, fill, rawVal, percent }
-  }
-
-  // Single item hover (clean, compact, no overflow)
-  if (payload.length === 1) {
-    const { label, fill, rawVal, percent } = getItemDetails(payload[0])
-    return (
-      <div className="rounded-xl border border-border/50 bg-background/95 backdrop-blur-md p-3 shadow-xl animate-in fade-in zoom-in-95 duration-200 min-w-[140px] pointer-events-none select-none">
-        <div className="flex flex-col gap-1.5">
-          <span className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">{label}</span>
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: fill }} />
-              <span className="font-bold text-sm text-foreground">{Number(rawVal).toLocaleString()}</span>
-            </div>
-            <span className="font-medium text-[11px] text-muted-foreground">{percent}%</span>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Multi-item breakdown fallback (max-height constrained, 2 columns if > 6 items)
-  const isMultiColumn = payload.length > 6
-  return (
-    <div className={`rounded-xl border border-border/50 bg-background/95 backdrop-blur-md p-3 shadow-xl animate-in fade-in zoom-in-95 duration-200 pointer-events-auto select-none ${
-      isMultiColumn ? 'min-w-[320px] max-w-[420px]' : 'min-w-[160px] max-w-[260px]'
-    }`}>
-      <div className="flex items-center justify-between border-b border-border/40 pb-1.5 mb-1.5">
-        <span className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wider">
-          Details ({payload.length})
-        </span>
-        {totalValue && totalValue > 0 && (
-          <span className="text-[11px] font-medium text-muted-foreground">
-            Total: {totalValue.toLocaleString()}
-          </span>
-        )}
-      </div>
-      <div className={`max-h-[200px] overflow-y-auto overscroll-contain pr-1 ${
-        isMultiColumn ? 'grid grid-cols-2 gap-x-4 gap-y-1' : 'flex flex-col gap-1.5'
-      }`}>
-        {payload.map((entry, idx) => {
-          const { label, fill, rawVal, percent } = getItemDetails(entry)
-          return (
-            <div key={idx} className="flex items-center justify-between gap-3 text-xs py-0.5">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <div className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: fill }} />
-                <span className="font-medium text-foreground truncate max-w-[90px]" title={label}>
-                  {label}
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span className="font-bold text-foreground">
-                  {Number(rawVal).toLocaleString()}
-                </span>
-                <span className="text-[10px] text-muted-foreground font-medium w-7 text-right">
-                  {percent}%
-                </span>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-});
-
-StackedTooltip.displayName = "StackedTooltip";
 
 const CustomStackedLabel = (props: any) => {
   const { x, y, width, height, value, rawData, top4KeysSet, barDataKey, isFullscreen, isHorizontal } = props;
@@ -193,7 +93,7 @@ const CustomStackedLabel = (props: any) => {
   // to ensure flawless compatibility with all SVG viewers (like Figma) while keeping 
   // the different font sizes.
   return (
-    <g>
+    <g style={{ pointerEvents: 'none' }}>
       <text 
         x={splitX1} 
         y={cy} 
@@ -202,6 +102,7 @@ const CustomStackedLabel = (props: any) => {
         dominantBaseline="central"
         fontSize={fontSizePercent} 
         fontWeight="500"
+        style={{ pointerEvents: 'none' }}
       >
         {str1}
       </text>
@@ -213,6 +114,7 @@ const CustomStackedLabel = (props: any) => {
         dominantBaseline="central"
         fontSize={fontSizeRaw} 
         fontWeight="500"
+        style={{ pointerEvents: 'none' }}
       >
         {str2}
       </text>
@@ -283,7 +185,95 @@ export const StackedChart = React.memo(function StackedChart({
       if (isFinite(v) && v > 0) sum += v;
     }
     return sum;
-  }, [data])
+  }, [data]);
+
+  const [activeTooltip, setActiveTooltip] = React.useState<{
+    label: string;
+    value: number;
+    color: string;
+    percent: number;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  React.useEffect(() => {
+    setActiveTooltip(null);
+  }, [data, showRadial, isHorizontal]);
+
+  const handleItemHover = React.useCallback((item: Datum, e: React.MouseEvent) => {
+    const node = localRef.current;
+    if (!node) return;
+    const rect = node.getBoundingClientRect();
+    const percent = totalValue > 0 ? Math.round((Math.max(0, item.value || 0) / totalValue) * 100) : 0;
+    setActiveTooltip({
+      label: item.label,
+      value: Number(item.value || 0),
+      color: item.color,
+      percent,
+      x: Math.round(e.clientX - rect.left),
+      y: Math.round(e.clientY - rect.top),
+    });
+  }, [totalValue]);
+
+  const handleItemMove = React.useCallback((item: Datum, e: React.MouseEvent) => {
+    const node = localRef.current;
+    if (!node) return;
+    const rect = node.getBoundingClientRect();
+    const percent = totalValue > 0 ? Math.round((Math.max(0, item.value || 0) / totalValue) * 100) : 0;
+    setActiveTooltip({
+      label: item.label,
+      value: Number(item.value || 0),
+      color: item.color,
+      percent,
+      x: Math.round(e.clientX - rect.left),
+      y: Math.round(e.clientY - rect.top),
+    });
+  }, [totalValue]);
+
+  const handleItemLeave = React.useCallback(() => {
+    setActiveTooltip(null);
+  }, []);
+
+  const renderFloatingTooltip = () => {
+    if (!activeTooltip) return null;
+
+    const containerWidth = dimensions.width || 400;
+    const clampedX = Math.max(90, Math.min(containerWidth - 90, activeTooltip.x));
+    const isNearTop = activeTooltip.y < 85;
+    const translateY = isNearTop ? '15px' : 'calc(-100% - 12px)';
+
+    return (
+      <div 
+        className="pointer-events-none select-none absolute z-50 transition-transform duration-75 ease-out"
+        data-chart-tooltip="floating"
+        data-hide-on-copy="true"
+        style={{
+          left: `${clampedX}px`,
+          top: `${activeTooltip.y}px`,
+          transform: `translate(-50%, ${translateY})`,
+        }}
+      >
+        <div className="rounded-xl border border-border/50 bg-background/95 backdrop-blur-md p-3 shadow-xl animate-in fade-in zoom-in-95 duration-150 min-w-[140px]">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">
+              {activeTooltip.label}
+            </span>
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: activeTooltip.color }} />
+                <span className="font-bold text-sm text-foreground">
+                  {activeTooltip.value.toLocaleString()}
+                </span>
+              </div>
+              <span className="font-medium text-[11px] text-muted-foreground">
+                {activeTooltip.percent}%
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const { maxItem, minItem } = React.useMemo(() => {
     if (!data || data.length === 0) return { maxItem: null, minItem: null };
@@ -397,7 +387,8 @@ export const StackedChart = React.memo(function StackedChart({
     const { fontSize, rectSize, gap, spacingY } = legendConfig;
     const textColor = isDark ? "#e4e4e7" : "#3f3f46"; 
     
-    const startY = isStandalone ? 12 : Math.max(0, (dimensions.height || 384) - legendHeight - 8);
+    const legendBottomMargin = showLegend ? (isFullscreen ? 24 : 10) : 0;
+    const startY = isStandalone ? 12 : Math.max(0, (dimensions.height || 384) - legendHeight - legendBottomMargin);
 
     return (
       <g className="svg-legend">
@@ -443,20 +434,20 @@ export const StackedChart = React.memo(function StackedChart({
     const baseWidth = dimensions.width || (isFullscreen ? 800 : 400);
     const baseHeight = dimensions.height || (isFullscreen ? 500 : 384);
     
-    const legendBottomMargin = showLegend ? 8 : 0;
+    const legendBottomMargin = showLegend ? (isFullscreen ? 24 : 10) : 0;
     const legendStartY = showLegend
       ? Math.max(120, baseHeight - legendHeight - legendBottomMargin)
       : baseHeight;
 
     // Radial semi-circle ends at cy. All content (arc, text, arrows) sits strictly ABOVE cy.
     // Ensure safe area padding and clean spacing between radialCy and legendStartY
-    const radialGap = showLegend && legendRows.length > 0 ? (isFullscreen ? 40 : 32) : 0;
+    const radialGap = showLegend && legendRows.length > 0 ? (isFullscreen ? 56 : 32) : 0;
     const radialCy = showLegend
       ? Math.max(120, legendStartY - radialGap)
       : Math.max(160, baseHeight - (isFullscreen ? 36 : 24));
     
     // Give proper headroom above the radial arc so it breathes comfortably
-    const topHeadroom = isFullscreen ? 50 : 35;
+    const topHeadroom = isFullscreen ? 60 : 35;
     const availableRadiusW = (baseWidth / 2) * (showLegend ? 0.82 : 0.85); 
     const availableRadiusH = Math.max(60, (radialCy - topHeadroom) * (showLegend ? 0.88 : 0.92)); 
     const maxRadius = Math.min(availableRadiusW, availableRadiusH);
@@ -465,7 +456,11 @@ export const StackedChart = React.memo(function StackedChart({
     const innerRadius = Math.round(outerRadius * 0.58);
     
     return (
-      <div ref={setRefs} className={`h-full w-full flex flex-col items-center justify-center overflow-hidden `}>
+      <div 
+        ref={setRefs} 
+        onMouseLeave={handleItemLeave}
+        className="h-full w-full flex flex-col items-center justify-center overflow-hidden relative"
+      >
         <div className="w-full flex-1 min-h-[300px]">
           <ChartContainer config={chartConfig} className="w-full h-full">
             <RadialBarChart
@@ -478,12 +473,6 @@ export const StackedChart = React.memo(function StackedChart({
               outerRadius={outerRadius}
               style={{ overflow: 'visible' }}
             >
-            <Tooltip
-              shared={false}
-              isAnimationActive={false}
-              cursor={false}
-              content={<StackedTooltip rawData={data} totalValue={totalValue} />}
-            />
             <PolarAngleAxis type="number" domain={[0, 1]} tick={false} axisLine={false} />
             <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
               <RechartsLabel
@@ -593,31 +582,49 @@ export const StackedChart = React.memo(function StackedChart({
                 stackId="a"
                 cornerRadius={4}
                 fill={d.color}
+                fillOpacity={activeTooltip ? (activeTooltip.label === d.label ? 1 : 0.5) : 1}
                 stroke={isDark ? "#18181b" : "#ffffff"}
                 strokeWidth={2.5}
+                onMouseEnter={(_data, _idx, e) => handleItemHover(d, e)}
+                onMouseMove={(_data, _idx, e) => handleItemMove(d, e)}
+                onMouseLeave={handleItemLeave}
+                style={{ cursor: 'pointer', transition: 'fill-opacity 150ms ease' }}
               />
             ))}
             {renderSvgLegend()}
           </RadialBarChart>
           </ChartContainer>
         </div>
+        {renderFloatingTooltip()}
       </div>
     )
   }
 
-  const chartBottomMargin = showLegend ? (legendHeight + (legendRows.length > 0 ? 16 : 10)) : 10;
+  const chartToLegendGap = isFullscreen ? 56 : 32;
+  const legendBottomMargin = showLegend ? (isFullscreen ? 24 : 10) : 0;
+  const chartBottomMargin = showLegend 
+    ? (legendHeight + chartToLegendGap + legendBottomMargin) 
+    : (isFullscreen ? 24 : 10);
+
+  const horizontalBarSize = isFullscreen ? 140 : 80;
+  const verticalBarSize = isFullscreen ? 160 : 90;
 
   // Horizontal mode: bars grow to the right
   if (isHorizontal) {
     return (
-      <div ref={setRefs} className={`h-full w-full `}>
+      <div 
+        ref={setRefs} 
+        onMouseLeave={handleItemLeave}
+        className="h-full w-full relative"
+      >
         <ResponsiveContainer width="100%" height="100%">
           <RechartsBarChart
             key="horizontal-stacked-chart"
             data={stackedData}
             stackOffset="expand"
             layout="vertical"
-            margin={{ top: 5, right: 15, bottom: chartBottomMargin, left: 5 }}
+            barSize={horizontalBarSize}
+            margin={{ top: isFullscreen ? 50 : 15, right: isFullscreen ? 30 : 15, bottom: chartBottomMargin, left: isFullscreen ? 20 : 5 }}
           >
             <CartesianGrid className="stroke-border opacity-80" strokeDasharray="4 4" />
             <YAxis
@@ -625,8 +632,8 @@ export const StackedChart = React.memo(function StackedChart({
               dataKey="name"
               tickLine={false}
               axisLine={false}
-              width={50}
-              style={{ fontSize: '12px' }}
+              width={isFullscreen ? 60 : 50}
+              style={{ fontSize: isFullscreen ? '14px' : '12px' }}
             />
             <XAxis
               type="number"
@@ -634,13 +641,7 @@ export const StackedChart = React.memo(function StackedChart({
               tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
               tickLine={false}
               axisLine={false}
-              style={{ fontSize: '12px' }}
-            />
-            <Tooltip
-              shared={false}
-              isAnimationActive={false}
-              cursor={{ fill: 'var(--muted)', opacity: 0.25 }}
-              content={<StackedTooltip rawData={data} totalValue={totalValue} />}
+              style={{ fontSize: isFullscreen ? '13px' : '12px' }}
             />
             {data.map((d) => (
               <Bar 
@@ -648,8 +649,14 @@ export const StackedChart = React.memo(function StackedChart({
                 dataKey={d.label} 
                 stackId="stacked" 
                 fill={d.color} 
+                fillOpacity={activeTooltip ? (activeTooltip.label === d.label ? 1 : 0.5) : 1}
                 name={d.label}
+                barSize={horizontalBarSize}
                 isAnimationActive={isAnimationActive}
+                onMouseEnter={(_data, _idx, e) => handleItemHover(d, e)}
+                onMouseMove={(_data, _idx, e) => handleItemMove(d, e)}
+                onMouseLeave={handleItemLeave}
+                style={{ cursor: 'pointer', transition: 'fill-opacity 150ms ease' }}
               >
                 {showLabels && (
                   <LabelList
@@ -662,20 +669,26 @@ export const StackedChart = React.memo(function StackedChart({
             {renderSvgLegend()}
           </RechartsBarChart>
         </ResponsiveContainer>
+        {renderFloatingTooltip()}
       </div>
     )
   }
 
   // Vertical mode: bars grow upward
   return (
-    <div ref={setRefs} className={`h-full w-full `}>
+    <div 
+      ref={setRefs} 
+      onMouseLeave={handleItemLeave}
+      className="h-full w-full relative"
+    >
       <ResponsiveContainer width="100%" height="100%">
         <RechartsBarChart
           key="vertical-stacked-chart"
           data={stackedData}
           stackOffset="expand"
           layout="horizontal"
-          margin={{ top: 5, right: 15, bottom: chartBottomMargin, left: 5 }}
+          barSize={verticalBarSize}
+          margin={{ top: isFullscreen ? 40 : 15, right: isFullscreen ? 30 : 15, bottom: chartBottomMargin, left: isFullscreen ? 20 : 5 }}
         >
           <CartesianGrid className="stroke-border opacity-80" strokeDasharray="4 4" />
           <XAxis
@@ -683,8 +696,8 @@ export const StackedChart = React.memo(function StackedChart({
             dataKey="name"
             tickLine={false}
             axisLine={false}
-            height={40}
-            style={{ fontSize: '12px' }}
+            height={isFullscreen ? 50 : 40}
+            style={{ fontSize: isFullscreen ? '14px' : '12px' }}
           />
           <YAxis
             type="number"
@@ -692,14 +705,8 @@ export const StackedChart = React.memo(function StackedChart({
             tickFormatter={(v) => `${(v * 100).toFixed(0)}%`}
             tickLine={false}
             axisLine={false}
-            width={50}
-            style={{ fontSize: '12px' }}
-          />
-          <Tooltip
-            shared={false}
-            isAnimationActive={false}
-            cursor={{ fill: 'var(--muted)', opacity: 0.25 }}
-            content={<StackedTooltip rawData={data} totalValue={totalValue} />}
+            width={isFullscreen ? 60 : 50}
+            style={{ fontSize: isFullscreen ? '13px' : '12px' }}
           />
           {data.map((d) => (
             <Bar 
@@ -707,8 +714,14 @@ export const StackedChart = React.memo(function StackedChart({
               dataKey={d.label} 
               stackId="stacked" 
               fill={d.color} 
+              fillOpacity={activeTooltip ? (activeTooltip.label === d.label ? 1 : 0.5) : 1}
               name={d.label}
+              barSize={verticalBarSize}
               isAnimationActive={isAnimationActive}
+              onMouseEnter={(_data, _idx, e) => handleItemHover(d, e)}
+              onMouseMove={(_data, _idx, e) => handleItemMove(d, e)}
+              onMouseLeave={handleItemLeave}
+              style={{ cursor: 'pointer', transition: 'fill-opacity 150ms ease' }}
             >
               {showLabels && (
                 <LabelList
@@ -721,6 +734,7 @@ export const StackedChart = React.memo(function StackedChart({
           {renderSvgLegend()}
         </RechartsBarChart>
       </ResponsiveContainer>
+      {renderFloatingTooltip()}
     </div>
   )
 }, (prevProps, nextProps) => {
