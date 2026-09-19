@@ -320,14 +320,14 @@ export default function DataVisualizer() {
     <>
       <div className="p-4 pb-28 sm:pb-36 space-y-6" data-testid="data-visualizer">
 
-        {/* Backdrop for open Data Manager */}
-        {isDockOpen && (
-          <div 
-            className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-sm z-[60] transition-opacity duration-300 cursor-pointer"
-            onClick={() => setIsDockOpen(false)}
-            aria-hidden="true"
-          />
-        )}
+        {/* Backdrop for open Data Manager with smooth fade in / fade out */}
+        <div 
+          className={`fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-sm z-[60] transition-opacity duration-300 ease-out cursor-pointer ${
+            isDockOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          }`}
+          onClick={() => setIsDockOpen(false)}
+          aria-hidden={!isDockOpen}
+        />
 
         {/* --- Data Input Section (Float Dock) --- */}
         {!fullscreenChart && (
@@ -348,10 +348,10 @@ export default function DataVisualizer() {
           >
             {/* Paper Panel */}
             <div 
-              className={`bg-background dark:bg-[#121214] shadow-2xl border border-border/80 rounded-2xl overflow-hidden transition-all duration-300 origin-bottom flex flex-col transform-gpu isolate ${
+              className={`absolute bottom-full mb-3 left-1/2 -translate-x-1/2 w-[95vw] sm:w-[85vw] md:w-[800px] h-[75vh] max-h-[calc(100vh-120px)] bg-background dark:bg-[#121214] shadow-2xl border border-border/80 rounded-2xl overflow-hidden transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] origin-bottom flex flex-col transform-gpu isolate ${
                 isDockOpen 
-                  ? "pointer-events-auto w-[95vw] sm:w-[85vw] md:w-[800px] h-[75vh] max-h-[750px] opacity-100 mb-3 scale-100" 
-                  : "pointer-events-none w-0 h-0 opacity-0 mb-0 scale-95 invisible"
+                  ? "pointer-events-auto opacity-100 translate-y-0 scale-100" 
+                  : "pointer-events-none opacity-0 translate-y-4 scale-[0.97] select-none"
               }`}
             >
             <div className="flex items-center justify-between p-4 border-b bg-muted/40">
@@ -473,10 +473,10 @@ export default function DataVisualizer() {
               <div className="relative flex flex-col items-center">
                 {/* Minimized Dock Trigger */}
                 <div 
-                  className={`transform-gpu ${
+                  className={`transform-gpu transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                     !isExpanded
-                      ? "relative opacity-100 pointer-events-auto transition-opacity duration-200 delay-50 ease-out" 
-                      : "absolute bottom-0 left-1/2 -translate-x-1/2 opacity-0 pointer-events-none select-none transition-opacity duration-150 ease-out"
+                      ? "relative opacity-100 scale-100 translate-y-0 pointer-events-auto" 
+                      : "absolute bottom-0 left-1/2 -translate-x-1/2 opacity-0 scale-95 translate-y-2 pointer-events-none select-none"
                   }`}
                   aria-hidden={isExpanded}
                 >
@@ -496,36 +496,36 @@ export default function DataVisualizer() {
 
                 {/* Expanded Dock Controls & Upper Minimize Button */}
                 <div 
-                  className={`flex flex-col items-center max-w-[95vw] transform-gpu ${
+                  className={`flex flex-col items-center max-w-[95vw] transform-gpu transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                     isExpanded
-                      ? "relative opacity-100 pointer-events-auto transition-opacity duration-200 delay-50 ease-out" 
-                      : "absolute bottom-0 left-1/2 -translate-x-1/2 opacity-0 pointer-events-none select-none transition-opacity duration-150 ease-out"
+                      ? "relative opacity-100 scale-100 translate-y-0 pointer-events-auto" 
+                      : "absolute bottom-0 left-1/2 -translate-x-1/2 opacity-0 scale-95 translate-y-2 pointer-events-none select-none"
                   }`}
                   aria-hidden={!isExpanded}
                 >
                   {/* Separate Minimize Button on Upper Dock with Zero-Jiggle Stable Wrapper */}
-                  {!isDockOpen && (
-                    <div className="h-8 flex items-center justify-center mb-1.5 pointer-events-none">
-                      <button
-                        type="button"
-                        onClick={() => setIsDockMinimized(true)}
-                        disabled={!isExpanded}
-                        className={`flex items-center justify-center w-12 sm:w-14 h-7 sm:h-8 rounded-full bg-background/90 dark:bg-background/80 backdrop-blur-xl border border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-200 transform-gpu active:scale-95 cursor-pointer origin-center ${
-                          isExpanded 
-                            ? `pointer-events-auto ${
-                                isDockHovered 
-                                  ? "opacity-100 scale-100 shadow-md" 
-                                  : "opacity-40 scale-75 shadow-none group-hover/dock:opacity-100 group-hover/dock:scale-100 group-hover/dock:shadow-md group-focus-within/dock:opacity-100 group-focus-within/dock:scale-100"
-                              }` 
-                            : "opacity-0 scale-0 pointer-events-none"
-                        }`}
-                        title="Minimize dock"
-                        aria-label="Minimize dock"
-                      >
-                        <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.25]" />
-                      </button>
-                    </div>
-                  )}
+                  <div className={`flex items-center justify-center transition-[height,opacity,margin] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-none overflow-hidden ${
+                    !isDockOpen ? "h-8 mb-1.5 opacity-100" : "h-0 mb-0 opacity-0"
+                  }`}>
+                    <button
+                      type="button"
+                      onClick={() => setIsDockMinimized(true)}
+                      disabled={!isExpanded || isDockOpen}
+                      className={`flex items-center justify-center w-12 sm:w-14 h-7 sm:h-8 rounded-full bg-background/90 dark:bg-background/80 backdrop-blur-xl border border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-200 transform-gpu active:scale-95 cursor-pointer origin-center ${
+                        isExpanded && !isDockOpen
+                          ? `pointer-events-auto ${
+                              isDockHovered 
+                                ? "opacity-100 scale-100 shadow-md" 
+                                : "opacity-40 scale-75 shadow-none group-hover/dock:opacity-100 group-hover/dock:scale-100 group-hover/dock:shadow-md group-focus-within/dock:opacity-100 group-focus-within/dock:scale-100"
+                            }` 
+                          : "opacity-0 scale-0 pointer-events-none"
+                      }`}
+                      title="Minimize dock"
+                      aria-label="Minimize dock"
+                    >
+                      <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.25]" />
+                    </button>
+                  </div>
 
                   <div className={`flex items-center justify-center gap-2 transition-opacity duration-200 ${
                     isExpanded ? "pointer-events-auto" : "pointer-events-none"
