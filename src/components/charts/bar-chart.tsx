@@ -51,6 +51,46 @@ export const BarChart = React.memo(function BarChart({
     return max
   }, [data])
 
+  const maxDataValue = React.useMemo(() => {
+    let max = 0;
+    for (let i = 0; i < data.length; i++) {
+      const v = Number(data[i].value) || 0;
+      if (v > max) max = v;
+    }
+    return max;
+  }, [data]);
+
+  const { numericTicks, numericAxisMax } = React.useMemo(() => {
+    if (maxDataValue <= 0) {
+      return { numericTicks: [0, 2, 4, 6, 8, 10], numericAxisMax: 10 };
+    }
+
+    const targetIntervals = 5;
+    const targetMax = maxDataValue * 1.08;
+    const rawStep = targetMax / targetIntervals;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+    const normalized = rawStep / magnitude;
+
+    let stepMultiplier = 10;
+    const standardSteps = [1, 2, 2.5, 5, 10];
+    for (let i = 0; i < standardSteps.length; i++) {
+      if (normalized <= standardSteps[i]) {
+        stepMultiplier = standardSteps[i];
+        break;
+      }
+    }
+
+    const step = stepMultiplier * magnitude;
+    const ticks: number[] = [];
+    let current = 0;
+    while (current < maxDataValue || (current - maxDataValue) / Math.max(1, current) < 0.05) {
+      ticks.push(current);
+      current = Math.round((current + step) * 1e6) / 1e6;
+    }
+    ticks.push(current);
+    return { numericTicks: ticks, numericAxisMax: ticks[ticks.length - 1] };
+  }, [maxDataValue]);
+
   const isAnimationActive = data.length <= 15
 
   const localRef = React.useRef<HTMLDivElement | null>(null);
@@ -103,8 +143,11 @@ export const BarChart = React.memo(function BarChart({
             <CartesianGrid className="stroke-border opacity-80" strokeDasharray="4 4" />
             <XAxis 
               type="number" 
+              ticks={numericTicks}
+              domain={[0, numericAxisMax]}
               tickLine={false} 
               axisLine={false}
+              tickFormatter={(v) => Number(v).toLocaleString()}
               style={{ fontSize: '14px' }}
             />
             <YAxis
@@ -199,9 +242,12 @@ export const BarChart = React.memo(function BarChart({
           />
           <YAxis
             type="number"
+            ticks={numericTicks}
+            domain={[0, numericAxisMax]}
             tickLine={false}
             axisLine={false}
-            width={45}
+            width={Math.max(45, String(numericAxisMax).length * 8.5 + 8)}
+            tickFormatter={(v) => Number(v).toLocaleString()}
             style={{ fontSize: '14px' }}
           />
           <ChartTooltip
