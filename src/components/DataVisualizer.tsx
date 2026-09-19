@@ -478,190 +478,196 @@ export default function DataVisualizer() {
             {(() => {
             const isExpanded = !isDockMinimized || isDockOpen;
             return (
-              <div className="relative flex flex-col items-center">
-                {/* Minimized Dock Trigger */}
+              <div className={`relative flex items-center justify-center transition-opacity duration-200 ${
+                isDockHovered || isDockOpen
+                  ? "opacity-100"
+                  : "opacity-75 sm:opacity-80 group-hover/dock:opacity-100 group-focus-within/dock:opacity-100"
+              }`}>
+                {/* Floating Upper Minimize Button (floats directly above controls with smooth slide/fade) */}
                 <div 
-                  className={`transform-gpu ${
-                    !isExpanded
-                      ? "relative opacity-100 scale-100 pointer-events-auto transition-[transform,opacity] duration-200 delay-100 ease-out" 
-                      : "absolute bottom-0 left-1/2 -translate-x-1/2 opacity-0 scale-95 pointer-events-none select-none transition-[transform,opacity] duration-100 ease-in"
+                  className={`absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none transform-gpu transition-[transform,opacity] duration-250 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                    isExpanded && !isDockOpen
+                      ? "opacity-100 translate-y-0 scale-100 pointer-events-auto" 
+                      : "opacity-0 translate-y-2 scale-75 pointer-events-none select-none"
                   }`}
-                  aria-hidden={isExpanded}
                 >
-                  <button 
+                  <button
                     type="button"
-                    className="flex items-center gap-2.5 bg-background/90 dark:bg-background/80 backdrop-blur-xl border border-border/60 h-11 sm:h-12 px-4 rounded-full transition-colors duration-200 cursor-pointer text-xs sm:text-sm font-medium text-foreground select-none active:scale-95 shadow-md hover:shadow-lg hover:bg-background whitespace-nowrap"
-                    onClick={() => setIsDockMinimized(false)}
-                    disabled={isExpanded}
-                    title="Expand dock controls"
-                    aria-label="Expand dock controls"
+                    onClick={() => setIsDockMinimized(true)}
+                    disabled={!isExpanded || isDockOpen}
+                    className={`flex items-center justify-center w-12 sm:w-14 h-7 sm:h-8 rounded-full bg-background/90 dark:bg-background/80 backdrop-blur-xl border border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-[opacity,transform,background-color,color] duration-150 transform-gpu active:scale-95 cursor-pointer origin-center ${
+                      isExpanded && !isDockOpen
+                        ? `pointer-events-auto ${
+                            isDockHovered 
+                              ? "opacity-100 scale-100 shadow-md" 
+                              : "opacity-40 scale-75 shadow-none group-hover/dock:opacity-100 group-hover/dock:scale-100 group-hover/dock:shadow-md group-focus-within/dock:opacity-100 group-focus-within/dock:scale-100"
+                          }` 
+                        : "opacity-0 scale-75 pointer-events-none"
+                    }`}
+                    title="Minimize dock"
+                    aria-label="Minimize dock"
                   >
-                    <SlidersHorizontal className="w-4 h-4 text-primary" />
-                    <span>Tools & Data</span>
-                    <ChevronUp className="w-4 h-4 text-muted-foreground ml-0.5" />
+                    <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.25]" />
                   </button>
                 </div>
 
-                {/* Expanded Dock Controls Bar with Floating Minimize Button */}
+                {/* Primary Morphing Pill Capsule */}
                 <div 
-                  className={`flex items-center justify-center max-w-[95vw] transform-gpu ${
-                    isExpanded
-                      ? "relative opacity-100 scale-100 pointer-events-auto transition-[transform,opacity] duration-200 delay-100 ease-out" 
-                      : "absolute bottom-0 left-1/2 -translate-x-1/2 opacity-0 scale-95 pointer-events-none select-none transition-[transform,opacity] duration-100 ease-in"
+                  className={`relative flex items-center justify-center bg-background/90 dark:bg-background/80 backdrop-blur-xl shadow-lg border border-border/60 h-11 sm:h-12 rounded-full overflow-hidden transition-[width,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] transform-gpu isolate ${
+                    !isExpanded
+                      ? "w-[155px] sm:w-[168px] px-3 sm:px-4 cursor-pointer hover:shadow-xl hover:bg-background active:scale-95 pointer-events-auto" 
+                      : "w-[305px] sm:w-[382px] px-2.5 sm:px-4 hover:shadow-xl pointer-events-auto"
+                  }`}
+                  onClick={!isExpanded ? () => setIsDockMinimized(false) : undefined}
+                  role={!isExpanded ? "button" : undefined}
+                  tabIndex={!isExpanded ? 0 : undefined}
+                  onKeyDown={!isExpanded ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setIsDockMinimized(false); } } : undefined}
+                  aria-label={!isExpanded ? "Expand dock controls" : undefined}
+                >
+                  {/* Minimized Content: Icon + "Tools & Data" + Chevron */}
+                  <div 
+                    className={`absolute inset-0 flex items-center justify-center gap-2 sm:gap-2.5 px-3 sm:px-4 pointer-events-none select-none transition-[opacity,transform] duration-200 transform-gpu whitespace-nowrap ${
+                      !isExpanded
+                        ? "opacity-100 scale-100 delay-100 ease-out" 
+                        : "opacity-0 scale-90 duration-100 ease-in"
+                    }`}
+                    aria-hidden={isExpanded}
+                  >
+                    <SlidersHorizontal className="w-4 h-4 text-primary shrink-0" />
+                    <span className="text-xs sm:text-sm font-medium text-foreground">Tools & Data</span>
+                    <ChevronUp className="w-4 h-4 text-muted-foreground ml-0.5 shrink-0" />
+                  </div>
+
+                  {/* Expanded Controls: Sort + Labels + Legend */}
+                  <div 
+                    className={`flex items-center gap-1.5 sm:gap-2.5 w-[305px] sm:w-[382px] shrink-0 justify-between transition-[opacity,transform] duration-200 transform-gpu whitespace-nowrap px-1 sm:px-0 ${
+                      isExpanded
+                        ? "opacity-100 scale-100 pointer-events-auto delay-75 ease-out" 
+                        : "opacity-0 scale-95 pointer-events-none duration-100 ease-in"
+                    }`}
+                    aria-hidden={!isExpanded}
+                  >
+                    {/* Sort Controls */}
+                    <div className="flex items-center gap-1 sm:gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (sortConfig) {
+                            setSortConfig({ ...sortConfig, direction: sortConfig.direction === "asc" ? "desc" : "asc" });
+                          }
+                        }}
+                        disabled={!sortConfig || !isExpanded}
+                        className={`flex items-center justify-center w-6 h-6 rounded-full transition-colors ${
+                          sortConfig 
+                            ? "hover:bg-muted/80 text-foreground cursor-pointer border border-border/40 shadow-xs" 
+                            : "text-muted-foreground opacity-40 cursor-default"
+                        }`}
+                        title={sortConfig ? `Switch to ${sortConfig.direction === 'asc' ? 'descending' : 'ascending'}` : "Select a sort method first"}
+                      >
+                        {!sortConfig && <ArrowUpDown className="w-3 h-3" />}
+                        {sortConfig?.direction === "asc" && <ArrowUp className="w-3 h-3" />}
+                        {sortConfig?.direction === "desc" && <ArrowDown className="w-3 h-3" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (sortConfig === null) {
+                            setSortConfig({ key: "label", direction: "asc" });
+                          } else if (sortConfig.key === "label") {
+                            setSortConfig({ key: "value", direction: "desc" });
+                          } else {
+                            setSortConfig(null);
+                          }
+                        }}
+                        disabled={!isExpanded}
+                        className="text-xs font-medium select-none hidden sm:inline cursor-pointer hover:text-primary transition-colors"
+                        title="Click to cycle sort: Name → Value → None"
+                      >
+                        Sort:
+                      </button>
+                      <Select
+                        value={sortConfig === null ? "none" : sortConfig.key}
+                        disabled={!isExpanded}
+                        onValueChange={(val) => {
+                          if (val === "none") setSortConfig(null);
+                          if (val === "value") setSortConfig({ key: "value", direction: "desc" });
+                          if (val === "label") setSortConfig({ key: "label", direction: "asc" });
+                        }}
+                      >
+                        <SelectTrigger className="h-7 w-[72px] sm:w-[78px] rounded-full text-xs font-medium border-border/50 bg-background/50 shadow-none hover:bg-muted/50 transition-colors focus:ring-0 focus:ring-offset-0 px-2 sm:px-2.5">
+                          <SelectValue placeholder="None" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl shadow-xl border-border/50 min-w-[100px]">
+                          <SelectItem value="none" className="text-xs cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-1.5">None</SelectItem>
+                          <SelectItem value="value" className="text-xs cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-1.5">Value</SelectItem>
+                          <SelectItem value="label" className="text-xs cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-1.5">Name</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="w-px h-4 sm:h-5 bg-border/60 shrink-0" />
+
+                    {/* Show Labels Toggle */}
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <label htmlFor="show-labels-dock" className="text-xs font-medium cursor-pointer select-none">
+                        Labels
+                      </label>
+                      <Switch
+                        id="show-labels-dock"
+                        checked={showLabels}
+                        disabled={!isExpanded}
+                        onCheckedChange={setShowLabels}
+                        className="scale-85 sm:scale-90 data-[state=checked]:bg-primary shadow-xs"
+                      />
+                    </div>
+
+                    <div className="w-px h-4 sm:h-5 bg-border/60 shrink-0" />
+
+                    {/* Show Legend Toggle */}
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <label htmlFor="show-legend-dock" className="text-xs font-medium cursor-pointer select-none">
+                        Legend
+                      </label>
+                      <Switch
+                        id="show-legend-dock"
+                        checked={showLegend}
+                        disabled={!isExpanded}
+                        onCheckedChange={setShowLegend}
+                        className="scale-85 sm:scale-90 data-[state=checked]:bg-primary shadow-xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Edit Data / Hide Data Button Pill with smooth scale/width collapse */}
+                <div 
+                  className={`overflow-hidden transition-[max-width,opacity,transform,margin] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] transform-gpu ${
+                    isExpanded 
+                      ? "max-w-[140px] opacity-100 scale-100 ml-2 pointer-events-auto" 
+                      : "max-w-0 opacity-0 scale-75 ml-0 pointer-events-none select-none"
                   }`}
                   aria-hidden={!isExpanded}
                 >
-                  {/* Floating Upper Minimize Button (floats directly above controls bar with zero layout shift) */}
-                  <div 
-                    className={`absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none transform-gpu ${
-                      isExpanded && !isDockOpen
-                        ? "opacity-100 scale-100 transition-[transform,opacity] duration-200 delay-100 ease-out" 
-                        : "opacity-0 scale-75 transition-[transform,opacity] duration-100 ease-in"
+                  <Button 
+                    size="default" 
+                    disabled={!isExpanded}
+                    className={`rounded-full shadow-lg h-11 sm:h-12 px-3.5 sm:px-5 gap-1.5 sm:gap-2 font-medium text-xs sm:text-sm whitespace-nowrap transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5 active:scale-95 ${
+                      isDockOpen 
+                        ? "bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-secondary/15" 
+                        : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/15"
                     }`}
+                    onClick={() => setIsDockOpen(!isDockOpen)}
                   >
-                    <button
-                      type="button"
-                      onClick={() => setIsDockMinimized(true)}
-                      disabled={!isExpanded || isDockOpen}
-                      className={`flex items-center justify-center w-12 sm:w-14 h-7 sm:h-8 rounded-full bg-background/90 dark:bg-background/80 backdrop-blur-xl border border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-[opacity,transform,background-color,color] duration-150 transform-gpu active:scale-95 cursor-pointer origin-center ${
-                        isExpanded && !isDockOpen
-                          ? `pointer-events-auto ${
-                              isDockHovered 
-                                ? "opacity-100 scale-100 shadow-md" 
-                                : "opacity-40 scale-75 shadow-none group-hover/dock:opacity-100 group-hover/dock:scale-100 group-hover/dock:shadow-md group-focus-within/dock:opacity-100 group-focus-within/dock:scale-100"
-                            }` 
-                          : "opacity-0 scale-75 pointer-events-none"
-                      }`}
-                      title="Minimize dock"
-                      aria-label="Minimize dock"
-                    >
-                      <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.25]" />
-                    </button>
-                  </div>
-
-                  <div className={`flex items-center justify-center gap-2 transition-opacity duration-200 ${
-                    isExpanded ? "pointer-events-auto" : "pointer-events-none"
-                  } ${
-                    isDockHovered || isDockOpen
-                      ? "opacity-100"
-                      : "opacity-75 sm:opacity-80 group-hover/dock:opacity-100 group-focus-within/dock:opacity-100"
-                  }`}>
-                    <div className="flex flex-row items-center gap-1.5 sm:gap-2.5 bg-background/90 dark:bg-background/80 backdrop-blur-xl shadow-lg border border-border/60 px-3 sm:px-4 h-11 sm:h-12 rounded-full hover:shadow-xl transition-all duration-200 transform-gpu isolate">
-                      {/* Sort Controls */}
-                      <div className="flex items-center gap-1 sm:gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (sortConfig) {
-                              setSortConfig({ ...sortConfig, direction: sortConfig.direction === "asc" ? "desc" : "asc" });
-                            }
-                          }}
-                          disabled={!sortConfig || !isExpanded}
-                          className={`flex items-center justify-center w-6 h-6 rounded-full transition-colors ${
-                            sortConfig 
-                              ? "hover:bg-muted/80 text-foreground cursor-pointer border border-border/40 shadow-xs" 
-                              : "text-muted-foreground opacity-40 cursor-default"
-                          }`}
-                          title={sortConfig ? `Switch to ${sortConfig.direction === 'asc' ? 'descending' : 'ascending'}` : "Select a sort method first"}
-                        >
-                          {!sortConfig && <ArrowUpDown className="w-3 h-3" />}
-                          {sortConfig?.direction === "asc" && <ArrowUp className="w-3 h-3" />}
-                          {sortConfig?.direction === "desc" && <ArrowDown className="w-3 h-3" />}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (sortConfig === null) {
-                              setSortConfig({ key: "label", direction: "asc" });
-                            } else if (sortConfig.key === "label") {
-                              setSortConfig({ key: "value", direction: "desc" });
-                            } else {
-                              setSortConfig(null);
-                            }
-                          }}
-                          disabled={!isExpanded}
-                          className="text-xs font-medium select-none hidden sm:inline cursor-pointer hover:text-primary transition-colors"
-                          title="Click to cycle sort: Name → Value → None"
-                        >
-                          Sort:
-                        </button>
-                        <Select
-                          value={sortConfig === null ? "none" : sortConfig.key}
-                          disabled={!isExpanded}
-                          onValueChange={(val) => {
-                            if (val === "none") setSortConfig(null);
-                            if (val === "value") setSortConfig({ key: "value", direction: "desc" });
-                            if (val === "label") setSortConfig({ key: "label", direction: "asc" });
-                          }}
-                        >
-                          <SelectTrigger className="h-7 w-[74px] sm:w-[78px] rounded-full text-xs font-medium border-border/50 bg-background/50 shadow-none hover:bg-muted/50 transition-colors focus:ring-0 focus:ring-offset-0 px-2 sm:px-2.5">
-                            <SelectValue placeholder="None" />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-xl shadow-xl border-border/50 min-w-[100px]">
-                            <SelectItem value="none" className="text-xs cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-1.5">None</SelectItem>
-                            <SelectItem value="value" className="text-xs cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-1.5">Value</SelectItem>
-                            <SelectItem value="label" className="text-xs cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-1.5">Name</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="w-px h-4 sm:h-5 bg-border/60" />
-
-                      {/* Show Labels Toggle */}
-                      <div className="flex items-center gap-1.5 sm:gap-2">
-                        <label htmlFor="show-labels-dock" className="text-xs font-medium cursor-pointer select-none">
-                          Labels
-                        </label>
-                        <Switch
-                          id="show-labels-dock"
-                          checked={showLabels}
-                          disabled={!isExpanded}
-                          onCheckedChange={setShowLabels}
-                          className="scale-85 sm:scale-90 data-[state=checked]:bg-primary shadow-xs"
-                        />
-                      </div>
-
-                      <div className="w-px h-4 sm:h-5 bg-border/60" />
-
-                      {/* Show Legend Toggle */}
-                      <div className="flex items-center gap-1.5 sm:gap-2">
-                        <label htmlFor="show-legend-dock" className="text-xs font-medium cursor-pointer select-none">
-                          Legend
-                        </label>
-                        <Switch
-                          id="show-legend-dock"
-                          checked={showLegend}
-                          disabled={!isExpanded}
-                          onCheckedChange={setShowLegend}
-                          className="scale-85 sm:scale-90 data-[state=checked]:bg-primary shadow-xs"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Edit Data / Hide Data Button */}
-                    <Button 
-                      size="default" 
-                      disabled={!isExpanded}
-                      className={`rounded-full shadow-lg h-11 sm:h-12 px-3.5 sm:px-5 gap-1.5 sm:gap-2 font-medium text-xs sm:text-sm transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5 active:scale-95 ${
-                        isExpanded ? "pointer-events-auto" : "pointer-events-none"
-                      } ${
-                        isDockOpen 
-                          ? "bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-secondary/15" 
-                          : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/15"
-                      }`}
-                      onClick={() => setIsDockOpen(!isDockOpen)}
-                    >
-                      {isDockOpen ? (
-                        <>
-                          <ChevronDown className="w-4 h-4" /> Hide Data
-                        </>
-                      ) : (
-                        <>
-                          <Database className="w-4 h-4" /> Edit Data
-                        </>
-                      )}
-                    </Button>
-                  </div>
+                    {isDockOpen ? (
+                      <>
+                        <ChevronDown className="w-4 h-4" /> Hide Data
+                      </>
+                    ) : (
+                      <>
+                        <Database className="w-4 h-4" /> Edit Data
+                      </>
+                    )}
+                  </Button>
                 </div>
               </div>
             );
