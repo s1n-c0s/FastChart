@@ -28,45 +28,106 @@ export interface StackedChartProps {
   showLabels?: boolean
   showRadial?: boolean
   isFullscreen?: boolean
+  showLegend?: boolean
   showFactText?: boolean
   factIndex?: number
   onFactIndexChange?: (index: number) => void
-  
 }
 
 interface StackedTooltipProps {
   active?: boolean
   payload?: Array<{ 
     name?: string
-    value: number
+    value?: any
     fill?: string
+    color?: string
+    dataKey?: string
   } & Record<string, unknown>>
   rawData?: Datum[]
+  totalValue?: number
 }
 
-const StackedTooltip = React.memo(function StackedTooltip({ active, payload, rawData }: StackedTooltipProps) {
+const StackedTooltip = React.memo(function StackedTooltip({ active, payload, rawData, totalValue }: StackedTooltipProps) {
   if (!active || !payload || payload.length === 0) return null
 
+  // Helper to extract datum info
+  const getItemDetails = (entry: any) => {
+    const label = entry.name || (entry.dataKey as string) || ""
+    const rawItem = rawData?.find(d => d.label === label || d.id === label)
+    const fill = entry.fill || entry.color || rawItem?.color || "#3b82f6"
+    const rawVal = rawItem?.value ?? (typeof entry.value === 'number' ? entry.value : 0)
+    
+    let percent = 0
+    if (typeof entry.value === 'number' && entry.value <= 1 && entry.value > 0) {
+      percent = Math.round(entry.value * 100)
+    } else if (totalValue && totalValue > 0) {
+      percent = Math.round((Number(rawVal) / totalValue) * 100)
+    } else if (Array.isArray(entry.value)) {
+      percent = Math.round(Math.abs(entry.value[1] - entry.value[0]) * 100)
+    }
+
+    return { label, fill, rawVal, percent }
+  }
+
+  // Single item hover (clean, compact, no overflow)
+  if (payload.length === 1) {
+    const { label, fill, rawVal, percent } = getItemDetails(payload[0])
+    return (
+      <div className="rounded-xl border border-border/50 bg-background/95 backdrop-blur-md p-3 shadow-xl animate-in fade-in zoom-in-95 duration-200 min-w-[140px] pointer-events-none select-none">
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">{label}</span>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: fill }} />
+              <span className="font-bold text-sm text-foreground">{Number(rawVal).toLocaleString()}</span>
+            </div>
+            <span className="font-medium text-[11px] text-muted-foreground">{percent}%</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Multi-item breakdown fallback (max-height constrained, 2 columns if > 6 items)
+  const isMultiColumn = payload.length > 6
   return (
-    <div className="rounded-xl border border-border/50 bg-background/95 backdrop-blur-md p-3 shadow-xl animate-in fade-in zoom-in-95 duration-200 min-w-[140px]">
-      <div className="flex flex-col gap-1.5">
-        <span className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">Details</span>
-        <div className="flex flex-col gap-2 mt-1">
-          {payload.map((entry, idx) => (
-            <div key={idx} className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.fill }} />
-                <span className="font-medium text-sm text-foreground">{entry.name}</span>
-              </div>
-              <div className="flex flex-col items-end">
-                <span className="font-bold text-sm text-foreground">
-                  {rawData?.find(d => d.label === entry.name)?.value?.toLocaleString() || 0}
+    <div className={`rounded-xl border border-border/50 bg-background/95 backdrop-blur-md p-3 shadow-xl animate-in fade-in zoom-in-95 duration-200 pointer-events-auto select-none ${
+      isMultiColumn ? 'min-w-[320px] max-w-[420px]' : 'min-w-[160px] max-w-[260px]'
+    }`}>
+      <div className="flex items-center justify-between border-b border-border/40 pb-1.5 mb-1.5">
+        <span className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wider">
+          Details ({payload.length})
+        </span>
+        {totalValue && totalValue > 0 && (
+          <span className="text-[11px] font-medium text-muted-foreground">
+            Total: {totalValue.toLocaleString()}
+          </span>
+        )}
+      </div>
+      <div className={`max-h-[200px] overflow-y-auto overscroll-contain pr-1 ${
+        isMultiColumn ? 'grid grid-cols-2 gap-x-4 gap-y-1' : 'flex flex-col gap-1.5'
+      }`}>
+        {payload.map((entry, idx) => {
+          const { label, fill, rawVal, percent } = getItemDetails(entry)
+          return (
+            <div key={idx} className="flex items-center justify-between gap-3 text-xs py-0.5">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <div className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: fill }} />
+                <span className="font-medium text-foreground truncate max-w-[90px]" title={label}>
+                  {label}
                 </span>
-                <span className="font-medium text-[11px] text-muted-foreground">{Math.round((entry.value || 0) * 100)}%</span>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="font-bold text-foreground">
+                  {Number(rawVal).toLocaleString()}
+                </span>
+                <span className="text-[10px] text-muted-foreground font-medium w-7 text-right">
+                  {percent}%
+                </span>
               </div>
             </div>
-          ))}
-        </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -75,11 +136,13 @@ const StackedTooltip = React.memo(function StackedTooltip({ active, payload, raw
 StackedTooltip.displayName = "StackedTooltip";
 
 const CustomStackedLabel = (props: any) => {
-  const { x, y, width, height, value, rawData, barDataKey, isFullscreen, isHorizontal } = props;
+  const { x, y, width, height, value, rawData, top4KeysSet, barDataKey, isFullscreen, isHorizontal } = props;
   
   if (width < 15 || height < 15) return null;
 
-  if (rawData && rawData.length > 4) {
+  if (top4KeysSet) {
+    if (!top4KeysSet.has(barDataKey)) return null;
+  } else if (rawData && rawData.length > 4) {
     const top4Keys = [...rawData]
       .sort((a, b) => (b.value || 0) - (a.value || 0))
       .slice(0, 4)
@@ -165,10 +228,10 @@ export const StackedChart = React.memo(function StackedChart({
   showLabels = false,
   showRadial = false,
   isFullscreen = false,
+  showLegend = true,
   showFactText = false,
   factIndex = 0,
   onFactIndexChange,
-  
 }: StackedChartProps) {
 
   const [isDark, setIsDark] = React.useState(false);
@@ -200,13 +263,12 @@ export const StackedChart = React.memo(function StackedChart({
   React.useEffect(() => {
     const node = localRef.current;
     if (node) {
-      setDimensions({ width: node.clientWidth, height: node.clientHeight });
+      setDimensions({ width: Math.round(node.clientWidth), height: Math.round(node.clientHeight) });
       const observer = new ResizeObserver((entries) => {
         if (entries[0]) {
-          setDimensions({
-            width: entries[0].contentRect.width,
-            height: entries[0].contentRect.height,
-          });
+          const w = Math.round(entries[0].contentRect.width);
+          const h = Math.round(entries[0].contentRect.height);
+          setDimensions((prev) => (prev.width === w && prev.height === h ? prev : { width: w, height: h }));
         }
       });
       observer.observe(node);
@@ -214,55 +276,86 @@ export const StackedChart = React.memo(function StackedChart({
     }
   }, []);
 
-  // Transform data for stacked chart
-  const stackedData = React.useMemo(() => {
-    const total = data.reduce((sum, d) => sum + Math.max(0, d.value || 0), 0)
-    return [
-      {
-        name: "All",
-        ...data.reduce((acc, d) => ({
-          ...acc,
-          [d.label]: Math.max(0, d.value || 0) / (total || 1)
-        }), {})
-      }
-    ]
+  // Calculate total for radial chart
+  const totalValue = React.useMemo(() => {
+    let sum = 0;
+    for (let i = 0; i < data.length; i++) {
+      const v = data[i].value;
+      if (isFinite(v) && v > 0) sum += v;
+    }
+    return sum;
   }, [data])
 
-  // Transform data for radial chart
+  const { maxItem, minItem } = React.useMemo(() => {
+    if (!data || data.length === 0) return { maxItem: null, minItem: null };
+    let max = data[0];
+    let min = data[0];
+    for (let i = 1; i < data.length; i++) {
+      const item = data[i];
+      if (item.value > max.value) max = item;
+      if (item.value < min.value) min = item;
+    }
+    return { maxItem: max, minItem: min };
+  }, [data]);
+
+  // Transform data for stacked chart (O(N) with single object)
+  const stackedData = React.useMemo(() => {
+    const row: Record<string, any> = { name: "All" };
+    const divisor = totalValue || 1;
+    data.forEach((d) => {
+      row[d.label] = Math.max(0, d.value || 0) / divisor;
+    });
+    return [row];
+  }, [data, totalValue]);
+
+  // Transform data for radial chart (O(N) with single object)
   const radialData = React.useMemo(() => {
-    const total = data.reduce((sum, d) => sum + Math.max(0, d.value || 0), 0)
-    return [
-      data.reduce((acc, d) => ({
-        ...acc,
-        [d.label]: Math.max(0, d.value || 0) / (total || 1)
-      }), {})
-    ]
-  }, [data])
+    const row: Record<string, any> = {};
+    const divisor = totalValue || 1;
+    data.forEach((d) => {
+      row[d.label] = Math.max(0, d.value || 0) / divisor;
+    });
+    return [row];
+  }, [data, totalValue]);
 
   // Build chart config for radial
   const chartConfig = React.useMemo(() => {
-    return data.reduce((acc, d) => ({
-      ...acc,
-      [d.label]: {
+    const cfg: ChartConfig = {};
+    data.forEach((d) => {
+      cfg[d.label] = {
         label: d.label,
         color: d.color,
-      }
-    }), {}) as ChartConfig
-  }, [data])
+      };
+    });
+    return cfg;
+  }, [data]);
 
-  // Calculate total for radial chart
-  const totalValue = React.useMemo(() => {
-    return data.reduce((sum, d) => sum + Math.max(0, d.value || 0), 0)
-  }, [data])
+  const top4KeysSet = React.useMemo(() => {
+    if (!data || data.length <= 4) return null;
+    return new Set(
+      [...data]
+        .sort((a, b) => (b.value || 0) - (a.value || 0))
+        .slice(0, 4)
+        .map(d => d.label)
+    );
+  }, [data]);
 
-  const { legendRows, legendHeight } = React.useMemo(() => {
-    const { width } = dimensions;
-    if (!width) return { legendRows: [], legendHeight: 0 };
+  const isAnimationActive = data.length <= 15;
+
+  const { legendRows, legendHeight, legendConfig } = React.useMemo(() => {
+    const { width, height } = dimensions;
+    if (!width) return { legendRows: [], legendHeight: 0, legendConfig: { fontSize: 12, rectSize: 14, gap: 8, spacingY: 25 } };
     
-    const spacingY = 25;
-    const rectSize = 14; 
-    const gap = 8;
-    const itemMargin = 20;
+    const effectiveSize = Math.max(width || 0, height || 0);
+    const scale = isFullscreen 
+      ? Math.min(1.6, Math.max(1.2, effectiveSize / 600))
+      : 1;
+
+    const fontSize = Math.round(12 * scale);
+    const rectSize = Math.round(14 * scale);
+    const gap = Math.round(8 * scale);
+    const itemMargin = Math.round(20 * scale);
+    const spacingY = Math.round(26 * scale);
     
     const rows: { items: Datum[]; width: number; itemWidths: number[] }[] = [];
     let currentRow: Datum[] = [];
@@ -272,10 +365,11 @@ export const StackedChart = React.memo(function StackedChart({
     data.forEach((item: Datum) => {
       const percentage = totalValue > 0 ? Math.round((Math.max(0, item.value || 0) / totalValue) * 100) : 0;
       const labelText = `${item.label}: ${Number(item.value || 0).toLocaleString()} (${percentage}%)`;
-      const textWidth = labelText.length * (isFullscreen ? 8.5 : 7.5); 
+      const textWidth = labelText.length * (fontSize * 0.62); 
       const itemWidth = rectSize + gap + textWidth + itemMargin;
+      const maxItemsPerRow = isFullscreen && width > 700 ? 5 : 4;
 
-      if (currentRowWidth + itemWidth - itemMargin > width && currentRow.length > 0) {
+      if ((currentRowWidth + itemWidth - itemMargin > width && currentRow.length > 0) || currentRow.length >= maxItemsPerRow) {
         rows.push({ items: currentRow, width: currentRowWidth - itemMargin, itemWidths: currentRowItemWidths });
         currentRow = [item];
         currentRowWidth = itemWidth;
@@ -293,19 +387,18 @@ export const StackedChart = React.memo(function StackedChart({
 
     return { 
       legendRows: rows, 
-      legendHeight: rows.length * spacingY 
+      legendHeight: rows.length * spacingY,
+      legendConfig: { fontSize, rectSize, gap, spacingY }
     };
-  }, [data, dimensions, isFullscreen]);
+  }, [data, dimensions, isFullscreen, totalValue]);
 
   const renderSvgLegend = (isStandalone = false) => {
-    if (!dimensions.width || !dimensions.height || legendRows.length === 0) return null;
+    if (!showLegend || !dimensions.width || !dimensions.height || legendRows.length === 0) return null;
 
-    const spacingY = 25;
-    const rectSize = 14; 
-    const gap = 8;
+    const { fontSize, rectSize, gap, spacingY } = legendConfig;
     const textColor = isDark ? "#e4e4e7" : "#3f3f46"; 
     
-    const startY = isStandalone ? 12 : (dimensions.height ? dimensions.height - legendHeight : 0);
+    const startY = isStandalone ? 12 : Math.max(0, (dimensions.height || 384) - legendHeight - 8);
 
     return (
       <g className="svg-legend">
@@ -321,17 +414,17 @@ export const StackedChart = React.memo(function StackedChart({
               <g key={`legend-${item.id}`}>
                 <rect 
                   x={x} 
-                  y={y - 12} 
+                  y={y - rectSize + 2} 
                   width={rectSize} 
                   height={rectSize} 
                   fill={item.color} 
-                  rx={3}
+                  rx={Math.max(3, Math.round(rectSize * 0.25))}
                 />
                 <text
                   x={x + rectSize + gap}
                   y={y}
                   fill={textColor}
-                  fontSize={isFullscreen ? 14 : 12}
+                  fontSize={fontSize}
                   fontWeight="500"
                   fontFamily="sans-serif"
                   style={{ pointerEvents: 'none' }}
@@ -349,19 +442,28 @@ export const StackedChart = React.memo(function StackedChart({
   // Render radial chart
   if (showRadial) {
     const baseWidth = dimensions.width || (isFullscreen ? 800 : 400);
-    const baseHeight = dimensions.height || (isFullscreen ? 500 : 300);
+    const baseHeight = dimensions.height || (isFullscreen ? 500 : 384);
     
-    // We want the chart to fit nicely in the top part of the container.
-    // The cx="50%" cy="80%" means the center of the half circle is very low.
-    // So the height of the chart is actually mostly its radius.
-    // Let's ensure it doesn't overflow horizontally or vertically.
+    const legendBottomMargin = showLegend ? 8 : 0;
+    const legendStartY = showLegend
+      ? Math.max(120, baseHeight - legendHeight - legendBottomMargin)
+      : baseHeight;
+
+    // Radial semi-circle ends at cy. All content (arc, text, arrows) sits strictly ABOVE cy.
+    // Ensure safe area padding and clean spacing between radialCy and legendStartY
+    const radialGap = showLegend && legendRows.length > 0 ? (isFullscreen ? 40 : 32) : 0;
+    const radialCy = showLegend
+      ? Math.max(120, legendStartY - radialGap)
+      : Math.max(160, baseHeight - (isFullscreen ? 36 : 24));
     
-    const availableRadiusW = (baseWidth / 2) * 0.8; 
-    const availableRadiusH = baseHeight * 0.7; // since cy=80%, we have 80% height available
+    // Give proper headroom above the radial arc so it breathes comfortably
+    const topHeadroom = isFullscreen ? 50 : 35;
+    const availableRadiusW = (baseWidth / 2) * (showLegend ? 0.82 : 0.85); 
+    const availableRadiusH = Math.max(60, (radialCy - topHeadroom) * (showLegend ? 0.88 : 0.92)); 
     const maxRadius = Math.min(availableRadiusW, availableRadiusH);
     
-    const outerRadius = Math.max(100, isFullscreen ? maxRadius * 0.9 : maxRadius * 0.9);
-    const innerRadius = outerRadius * 0.55;
+    const outerRadius = Math.max(65, isFullscreen ? maxRadius * 0.95 : maxRadius);
+    const innerRadius = Math.round(outerRadius * 0.58);
     
     return (
       <div ref={setRefs} className={`h-full w-full flex flex-col items-center justify-center overflow-hidden `}>
@@ -372,15 +474,16 @@ export const StackedChart = React.memo(function StackedChart({
               startAngle={180}
               endAngle={0}
               cx="50%"
-              cy="80%"
+              cy={radialCy}
               innerRadius={innerRadius}
               outerRadius={outerRadius}
               style={{ overflow: 'visible' }}
             >
             <Tooltip
+              shared={false}
               isAnimationActive={false}
               cursor={false}
-              content={<StackedTooltip rawData={data} />}
+              content={<StackedTooltip rawData={data} totalValue={totalValue} />}
             />
             <PolarAngleAxis type="number" domain={[0, 1]} tick={false} axisLine={false} />
             <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
@@ -402,9 +505,6 @@ export const StackedChart = React.memo(function StackedChart({
                     const textSize = maxTextSize * scaleFactor;
                     const labelSize = maxLabelSize * scaleFactor;
                     const titleSize = labelSize * 0.9;
-                    
-                    const maxItem = data && data.length > 0 ? data.reduce((prev: any, current: any) => (prev.value > current.value) ? prev : current) : null;
-                    const minItem = data && data.length > 0 ? data.reduce((prev: any, current: any) => (prev.value < current.value) ? prev : current) : null;
                     
                     let factTitle = "Total";
                     let factValue = totalValue.toLocaleString();
@@ -511,14 +611,16 @@ export const StackedChart = React.memo(function StackedChart({
               />
             </PolarRadiusAxis>
             {data.map((d) => (
-              <RadialBar isAnimationActive={true}
+              <RadialBar 
+                isAnimationActive={isAnimationActive}
                 key={d.id}
                 dataKey={d.label}
                 name={d.label}
                 stackId="a"
-                cornerRadius={5}
+                cornerRadius={4}
                 fill={d.color}
-                className="stroke-transparent stroke-2"
+                stroke={isDark ? "#18181b" : "#ffffff"}
+                strokeWidth={2.5}
               />
             ))}
             {renderSvgLegend()}
@@ -528,6 +630,8 @@ export const StackedChart = React.memo(function StackedChart({
       </div>
     )
   }
+
+  const chartBottomMargin = showLegend ? (legendHeight + (legendRows.length > 0 ? 16 : 10)) : 10;
 
   // Horizontal mode: bars grow to the right
   if (isHorizontal) {
@@ -539,7 +643,7 @@ export const StackedChart = React.memo(function StackedChart({
             data={stackedData}
             stackOffset="expand"
             layout="vertical"
-            margin={{ top: 5, right: 15, bottom: legendHeight + 10, left: 5 }}
+            margin={{ top: 5, right: 15, bottom: chartBottomMargin, left: 5 }}
           >
             <CartesianGrid className="stroke-border opacity-80" strokeDasharray="4 4" />
             <YAxis
@@ -558,7 +662,12 @@ export const StackedChart = React.memo(function StackedChart({
               axisLine={false}
               style={{ fontSize: '12px' }}
             />
-            <Tooltip isAnimationActive={false} cursor={{ fill: 'var(--muted)', opacity: 0.65 }} content={<StackedTooltip rawData={data} />} />
+            <Tooltip
+              shared={false}
+              isAnimationActive={false}
+              cursor={{ fill: 'var(--muted)', opacity: 0.25 }}
+              content={<StackedTooltip rawData={data} totalValue={totalValue} />}
+            />
             {data.map((d) => (
               <Bar 
                 key={d.id} 
@@ -566,12 +675,12 @@ export const StackedChart = React.memo(function StackedChart({
                 stackId="stacked" 
                 fill={d.color} 
                 name={d.label}
-                isAnimationActive={true}
+                isAnimationActive={isAnimationActive}
               >
                 {showLabels && (
                   <LabelList
                     dataKey={d.label}
-                    content={<CustomStackedLabel rawData={data} isFullscreen={isFullscreen} isHorizontal={isHorizontal} barDataKey={d.label} />}
+                    content={<CustomStackedLabel rawData={data} top4KeysSet={top4KeysSet} isFullscreen={isFullscreen} isHorizontal={isHorizontal} barDataKey={d.label} />}
                   />
                 )}
               </Bar>
@@ -592,7 +701,7 @@ export const StackedChart = React.memo(function StackedChart({
           data={stackedData}
           stackOffset="expand"
           layout="horizontal"
-          margin={{ top: 5, right: 15, bottom: legendHeight + 10, left: 5 }}
+          margin={{ top: 5, right: 15, bottom: chartBottomMargin, left: 5 }}
         >
           <CartesianGrid className="stroke-border opacity-80" strokeDasharray="4 4" />
           <XAxis
@@ -612,7 +721,12 @@ export const StackedChart = React.memo(function StackedChart({
             width={50}
             style={{ fontSize: '12px' }}
           />
-          <Tooltip isAnimationActive={false} cursor={{ fill: 'var(--muted)', opacity: 0.65 }} content={<StackedTooltip rawData={data} />} />
+          <Tooltip
+            shared={false}
+            isAnimationActive={false}
+            cursor={{ fill: 'var(--muted)', opacity: 0.25 }}
+            content={<StackedTooltip rawData={data} totalValue={totalValue} />}
+          />
           {data.map((d) => (
             <Bar 
               key={d.id} 
@@ -620,12 +734,12 @@ export const StackedChart = React.memo(function StackedChart({
               stackId="stacked" 
               fill={d.color} 
               name={d.label}
-              isAnimationActive={true}
+              isAnimationActive={isAnimationActive}
             >
               {showLabels && (
                 <LabelList
                   dataKey={d.label}
-                  content={<CustomStackedLabel rawData={data} isFullscreen={isFullscreen} isHorizontal={isHorizontal} barDataKey={d.label} />}
+                  content={<CustomStackedLabel rawData={data} top4KeysSet={top4KeysSet} isFullscreen={isFullscreen} isHorizontal={isHorizontal} barDataKey={d.label} />}
                 />
               )}
             </Bar>
@@ -641,12 +755,14 @@ export const StackedChart = React.memo(function StackedChart({
     prevProps.showLabels === nextProps.showLabels &&
     prevProps.showRadial === nextProps.showRadial &&
     prevProps.isFullscreen === nextProps.isFullscreen &&
+    prevProps.showLegend === nextProps.showLegend &&
     prevProps.showFactText === nextProps.showFactText &&
     prevProps.factIndex === nextProps.factIndex &&
     prevProps.data.length === nextProps.data.length &&
     prevProps.data.every((item, idx) => 
       item.id === nextProps.data[idx]?.id &&
       item.value === nextProps.data[idx]?.value &&
+      item.label === nextProps.data[idx]?.label &&
       item.color === nextProps.data[idx]?.color
     )
   )

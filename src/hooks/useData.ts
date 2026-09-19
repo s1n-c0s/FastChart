@@ -1,44 +1,36 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import type { Datum, SortConfig } from '@/types';
 
 export const useSort = (data: Datum[]) => {
   const [sortConfig, setSortConfig] = useState<SortConfig>(null);
 
   const sortedData = useMemo(() => {
+    if (sortConfig === null) return data;
     const sortableData = [...data];
 
-    if (sortConfig !== null) {
-      sortableData.sort((a, b) => {
-        if (a[sortConfig.key] < b[sortConfig.key]) {
-          return sortConfig.direction === "asc" ? -1 : 1;
-        }
-        if (a[sortConfig.key] > b[sortConfig.key]) {
-          return sortConfig.direction === "asc" ? 1 : -1;
-        }
-        return 0;
-      });
-    }
+    sortableData.sort((a, b) => {
+      if (a[sortConfig.key] < b[sortConfig.key]) {
+        return sortConfig.direction === "asc" ? -1 : 1;
+      }
+      if (a[sortConfig.key] > b[sortConfig.key]) {
+        return sortConfig.direction === "asc" ? 1 : -1;
+      }
+      return 0;
+    });
     return sortableData;
   }, [data, sortConfig]);
 
-  const requestSort = (key: "label" | "value") => {
-    let direction: "asc" | "desc" = "asc";
-    if (
-      sortConfig &&
-      sortConfig.key === key &&
-      sortConfig.direction === "asc"
-    ) {
-      direction = "desc";
-    } else if (
-      sortConfig &&
-      sortConfig.key === key &&
-      sortConfig.direction === "desc"
-    ) {
-      setSortConfig(null);
-      return;
-    }
-    setSortConfig({ key, direction });
-  };
+  const requestSort = useCallback((key: "label" | "value") => {
+    setSortConfig((prev) => {
+      let direction: "asc" | "desc" = "asc";
+      if (prev && prev.key === key && prev.direction === "asc") {
+        direction = "desc";
+      } else if (prev && prev.key === key && prev.direction === "desc") {
+        return null;
+      }
+      return { key, direction };
+    });
+  }, []);
 
   return { sortedData, sortConfig, requestSort, setSortConfig };
 };
@@ -46,33 +38,37 @@ export const useSort = (data: Datum[]) => {
 export const useDataManipulation = (initialData: Datum[]) => {
   const [data, setData] = useState<Datum[]>(initialData);
 
-  const total = useMemo(
-    () => data.reduce((sum, d) => sum + (isFinite(d.value) ? d.value : 0), 0),
-    [data]
-  );
+  const total = useMemo(() => {
+    let sum = 0;
+    for (let i = 0; i < data.length; i++) {
+      const v = data[i].value;
+      if (isFinite(v)) sum += v;
+    }
+    return sum;
+  }, [data]);
 
-  const updateLabel = (id: string, label: string) => {
+  const updateLabel = useCallback((id: string, label: string) => {
     setData((prev) => prev.map((d) => (d.id === id ? { ...d, label } : d)));
-  };
+  }, []);
 
-  const updateValue = (id: string, next: string) => {
+  const updateValue = useCallback((id: string, next: string) => {
     const parsed = Number(next);
     setData((prev) =>
       prev.map((d) =>
         d.id === id ? { ...d, value: isFinite(parsed) ? parsed : 0 } : d
       )
     );
-  };
+  }, []);
 
-  const updateColor = (id: string, color: string) => {
+  const updateColor = useCallback((id: string, color: string) => {
     setData((prev) => prev.map((d) => (d.id === id ? { ...d, color } : d)));
-  };
+  }, []);
 
-  const removeRow = (id: string) => {
+  const removeRow = useCallback((id: string) => {
     setData((prev) =>
       prev.length > 1 ? prev.filter((d) => d.id !== id) : prev
     );
-  };
+  }, []);
 
   return {
     data,

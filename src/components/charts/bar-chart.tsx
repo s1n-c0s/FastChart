@@ -30,26 +30,108 @@ export const BarChart = React.memo(function BarChart({
 
 }: BarChartProps) {
   const chartConfig = React.useMemo(() => {
-    return data.reduce((acc, item) => {
-      acc[item.id] = {
+    const config: Record<string, { label: string; color: string }> = {}
+    for (let i = 0; i < data.length; i++) {
+      const item = data[i]
+      config[item.id] = {
         label: item.label,
         color: item.color,
       }
-      return acc
-    }, {} as Record<string, { label: string; color: string }>)
+    }
+    return config
   }, [data])
 
   // Calculate dynamic margins based on label lengths
   const maxLabelLength = React.useMemo(() => {
-    return Math.max(...data.map(d => d.label.length))
+    let max = 0
+    for (let i = 0; i < data.length; i++) {
+      const len = data[i].label?.length || 0
+      if (len > max) max = len
+    }
+    return max
   }, [data])
+
+  const maxDataValue = React.useMemo(() => {
+    let max = 0;
+    for (let i = 0; i < data.length; i++) {
+      const v = Number(data[i].value) || 0;
+      if (v > max) max = v;
+    }
+    return max;
+  }, [data]);
+
+  const { numericTicks, numericAxisMax } = React.useMemo(() => {
+    if (maxDataValue <= 0) {
+      return { numericTicks: [0, 2, 4, 6, 8, 10], numericAxisMax: 10 };
+    }
+
+    const targetIntervals = 5;
+    const targetMax = maxDataValue * 1.08;
+    const rawStep = targetMax / targetIntervals;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+    const normalized = rawStep / magnitude;
+
+    let stepMultiplier = 10;
+    const standardSteps = [1, 2, 2.5, 5, 10];
+    for (let i = 0; i < standardSteps.length; i++) {
+      if (normalized <= standardSteps[i]) {
+        stepMultiplier = standardSteps[i];
+        break;
+      }
+    }
+
+    const step = stepMultiplier * magnitude;
+    const ticks: number[] = [];
+    let current = 0;
+    while (current < maxDataValue || (current - maxDataValue) / Math.max(1, current) < 0.05) {
+      ticks.push(current);
+      current = Math.round((current + step) * 1e6) / 1e6;
+    }
+    ticks.push(current);
+    return { numericTicks: ticks, numericAxisMax: ticks[ticks.length - 1] };
+  }, [maxDataValue]);
+
+  const isAnimationActive = data.length <= 15
+
+  const localRef = React.useRef<HTMLDivElement | null>(null);
+  const [dimensions, setDimensions] = React.useState({ width: 0, height: 0 });
+
+  const setRefs = React.useCallback(
+    (node: HTMLDivElement | null) => {
+      localRef.current = node;
+      if (containerRef) {
+        if (typeof containerRef === "function") {
+          containerRef(node);
+        } else {
+          (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+        }
+      }
+    },
+    [containerRef]
+  );
+
+  React.useEffect(() => {
+    const node = localRef.current;
+    if (node) {
+      setDimensions({ width: Math.round(node.clientWidth), height: Math.round(node.clientHeight) });
+      const observer = new ResizeObserver((entries) => {
+        if (entries[0]) {
+          const w = Math.round(entries[0].contentRect.width);
+          const h = Math.round(entries[0].contentRect.height);
+          setDimensions((prev) => (prev.width === w && prev.height === h ? prev : { width: w, height: h }));
+        }
+      });
+      observer.observe(node);
+      return () => observer.disconnect();
+    }
+  }, []);
 
   // Horizontal mode: bars grow to the right
   if (isHorizontal) {
-    const yAxisWidth = Math.min(Math.max(maxLabelLength * 6, 40), 100)
+    const yAxisWidth = Math.min(Math.max(maxLabelLength * 7.5, 45), 140)
     
     return (
-      <div ref={containerRef} className="h-full w-full">
+      <div ref={setRefs} className="h-full w-full">
         <ChartContainer config={chartConfig} className="h-full w-full">
           <RechartsBarChart
             key="horizontal-chart"
@@ -61,17 +143,21 @@ export const BarChart = React.memo(function BarChart({
             <CartesianGrid className="stroke-border opacity-80" strokeDasharray="4 4" />
             <XAxis 
               type="number" 
+              ticks={numericTicks}
+              domain={[0, numericAxisMax]}
               tickLine={false} 
               axisLine={false}
+              tickFormatter={(v) => Number(v).toLocaleString()}
               style={{ fontSize: '14px' }}
             />
             <YAxis
               dataKey="label"
               type="category"
+              interval={0}
               tickLine={false}
               axisLine={false}
               width={yAxisWidth}
-              style={{ fontSize: '14px' }}
+              style={{ fontSize: data.length > 20 ? '12px' : '14px' }}
             />
             <ChartTooltip
               cursor={{ fill: 'var(--muted)', opacity: 0.65 }}
@@ -94,7 +180,7 @@ export const BarChart = React.memo(function BarChart({
                 return null
               }}
             />
-            <Bar dataKey="value" radius={[0, 6, 6, 0]} maxBarSize={50}>
+            <Bar dataKey="value" radius={[0, 6, 6, 0]} maxBarSize={50} isAnimationActive={isAnimationActive}>
               {data.map((item) => (
                 <Cell key={item.id} fill={item.color} />
               ))}
@@ -116,31 +202,52 @@ export const BarChart = React.memo(function BarChart({
   }
 
   // Vertical mode: bars grow upward
-  const xAxisHeight = Math.min(Math.max(maxLabelLength * 4, 30), 60)
+  const chartWidth = dimensions.width || 800;
+  const availableWidthPerBar = data.length > 0 ? (chartWidth - 60) / data.length : 80;
+  const approxLabelWidth = maxLabelLength * 7;
+  
+  // If bars are tight and labels are longer than available space, angle them cleanly so they never collide
+  const shouldAngle = availableWidthPerBar < approxLabelWidth && data.length > 6;
+  
+  const tickFontSize = shouldAngle 
+    ? (availableWidthPerBar < 30 ? 11 : 12) 
+    : (data.length > 15 ? 12 : 14);
+
+  const xAxisHeight = shouldAngle 
+    ? Math.min(Math.max(maxLabelLength * 5.5, 45), 90) 
+    : Math.min(Math.max(maxLabelLength * 3.5, 30), 55);
   
   return (
-    <div ref={containerRef} className="h-full w-full">
+    <div ref={setRefs} className="h-full w-full">
       <ChartContainer config={chartConfig} className="h-full w-full">
         <RechartsBarChart
           key="vertical-chart"
           data={data}
           layout="horizontal"
-          margin={{ top: 25, right: 15, bottom: 5, left: 5 }}
+          margin={{ top: 25, right: 15, bottom: shouldAngle ? 10 : 5, left: 5 }}
           barCategoryGap="15%"
         >
           <CartesianGrid className="stroke-border opacity-80" strokeDasharray="4 4" />
           <XAxis
             dataKey="label"
+            interval={0}
             tickLine={false}
             axisLine={false}
             height={xAxisHeight}
-            style={{ fontSize: '14px' }}
+            angle={shouldAngle ? -35 : 0}
+            textAnchor={shouldAngle ? "end" : "middle"}
+            dx={shouldAngle ? -3 : 0}
+            dy={shouldAngle ? 4 : 0}
+            style={{ fontSize: `${tickFontSize}px` }}
           />
           <YAxis
             type="number"
+            ticks={numericTicks}
+            domain={[0, numericAxisMax]}
             tickLine={false}
             axisLine={false}
-            width={45}
+            width={Math.max(45, String(numericAxisMax).length * 8.5 + 8)}
+            tickFormatter={(v) => Number(v).toLocaleString()}
             style={{ fontSize: '14px' }}
           />
           <ChartTooltip
@@ -168,6 +275,7 @@ export const BarChart = React.memo(function BarChart({
             dataKey="value" 
             radius={[6, 6, 0, 0]}
             maxBarSize={80}
+            isAnimationActive={isAnimationActive}
           >
             {data.map((item) => (
               <Cell key={item.id} fill={item.color} />
@@ -194,6 +302,7 @@ export const BarChart = React.memo(function BarChart({
     prevProps.data.every((item, idx) => 
       item.id === nextProps.data[idx]?.id &&
       item.value === nextProps.data[idx]?.value &&
+      item.label === nextProps.data[idx]?.label &&
       item.color === nextProps.data[idx]?.color
     )
   )

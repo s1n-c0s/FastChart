@@ -47,6 +47,7 @@ export default function EmbedChart() {
           <PieChart 
             data={data} 
             total={total} 
+            showLegend={options.showLegend !== false}
             showFactText={options.showFactText} 
             factIndex={pieFactIndex}
             onFactIndexChange={setPieFactIndex}
@@ -59,6 +60,7 @@ export default function EmbedChart() {
             isHorizontal={options.isHorizontal} 
             showLabels={options.showLabels} 
             showRadial={options.showRadial} 
+            showLegend={options.showLegend !== false}
             showFactText={options.showFactText} 
             factIndex={radialFactIndex}
             onFactIndexChange={setRadialFactIndex}

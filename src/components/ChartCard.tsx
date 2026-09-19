@@ -136,7 +136,7 @@ export function ChartCard({
       </div>
       <div 
         ref={chartRef} 
-        className="w-full h-96 relative cursor-pointer"
+        className="w-full h-96 relative cursor-pointer overflow-hidden rounded-xl"
         onClick={handleChartClick}
       >
         {showTooltip && (
