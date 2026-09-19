@@ -38,35 +38,96 @@ interface StackedTooltipProps {
   active?: boolean
   payload?: Array<{ 
     name?: string
-    value: number
+    value?: any
     fill?: string
+    color?: string
+    dataKey?: string
   } & Record<string, unknown>>
   rawData?: Datum[]
+  totalValue?: number
 }
 
-const StackedTooltip = React.memo(function StackedTooltip({ active, payload, rawData }: StackedTooltipProps) {
+const StackedTooltip = React.memo(function StackedTooltip({ active, payload, rawData, totalValue }: StackedTooltipProps) {
   if (!active || !payload || payload.length === 0) return null
 
+  // Helper to extract datum info
+  const getItemDetails = (entry: any) => {
+    const label = entry.name || (entry.dataKey as string) || ""
+    const rawItem = rawData?.find(d => d.label === label || d.id === label)
+    const fill = entry.fill || entry.color || rawItem?.color || "#3b82f6"
+    const rawVal = rawItem?.value ?? (typeof entry.value === 'number' ? entry.value : 0)
+    
+    let percent = 0
+    if (typeof entry.value === 'number' && entry.value <= 1 && entry.value > 0) {
+      percent = Math.round(entry.value * 100)
+    } else if (totalValue && totalValue > 0) {
+      percent = Math.round((Number(rawVal) / totalValue) * 100)
+    } else if (Array.isArray(entry.value)) {
+      percent = Math.round(Math.abs(entry.value[1] - entry.value[0]) * 100)
+    }
+
+    return { label, fill, rawVal, percent }
+  }
+
+  // Single item hover (clean, compact, no overflow)
+  if (payload.length === 1) {
+    const { label, fill, rawVal, percent } = getItemDetails(payload[0])
+    return (
+      <div className="rounded-xl border border-border/50 bg-background/95 backdrop-blur-md p-3 shadow-xl animate-in fade-in zoom-in-95 duration-200 min-w-[140px] pointer-events-none select-none">
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">{label}</span>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: fill }} />
+              <span className="font-bold text-sm text-foreground">{Number(rawVal).toLocaleString()}</span>
+            </div>
+            <span className="font-medium text-[11px] text-muted-foreground">{percent}%</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Multi-item breakdown fallback (max-height constrained, 2 columns if > 6 items)
+  const isMultiColumn = payload.length > 6
   return (
-    <div className="rounded-xl border border-border/50 bg-background/95 backdrop-blur-md p-3 shadow-xl animate-in fade-in zoom-in-95 duration-200 min-w-[140px]">
-      <div className="flex flex-col gap-1.5">
-        <span className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">Details</span>
-        <div className="flex flex-col gap-2 mt-1">
-          {payload.map((entry, idx) => (
-            <div key={idx} className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.fill }} />
-                <span className="font-medium text-sm text-foreground">{entry.name}</span>
-              </div>
-              <div className="flex flex-col items-end">
-                <span className="font-bold text-sm text-foreground">
-                  {rawData?.find(d => d.label === entry.name)?.value?.toLocaleString() || 0}
+    <div className={`rounded-xl border border-border/50 bg-background/95 backdrop-blur-md p-3 shadow-xl animate-in fade-in zoom-in-95 duration-200 pointer-events-auto select-none ${
+      isMultiColumn ? 'min-w-[320px] max-w-[420px]' : 'min-w-[160px] max-w-[260px]'
+    }`}>
+      <div className="flex items-center justify-between border-b border-border/40 pb-1.5 mb-1.5">
+        <span className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wider">
+          Details ({payload.length})
+        </span>
+        {totalValue && totalValue > 0 && (
+          <span className="text-[11px] font-medium text-muted-foreground">
+            Total: {totalValue.toLocaleString()}
+          </span>
+        )}
+      </div>
+      <div className={`max-h-[200px] overflow-y-auto overscroll-contain pr-1 ${
+        isMultiColumn ? 'grid grid-cols-2 gap-x-4 gap-y-1' : 'flex flex-col gap-1.5'
+      }`}>
+        {payload.map((entry, idx) => {
+          const { label, fill, rawVal, percent } = getItemDetails(entry)
+          return (
+            <div key={idx} className="flex items-center justify-between gap-3 text-xs py-0.5">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <div className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: fill }} />
+                <span className="font-medium text-foreground truncate max-w-[90px]" title={label}>
+                  {label}
                 </span>
-                <span className="font-medium text-[11px] text-muted-foreground">{Math.round((entry.value || 0) * 100)}%</span>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="font-bold text-foreground">
+                  {Number(rawVal).toLocaleString()}
+                </span>
+                <span className="text-[10px] text-muted-foreground font-medium w-7 text-right">
+                  {percent}%
+                </span>
               </div>
             </div>
-          ))}
-        </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -419,9 +480,10 @@ export const StackedChart = React.memo(function StackedChart({
               style={{ overflow: 'visible' }}
             >
             <Tooltip
+              shared={false}
               isAnimationActive={false}
               cursor={false}
-              content={<StackedTooltip rawData={data} />}
+              content={<StackedTooltip rawData={data} totalValue={totalValue} />}
             />
             <PolarAngleAxis type="number" domain={[0, 1]} tick={false} axisLine={false} />
             <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
@@ -600,7 +662,12 @@ export const StackedChart = React.memo(function StackedChart({
               axisLine={false}
               style={{ fontSize: '12px' }}
             />
-            <Tooltip isAnimationActive={false} cursor={{ fill: 'var(--muted)', opacity: 0.65 }} content={<StackedTooltip rawData={data} />} />
+            <Tooltip
+              shared={false}
+              isAnimationActive={false}
+              cursor={{ fill: 'var(--muted)', opacity: 0.25 }}
+              content={<StackedTooltip rawData={data} totalValue={totalValue} />}
+            />
             {data.map((d) => (
               <Bar 
                 key={d.id} 
@@ -654,7 +721,12 @@ export const StackedChart = React.memo(function StackedChart({
             width={50}
             style={{ fontSize: '12px' }}
           />
-          <Tooltip isAnimationActive={false} cursor={{ fill: 'var(--muted)', opacity: 0.65 }} content={<StackedTooltip rawData={data} />} />
+          <Tooltip
+            shared={false}
+            isAnimationActive={false}
+            cursor={{ fill: 'var(--muted)', opacity: 0.25 }}
+            content={<StackedTooltip rawData={data} totalValue={totalValue} />}
+          />
           {data.map((d) => (
             <Bar 
               key={d.id} 
