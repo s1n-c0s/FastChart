@@ -481,10 +481,10 @@ export default function DataVisualizer() {
               <div className="relative flex flex-col items-center">
                 {/* Minimized Dock Trigger */}
                 <div 
-                  className={`transform-gpu transition-[transform,opacity] duration-200 ease-out ${
+                  className={`transform-gpu ${
                     !isExpanded
-                      ? "relative opacity-100 scale-100 pointer-events-auto" 
-                      : "absolute bottom-0 left-1/2 -translate-x-1/2 opacity-0 scale-90 pointer-events-none select-none"
+                      ? "relative opacity-100 scale-100 pointer-events-auto transition-[transform,opacity] duration-200 delay-100 ease-out" 
+                      : "absolute bottom-0 left-1/2 -translate-x-1/2 opacity-0 scale-95 pointer-events-none select-none transition-[transform,opacity] duration-100 ease-in"
                   }`}
                   aria-hidden={isExpanded}
                 >
@@ -504,19 +504,19 @@ export default function DataVisualizer() {
 
                 {/* Expanded Dock Controls Bar with Floating Minimize Button */}
                 <div 
-                  className={`flex items-center justify-center max-w-[95vw] transform-gpu transition-[transform,opacity] duration-200 ease-out ${
+                  className={`flex items-center justify-center max-w-[95vw] transform-gpu ${
                     isExpanded
-                      ? "relative opacity-100 scale-100 pointer-events-auto" 
-                      : "absolute bottom-0 left-1/2 -translate-x-1/2 opacity-0 scale-95 pointer-events-none select-none"
+                      ? "relative opacity-100 scale-100 pointer-events-auto transition-[transform,opacity] duration-200 delay-100 ease-out" 
+                      : "absolute bottom-0 left-1/2 -translate-x-1/2 opacity-0 scale-95 pointer-events-none select-none transition-[transform,opacity] duration-100 ease-in"
                   }`}
                   aria-hidden={!isExpanded}
                 >
                   {/* Floating Upper Minimize Button (floats directly above controls bar with zero layout shift) */}
                   <div 
-                    className={`absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none transform-gpu transition-[transform,opacity] duration-200 ease-out ${
+                    className={`absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none transform-gpu ${
                       isExpanded && !isDockOpen
-                        ? "opacity-100 scale-100" 
-                        : "opacity-0 scale-75"
+                        ? "opacity-100 scale-100 transition-[transform,opacity] duration-200 delay-100 ease-out" 
+                        : "opacity-0 scale-75 transition-[transform,opacity] duration-100 ease-in"
                     }`}
                   >
                     <button
