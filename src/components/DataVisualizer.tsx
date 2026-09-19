@@ -478,10 +478,10 @@ export default function DataVisualizer() {
                 >
                   <button 
                     type="button"
-                    className={`flex items-center gap-2.5 bg-background/90 dark:bg-background/80 backdrop-blur-xl border border-border/60 h-11 px-4 rounded-full transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] cursor-pointer text-xs sm:text-sm font-medium text-foreground select-none hover:-translate-y-0.5 active:scale-95 ${
+                    className={`flex items-center gap-2.5 bg-background/90 dark:bg-background/80 backdrop-blur-xl border border-border/60 h-11 px-4 rounded-full transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] cursor-pointer text-xs sm:text-sm font-medium text-foreground select-none active:scale-95 ${
                       isDockHovered
-                        ? "opacity-100 scale-100 shadow-xl"
-                        : "opacity-75 scale-95 shadow-md group-hover/dock:opacity-100 group-hover/dock:scale-100 group-focus-within/dock:opacity-100 group-focus-within/dock:scale-100"
+                        ? "opacity-100 shadow-xl"
+                        : "opacity-75 shadow-md group-hover/dock:opacity-100 group-hover/dock:shadow-xl group-focus-within/dock:opacity-100"
                     }`}
                     onClick={() => setIsDockMinimized(false)}
                     disabled={isExpanded}
@@ -503,36 +503,34 @@ export default function DataVisualizer() {
                   }`}
                   aria-hidden={!isExpanded}
                 >
-                  {/* Separate Minimize Button on Upper Dock */}
-                  <button
-                    type="button"
-                    onClick={() => setIsDockMinimized(true)}
-                    disabled={!isExpanded}
-                    className={`flex items-center justify-center rounded-full bg-background/90 dark:bg-background/80 backdrop-blur-xl border border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 active:scale-95 cursor-pointer mb-1.5 ${
-                      isExpanded 
-                        ? `pointer-events-auto delay-75 ${
-                            isDockHovered 
-                              ? "w-12 sm:w-14 h-7 sm:h-8 opacity-100 scale-100 shadow-md translate-y-0" 
-                              : "w-9 sm:w-10 h-5 sm:h-6 opacity-45 scale-90 shadow-xs translate-y-0.5 group-hover/dock:w-12 group-hover/dock:sm:w-14 group-hover/dock:h-7 group-hover/dock:sm:h-8 group-hover/dock:opacity-100 group-hover/dock:scale-100 group-hover/dock:shadow-md group-hover/dock:translate-y-0 group-focus-within/dock:opacity-100 group-focus-within/dock:scale-100 group-focus-within/dock:w-12 group-focus-within/dock:sm:w-14 group-focus-within/dock:h-7 group-focus-within/dock:sm:h-8"
-                          }` 
-                        : "opacity-0 scale-75 translate-y-3 pointer-events-none w-12 sm:w-14 h-7 sm:h-8"
-                    }`}
-                    title="Minimize dock"
-                    aria-label="Minimize dock"
-                  >
-                    <ChevronDown className={`stroke-[2.25] transition-all duration-300 ${
-                      isDockHovered 
-                        ? "w-4 h-4 sm:w-5 sm:h-5" 
-                        : "w-3 h-3 sm:w-3.5 sm:h-3.5 group-hover/dock:w-4 group-hover/dock:h-4 group-hover/dock:sm:w-5 group-hover/dock:sm:h-5 group-focus-within/dock:w-4 group-focus-within/dock:h-4 group-focus-within/dock:sm:w-5 group-focus-within/dock:sm:h-5"
-                    }`} />
-                  </button>
+                  {/* Separate Minimize Button on Upper Dock with Zero-Jiggle Stable Wrapper */}
+                  <div className="h-8 flex items-center justify-center mb-1.5 pointer-events-none">
+                    <button
+                      type="button"
+                      onClick={() => setIsDockMinimized(true)}
+                      disabled={!isExpanded}
+                      className={`flex items-center justify-center w-12 sm:w-14 h-7 sm:h-8 rounded-full bg-background/90 dark:bg-background/80 backdrop-blur-xl border border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] transform-gpu active:scale-95 cursor-pointer origin-center ${
+                        isExpanded 
+                          ? `pointer-events-auto delay-75 ${
+                              isDockHovered 
+                                ? "opacity-100 scale-100 shadow-md" 
+                                : "opacity-40 scale-75 shadow-none group-hover/dock:opacity-100 group-hover/dock:scale-100 group-hover/dock:shadow-md group-focus-within/dock:opacity-100 group-focus-within/dock:scale-100"
+                            }` 
+                          : "opacity-0 scale-50 translate-y-3 pointer-events-none"
+                      }`}
+                      title="Minimize dock"
+                      aria-label="Minimize dock"
+                    >
+                      <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.25]" />
+                    </button>
+                  </div>
 
-                  <div className={`flex items-center justify-center gap-2 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                  <div className={`flex items-center justify-center gap-2 transition-opacity duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                     isExpanded ? "pointer-events-auto" : "pointer-events-none"
                   } ${
                     isDockHovered || isDockOpen
-                      ? "opacity-100 scale-100"
-                      : "opacity-80 scale-[0.98] group-hover/dock:opacity-100 group-hover/dock:scale-100 group-focus-within/dock:opacity-100 group-focus-within/dock:scale-100"
+                      ? "opacity-100"
+                      : "opacity-75 sm:opacity-80 group-hover/dock:opacity-100 group-focus-within/dock:opacity-100"
                   }`}>
                     <div className="flex flex-row items-center gap-1.5 sm:gap-2.5 bg-background/90 dark:bg-background/80 backdrop-blur-xl shadow-lg border border-border/60 px-3 sm:px-4 h-11 sm:h-12 rounded-full hover:shadow-xl transition-all duration-200 transform-gpu isolate">
                       {/* Sort Controls */}
