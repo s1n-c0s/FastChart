@@ -1,5 +1,4 @@
 import * as React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { PieChart as RechartsPieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
 import type { Datum } from "@/types";
@@ -61,10 +60,6 @@ const FactTextOverlay = (props: any) => {
     factLabel = minItem.label;
   }
   
-  const handlePrev = (e: React.MouseEvent) => { 
-    e.stopPropagation(); 
-    if (onFactIndexChange) onFactIndexChange((factIndex - 1 + 3) % 3);
-  };
   const handleNext = (e: React.MouseEvent) => { 
     e.stopPropagation(); 
     if (onFactIndexChange) onFactIndexChange((factIndex + 1) % 3);
@@ -92,12 +87,14 @@ const FactTextOverlay = (props: any) => {
     valueYOffset = isFullscreen ? 18 : 14;
     labelYOffset = 0;
   }
-  
-  const arrowY = cy - 16;
 
   return (
-    <g className="group" style={{ pointerEvents: 'all' }}>
-      <circle cx={cx} cy={cy} r={innerR} fill="transparent" />
+    <g 
+      className="group cursor-pointer select-none transition-opacity hover:opacity-80" 
+      style={{ pointerEvents: 'all' }}
+      onClick={handleNext}
+    >
+      <circle cx={cx} cy={cy} r={innerR} fill="transparent" style={{ cursor: 'pointer' }} />
       
       <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle" className="pointer-events-none select-none">
         <tspan
@@ -131,32 +128,6 @@ const FactTextOverlay = (props: any) => {
           </tspan>
         )}
       </text>
-      
-      <svg 
-        x={cx - innerR + (isFullscreen ? 30 : 10)} 
-        y={arrowY} 
-        width={32} height={32} 
-        onClick={handlePrev} 
-        className="opacity-0 group-hover:opacity-100 cursor-pointer pointer-events-auto text-muted-foreground transition-opacity"
-        color="currentColor"
-        data-hide-on-copy="true"
-      >
-        <rect width="32" height="32" fill="transparent" />
-        <ChevronLeft x={4} y={4} width={24} height={24} strokeWidth={2.5} />
-      </svg>
-
-      <svg 
-        x={cx + innerR - 32 - (isFullscreen ? 30 : 10)} 
-        y={arrowY} 
-        width={32} height={32} 
-        onClick={handleNext} 
-        className="opacity-0 group-hover:opacity-100 cursor-pointer pointer-events-auto text-muted-foreground transition-opacity"
-        color="currentColor"
-        data-hide-on-copy="true"
-      >
-        <rect width="32" height="32" fill="transparent" />
-        <ChevronRight x={4} y={4} width={24} height={24} strokeWidth={2.5} />
-      </svg>
     </g>
   );
 };
