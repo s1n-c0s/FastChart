@@ -515,8 +515,8 @@ export default function DataVisualizer() {
                 <div 
                   className={`relative flex items-center justify-center bg-background/90 dark:bg-background/80 backdrop-blur-xl shadow-lg border border-border/60 h-11 sm:h-12 rounded-full overflow-hidden transition-[width,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] transform-gpu isolate ${
                     !isExpanded
-                      ? "w-[155px] sm:w-[168px] px-3 sm:px-4 cursor-pointer hover:shadow-xl hover:bg-background active:scale-95 pointer-events-auto" 
-                      : "w-[305px] sm:w-[382px] px-2.5 sm:px-4 hover:shadow-xl pointer-events-auto"
+                      ? "w-[145px] sm:w-[168px] px-3 sm:px-4 cursor-pointer hover:shadow-xl hover:bg-background active:scale-95 pointer-events-auto" 
+                      : "w-[240px] sm:w-[382px] px-2 sm:px-4 hover:shadow-xl pointer-events-auto"
                   }`}
                   onClick={!isExpanded ? () => setIsDockMinimized(false) : undefined}
                   role={!isExpanded ? "button" : undefined}
@@ -540,7 +540,7 @@ export default function DataVisualizer() {
 
                   {/* Expanded Controls: Sort + Labels + Legend */}
                   <div 
-                    className={`flex items-center gap-1.5 sm:gap-2.5 w-[305px] sm:w-[382px] shrink-0 justify-between transition-[opacity,transform] duration-200 transform-gpu whitespace-nowrap px-1 sm:px-0 ${
+                    className={`flex items-center gap-1 sm:gap-2.5 w-[240px] sm:w-[382px] shrink-0 justify-between transition-[opacity,transform] duration-200 transform-gpu whitespace-nowrap px-0.5 sm:px-0 ${
                       isExpanded
                         ? "opacity-100 scale-100 pointer-events-auto delay-75 ease-out" 
                         : "opacity-0 scale-95 pointer-events-none duration-100 ease-in"
@@ -548,7 +548,7 @@ export default function DataVisualizer() {
                     aria-hidden={!isExpanded}
                   >
                     {/* Sort Controls */}
-                    <div className="flex items-center gap-1 sm:gap-1.5">
+                    <div className="flex items-center gap-0.5 sm:gap-1.5">
                       <button
                         type="button"
                         onClick={() => {
@@ -557,16 +557,16 @@ export default function DataVisualizer() {
                           }
                         }}
                         disabled={!sortConfig || !isExpanded}
-                        className={`flex items-center justify-center w-6 h-6 rounded-full transition-colors ${
+                        className={`flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full transition-colors ${
                           sortConfig 
                             ? "hover:bg-muted/80 text-foreground cursor-pointer border border-border/40 shadow-xs" 
                             : "text-muted-foreground opacity-40 cursor-default"
                         }`}
                         title={sortConfig ? `Switch to ${sortConfig.direction === 'asc' ? 'descending' : 'ascending'}` : "Select a sort method first"}
                       >
-                        {!sortConfig && <ArrowUpDown className="w-3 h-3" />}
-                        {sortConfig?.direction === "asc" && <ArrowUp className="w-3 h-3" />}
-                        {sortConfig?.direction === "desc" && <ArrowDown className="w-3 h-3" />}
+                        {!sortConfig && <ArrowUpDown className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
+                        {sortConfig?.direction === "asc" && <ArrowUp className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
+                        {sortConfig?.direction === "desc" && <ArrowDown className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
                       </button>
                       <button
                         type="button"
@@ -594,7 +594,7 @@ export default function DataVisualizer() {
                           if (val === "label") setSortConfig({ key: "label", direction: "asc" });
                         }}
                       >
-                        <SelectTrigger className="h-7 w-[72px] sm:w-[78px] rounded-full text-xs font-medium border-border/50 bg-background/50 shadow-none hover:bg-muted/50 transition-colors focus:ring-0 focus:ring-offset-0 px-2 sm:px-2.5">
+                        <SelectTrigger className="h-6 sm:h-7 w-[60px] sm:w-[78px] rounded-full text-[11px] sm:text-xs font-medium border-border/50 bg-background/50 shadow-none hover:bg-muted/50 transition-colors focus:ring-0 focus:ring-offset-0 px-1 sm:px-2.5">
                           <SelectValue placeholder="None" />
                         </SelectTrigger>
                         <SelectContent className="rounded-xl shadow-xl border-border/50 min-w-[100px]">
@@ -605,11 +605,11 @@ export default function DataVisualizer() {
                       </Select>
                     </div>
 
-                    <div className="w-px h-4 sm:h-5 bg-border/60 shrink-0" />
+                    <div className="w-px h-3.5 sm:h-5 bg-border/60 shrink-0" />
 
                     {/* Show Labels Toggle */}
-                    <div className="flex items-center gap-1.5 sm:gap-2">
-                      <label htmlFor="show-labels-dock" className="text-xs font-medium cursor-pointer select-none">
+                    <div className="flex items-center gap-1 sm:gap-2">
+                      <label htmlFor="show-labels-dock" className="text-[11px] sm:text-xs font-medium cursor-pointer select-none">
                         Labels
                       </label>
                       <Switch
@@ -617,15 +617,15 @@ export default function DataVisualizer() {
                         checked={showLabels}
                         disabled={!isExpanded}
                         onCheckedChange={setShowLabels}
-                        className="scale-85 sm:scale-90 data-[state=checked]:bg-primary shadow-xs"
+                        className="scale-75 sm:scale-90 data-[state=checked]:bg-primary shadow-xs origin-center"
                       />
                     </div>
 
-                    <div className="w-px h-4 sm:h-5 bg-border/60 shrink-0" />
+                    <div className="w-px h-3.5 sm:h-5 bg-border/60 shrink-0" />
 
                     {/* Show Legend Toggle */}
-                    <div className="flex items-center gap-1.5 sm:gap-2">
-                      <label htmlFor="show-legend-dock" className="text-xs font-medium cursor-pointer select-none">
+                    <div className="flex items-center gap-1 sm:gap-2">
+                      <label htmlFor="show-legend-dock" className="text-[11px] sm:text-xs font-medium cursor-pointer select-none">
                         Legend
                       </label>
                       <Switch
@@ -633,7 +633,7 @@ export default function DataVisualizer() {
                         checked={showLegend}
                         disabled={!isExpanded}
                         onCheckedChange={setShowLegend}
-                        className="scale-85 sm:scale-90 data-[state=checked]:bg-primary shadow-xs"
+                        className="scale-75 sm:scale-90 data-[state=checked]:bg-primary shadow-xs origin-center"
                       />
                     </div>
                   </div>
@@ -641,17 +641,17 @@ export default function DataVisualizer() {
 
                 {/* Edit Data / Hide Data Button Pill with smooth scale/width collapse */}
                 <div 
-                  className={`overflow-hidden transition-[max-width,opacity,transform,margin] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] transform-gpu ${
+                  className={`transition-[max-width,opacity,transform,margin] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] transform-gpu ${
                     isExpanded 
-                      ? "max-w-[140px] opacity-100 scale-100 ml-2 pointer-events-auto" 
-                      : "max-w-0 opacity-0 scale-75 ml-0 pointer-events-none select-none"
+                      ? "max-w-[180px] opacity-100 scale-100 ml-1.5 sm:ml-2 pointer-events-auto overflow-visible" 
+                      : "max-w-0 opacity-0 scale-75 ml-0 pointer-events-none select-none overflow-hidden"
                   }`}
                   aria-hidden={!isExpanded}
                 >
                   <Button 
                     size="default" 
                     disabled={!isExpanded}
-                    className={`rounded-full shadow-lg h-11 sm:h-12 px-3.5 sm:px-5 gap-1.5 sm:gap-2 font-medium text-xs sm:text-sm whitespace-nowrap transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5 active:scale-95 ${
+                    className={`rounded-full shadow-lg h-11 sm:h-12 px-3 sm:px-5 gap-1.5 sm:gap-2 font-medium text-xs sm:text-sm whitespace-nowrap transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5 active:scale-95 shrink-0 ${
                       isDockOpen 
                         ? "bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-secondary/15" 
                         : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/15"
@@ -660,11 +660,13 @@ export default function DataVisualizer() {
                   >
                     {isDockOpen ? (
                       <>
-                        <ChevronDown className="w-4 h-4" /> Hide Data
+                        <ChevronDown className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" /> 
+                        <span>Hide Data</span>
                       </>
                     ) : (
                       <>
-                        <Database className="w-4 h-4" /> Edit Data
+                        <Database className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" /> 
+                        <span>Edit Data</span>
                       </>
                     )}
                   </Button>
