@@ -72,10 +72,8 @@ export default function DataVisualizer() {
   const [showGradientArea, setShowGradientArea] = useState(true);
   const [lineColor, setLineColor] = useState<string | undefined>(undefined);
   const [isDockOpen, setIsDockOpen] = useState(false);
-  const [isDockVisible, setIsDockVisible] = useState(true);
   const [isDockHovered, setIsDockHovered] = useState(false);
   const [isDockMinimized, setIsDockMinimized] = useState(false);
-  const lastScrollY = useRef(0);
   
   const fsRef = useRef<HTMLDivElement>(null);
 
@@ -269,51 +267,6 @@ export default function DataVisualizer() {
     };
   }, [isDockOpen]);
 
-  // --- 10. Auto-hide dock on scroll ---
-  useEffect(() => {
-    const handleScroll = () => {
-      if (isDockOpen) return;
-      const currentScrollY = window.scrollY;
-      const diff = currentScrollY - lastScrollY.current;
-
-      const isNearTop = currentScrollY <= 60;
-      const isNearBottom = window.innerHeight + currentScrollY >= document.documentElement.scrollHeight - 80;
-
-      if (isNearTop || isNearBottom) {
-        setIsDockVisible(true);
-      } else if (diff > 8 && currentScrollY > 80) {
-        if (!isDockHovered) {
-          setIsDockVisible(false);
-        }
-      } else if (diff < -8) {
-        setIsDockVisible(true);
-      }
-
-      lastScrollY.current = currentScrollY;
-    };
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (e.clientY >= window.innerHeight - 80) {
-        setIsDockVisible(true);
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("mousemove", handleMouseMove, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("mousemove", handleMouseMove);
-    };
-  }, [isDockOpen, isDockHovered]);
-
-  useEffect(() => {
-    if (isDockOpen) {
-      setIsDockVisible(true);
-    }
-  }, [isDockOpen]);
-
-
-
   return (
     <>
       <div className="p-4 pb-32 sm:pb-40 space-y-6" data-testid="data-visualizer">
@@ -322,18 +275,11 @@ export default function DataVisualizer() {
         {!fullscreenChart && (
           <div 
             ref={dockRef}
-            onMouseEnter={() => {
-              setIsDockHovered(true);
-              setIsDockVisible(true);
-            }}
+            onMouseEnter={() => setIsDockHovered(true)}
             onMouseLeave={() => setIsDockHovered(false)}
             className={`fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 ${
               isDockOpen ? "z-[70]" : "z-50"
-            } flex flex-col items-center pointer-events-none transition-[transform,opacity] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] transform-gpu group/dock ${
-              !isDockVisible && !isDockOpen 
-                ? "translate-y-36 opacity-0 scale-95 pointer-events-none select-none" 
-                : "translate-y-0 opacity-100 scale-100"
-            }`}
+            } flex flex-col items-center pointer-events-none group/dock`}
           >
             {/* Paper Panel (Data Manager) - Smooth Accordion Rise matching dev/stable */}
             <div 
