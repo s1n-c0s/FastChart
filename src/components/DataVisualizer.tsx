@@ -33,7 +33,7 @@ import {
   LineChart,
   StackedChart
 } from "../components/charts";
-import { Database, X, ChevronDown, Copy, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Database, X, ChevronDown, ChevronUp, SlidersHorizontal, Copy, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -72,6 +72,10 @@ export default function DataVisualizer() {
   const [showGradientArea, setShowGradientArea] = useState(true);
   const [lineColor, setLineColor] = useState<string | undefined>(undefined);
   const [isDockOpen, setIsDockOpen] = useState(false);
+  const [isDockVisible, setIsDockVisible] = useState(true);
+  const [isDockHovered, setIsDockHovered] = useState(false);
+  const [isDockMinimized, setIsDockMinimized] = useState(false);
+  const lastScrollY = useRef(0);
   
   const fsRef = useRef<HTMLDivElement>(null);
 
@@ -265,23 +269,87 @@ export default function DataVisualizer() {
     };
   }, [isDockOpen]);
 
+  // --- 10. Auto-hide dock on scroll ---
+  useEffect(() => {
+    const handleScroll = () => {
+      if (isDockOpen) return;
+      const currentScrollY = window.scrollY;
+      const diff = currentScrollY - lastScrollY.current;
+
+      const isNearTop = currentScrollY <= 60;
+      const isNearBottom = window.innerHeight + currentScrollY >= document.documentElement.scrollHeight - 80;
+
+      if (isNearTop || isNearBottom) {
+        setIsDockVisible(true);
+      } else if (diff > 8 && currentScrollY > 80) {
+        if (!isDockHovered) {
+          setIsDockVisible(false);
+        }
+      } else if (diff < -8) {
+        setIsDockVisible(true);
+      }
+
+      lastScrollY.current = currentScrollY;
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (e.clientY >= window.innerHeight - 80) {
+        setIsDockVisible(true);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("mousemove", handleMouseMove, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("mousemove", handleMouseMove);
+    };
+  }, [isDockOpen, isDockHovered]);
+
+  useEffect(() => {
+    if (isDockOpen) {
+      setIsDockVisible(true);
+    }
+  }, [isDockOpen]);
+
 
 
   return (
     <>
-      <div className="p-4 space-y-6" data-testid="data-visualizer">
+      <div className="p-4 pb-28 sm:pb-36 space-y-6" data-testid="data-visualizer">
+
+        {/* Backdrop for open Data Manager */}
+        {isDockOpen && (
+          <div 
+            className="fixed inset-0 bg-background/60 dark:bg-black/60 backdrop-blur-xs z-40 transition-opacity duration-300"
+            onClick={() => setIsDockOpen(false)}
+            aria-hidden="true"
+          />
+        )}
 
         {/* --- Data Input Section (Float Dock) --- */}
-        <div 
-          ref={dockRef}
-          className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center transition-all duration-300 pointer-events-none`}
-        >
-          {/* Paper Panel */}
+        {!fullscreenChart && (
           <div 
-            className={`pointer-events-auto bg-background/90 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-border/50 rounded-2xl overflow-hidden transition-all duration-300 origin-bottom flex flex-col transform-gpu isolate ${
-              isDockOpen ? "w-[95vw] sm:w-[85vw] md:w-[800px] h-[75vh] max-h-[750px] opacity-100 mb-4 scale-100" : "w-0 h-0 opacity-0 mb-0 scale-95"
+            ref={dockRef}
+            onMouseEnter={() => {
+              setIsDockHovered(true);
+              setIsDockVisible(true);
+            }}
+            onMouseLeave={() => setIsDockHovered(false)}
+            className={`fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center pointer-events-none transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] transform-gpu group/dock ${
+              !isDockVisible && !isDockOpen 
+                ? "translate-y-36 opacity-0 scale-95 pointer-events-none select-none" 
+                : "translate-y-0 opacity-100 scale-100"
             }`}
           >
+            {/* Paper Panel */}
+            <div 
+              className={`bg-background/95 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.16)] border border-border/60 rounded-2xl overflow-hidden transition-all duration-300 origin-bottom flex flex-col transform-gpu isolate ${
+                isDockOpen 
+                  ? "pointer-events-auto w-[95vw] sm:w-[85vw] md:w-[800px] h-[75vh] max-h-[750px] opacity-100 mb-3 scale-100" 
+                  : "pointer-events-none w-0 h-0 opacity-0 mb-0 scale-95 invisible"
+              }`}
+            >
             <div className="flex items-center justify-between p-4 border-b bg-muted/40">
               <h2 className="font-semibold text-lg flex items-center gap-2">
                 <Database className="w-5 h-5 text-primary" /> Data Manager
@@ -394,114 +462,200 @@ export default function DataVisualizer() {
             </div>
           </div>
 
-          {/* Toggle Buttons */}
-          <div className="pointer-events-auto flex flex-wrap justify-center items-center gap-2 sm:gap-3 w-full px-2">
-            <div className="flex flex-col sm:flex-row justify-center items-center gap-y-3 sm:gap-4 bg-background/90 backdrop-blur-xl shadow-xl border border-border/50 py-3 sm:py-0 px-4 sm:px-5 min-h-[56px] rounded-[24px] sm:rounded-full transition-all duration-300 hover:shadow-2xl max-w-[95vw] transform-gpu isolate">
-              {/* Sort Dropdown */}
-              <div className="flex items-center gap-2 justify-between sm:justify-center w-[160px] sm:w-auto">
-                <button
-                  onClick={() => {
-                    if (sortConfig) {
-                      setSortConfig({ ...sortConfig, direction: sortConfig.direction === "asc" ? "desc" : "asc" });
-                    }
-                  }}
-                  disabled={!sortConfig}
-                  className={`flex items-center justify-center w-7 h-7 rounded-full transition-colors ${
-                    sortConfig 
-                      ? "hover:bg-muted/80 text-foreground cursor-pointer shadow-sm border border-border/40" 
-                      : "text-muted-foreground opacity-50 cursor-default"
+          {/* Dock Controls Container with Smooth Morphing Transition */}
+          {(() => {
+            const isExpanded = !isDockMinimized || isDockOpen;
+            return (
+              <div className="relative flex flex-col items-center w-full">
+                {/* Minimized Dock Trigger */}
+                <div 
+                  className={`transform-gpu ${
+                    !isExpanded
+                      ? "relative opacity-100 scale-100 translate-y-0 pointer-events-auto transition-all duration-300 delay-75 ease-[cubic-bezier(0.16,1,0.3,1)]" 
+                      : "absolute bottom-0 left-1/2 -translate-x-1/2 opacity-0 scale-90 translate-y-2 pointer-events-none select-none transition-all duration-150 ease-out"
                   }`}
-                  title={sortConfig ? `Switch to ${sortConfig.direction === 'asc' ? 'descending' : 'ascending'}` : "Select a sort method first"}
+                  aria-hidden={isExpanded}
                 >
-                  {!sortConfig && <ArrowUpDown className="w-3.5 h-3.5" />}
-                  {sortConfig?.direction === "asc" && <ArrowUp className="w-3.5 h-3.5" />}
-                  {sortConfig?.direction === "desc" && <ArrowDown className="w-3.5 h-3.5" />}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (sortConfig === null) {
-                      setSortConfig({ key: "label", direction: "asc" });
-                    } else if (sortConfig.key === "label") {
-                      setSortConfig({ key: "value", direction: "desc" });
-                    } else {
-                      setSortConfig(null);
-                    }
-                  }}
-                  className="text-sm font-medium select-none hidden sm:inline ml-1 cursor-pointer hover:text-primary transition-colors"
-                  title="Click to cycle sort: Name → Value → None"
+                  <button 
+                    type="button"
+                    className={`flex items-center gap-2.5 bg-background/90 dark:bg-background/80 backdrop-blur-xl border border-border/60 h-11 px-4 rounded-full transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] cursor-pointer text-xs sm:text-sm font-medium text-foreground select-none hover:-translate-y-0.5 active:scale-95 ${
+                      isDockHovered
+                        ? "opacity-100 scale-100 shadow-xl"
+                        : "opacity-75 scale-95 shadow-md group-hover/dock:opacity-100 group-hover/dock:scale-100 group-focus-within/dock:opacity-100 group-focus-within/dock:scale-100"
+                    }`}
+                    onClick={() => setIsDockMinimized(false)}
+                    disabled={isExpanded}
+                    title="Expand dock controls"
+                    aria-label="Expand dock controls"
+                  >
+                    <SlidersHorizontal className="w-4 h-4 text-primary" />
+                    <span>Tools & Data</span>
+                    <ChevronUp className="w-4 h-4 text-muted-foreground ml-0.5" />
+                  </button>
+                </div>
+
+                {/* Expanded Dock Controls & Upper Minimize Button */}
+                <div 
+                  className={`flex flex-col items-center max-w-[95vw] transform-gpu ${
+                    isExpanded
+                      ? "relative opacity-100 scale-100 translate-y-0 pointer-events-auto transition-all duration-300 delay-75 ease-[cubic-bezier(0.16,1,0.3,1)]" 
+                      : "absolute bottom-0 left-1/2 -translate-x-1/2 opacity-0 scale-90 translate-y-2 pointer-events-none select-none transition-all duration-150 ease-out"
+                  }`}
+                  aria-hidden={!isExpanded}
                 >
-                  Sort:
-                </button>
-                <Select
-                  value={sortConfig === null ? "none" : sortConfig.key}
-                  onValueChange={(val) => {
-                    if (val === "none") setSortConfig(null);
-                    if (val === "value") setSortConfig({ key: "value", direction: "desc" });
-                    if (val === "label") setSortConfig({ key: "label", direction: "asc" });
-                  }}
-                >
-                  <SelectTrigger className="h-8 w-[80px] rounded-full text-xs font-medium border-border/50 bg-background/50 shadow-sm hover:bg-muted/50 transition-colors focus:ring-0 focus:ring-offset-0">
-                    <SelectValue placeholder="None" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl shadow-xl border-border/50 min-w-[100px]">
-                    <SelectItem value="none" className="text-sm cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-2">None</SelectItem>
-                    <SelectItem value="value" className="text-sm cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-2">Value</SelectItem>
-                    <SelectItem value="label" className="text-sm cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-2">Name</SelectItem>
-                  </SelectContent>
-                </Select>
+                  {/* Separate Minimize Button on Upper Dock */}
+                  <button
+                    type="button"
+                    onClick={() => setIsDockMinimized(true)}
+                    disabled={!isExpanded}
+                    className={`flex items-center justify-center rounded-full bg-background/90 dark:bg-background/80 backdrop-blur-xl border border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-0.5 active:scale-95 cursor-pointer mb-1.5 ${
+                      isExpanded 
+                        ? `pointer-events-auto delay-75 ${
+                            isDockHovered 
+                              ? "w-12 sm:w-14 h-7 sm:h-8 opacity-100 scale-100 shadow-md translate-y-0" 
+                              : "w-9 sm:w-10 h-5 sm:h-6 opacity-45 scale-90 shadow-xs translate-y-0.5 group-hover/dock:w-12 group-hover/dock:sm:w-14 group-hover/dock:h-7 group-hover/dock:sm:h-8 group-hover/dock:opacity-100 group-hover/dock:scale-100 group-hover/dock:shadow-md group-hover/dock:translate-y-0 group-focus-within/dock:opacity-100 group-focus-within/dock:scale-100 group-focus-within/dock:w-12 group-focus-within/dock:sm:w-14 group-focus-within/dock:h-7 group-focus-within/dock:sm:h-8"
+                          }` 
+                        : "opacity-0 scale-75 translate-y-3 pointer-events-none w-12 sm:w-14 h-7 sm:h-8"
+                    }`}
+                    title="Minimize dock"
+                    aria-label="Minimize dock"
+                  >
+                    <ChevronDown className={`stroke-[2.25] transition-all duration-300 ${
+                      isDockHovered 
+                        ? "w-4 h-4 sm:w-5 sm:h-5" 
+                        : "w-3 h-3 sm:w-3.5 sm:h-3.5 group-hover/dock:w-4 group-hover/dock:h-4 group-hover/dock:sm:w-5 group-hover/dock:sm:h-5 group-focus-within/dock:w-4 group-focus-within/dock:h-4 group-focus-within/dock:sm:w-5 group-focus-within/dock:sm:h-5"
+                    }`} />
+                  </button>
+
+                  <div className={`flex items-center justify-center gap-2 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                    isExpanded ? "pointer-events-auto" : "pointer-events-none"
+                  } ${
+                    isDockHovered || isDockOpen
+                      ? "opacity-100 scale-100"
+                      : "opacity-80 scale-[0.98] group-hover/dock:opacity-100 group-hover/dock:scale-100 group-focus-within/dock:opacity-100 group-focus-within/dock:scale-100"
+                  }`}>
+                    <div className="flex flex-row items-center gap-1.5 sm:gap-2.5 bg-background/90 dark:bg-background/80 backdrop-blur-xl shadow-lg border border-border/60 px-3 sm:px-4 h-11 sm:h-12 rounded-full hover:shadow-xl transition-all duration-200 transform-gpu isolate">
+                      {/* Sort Controls */}
+                      <div className="flex items-center gap-1 sm:gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (sortConfig) {
+                              setSortConfig({ ...sortConfig, direction: sortConfig.direction === "asc" ? "desc" : "asc" });
+                            }
+                          }}
+                          disabled={!sortConfig || !isExpanded}
+                          className={`flex items-center justify-center w-6 h-6 rounded-full transition-colors ${
+                            sortConfig 
+                              ? "hover:bg-muted/80 text-foreground cursor-pointer border border-border/40 shadow-xs" 
+                              : "text-muted-foreground opacity-40 cursor-default"
+                          }`}
+                          title={sortConfig ? `Switch to ${sortConfig.direction === 'asc' ? 'descending' : 'ascending'}` : "Select a sort method first"}
+                        >
+                          {!sortConfig && <ArrowUpDown className="w-3 h-3" />}
+                          {sortConfig?.direction === "asc" && <ArrowUp className="w-3 h-3" />}
+                          {sortConfig?.direction === "desc" && <ArrowDown className="w-3 h-3" />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (sortConfig === null) {
+                              setSortConfig({ key: "label", direction: "asc" });
+                            } else if (sortConfig.key === "label") {
+                              setSortConfig({ key: "value", direction: "desc" });
+                            } else {
+                              setSortConfig(null);
+                            }
+                          }}
+                          disabled={!isExpanded}
+                          className="text-xs font-medium select-none hidden sm:inline cursor-pointer hover:text-primary transition-colors"
+                          title="Click to cycle sort: Name → Value → None"
+                        >
+                          Sort:
+                        </button>
+                        <Select
+                          value={sortConfig === null ? "none" : sortConfig.key}
+                          disabled={!isExpanded}
+                          onValueChange={(val) => {
+                            if (val === "none") setSortConfig(null);
+                            if (val === "value") setSortConfig({ key: "value", direction: "desc" });
+                            if (val === "label") setSortConfig({ key: "label", direction: "asc" });
+                          }}
+                        >
+                          <SelectTrigger className="h-7 w-[74px] sm:w-[78px] rounded-full text-xs font-medium border-border/50 bg-background/50 shadow-none hover:bg-muted/50 transition-colors focus:ring-0 focus:ring-offset-0 px-2 sm:px-2.5">
+                            <SelectValue placeholder="None" />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl shadow-xl border-border/50 min-w-[100px]">
+                            <SelectItem value="none" className="text-xs cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-1.5">None</SelectItem>
+                            <SelectItem value="value" className="text-xs cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-1.5">Value</SelectItem>
+                            <SelectItem value="label" className="text-xs cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-1.5">Name</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="w-px h-4 sm:h-5 bg-border/60" />
+
+                      {/* Show Labels Toggle */}
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <label htmlFor="show-labels-dock" className="text-xs font-medium cursor-pointer select-none">
+                          Labels
+                        </label>
+                        <Switch
+                          id="show-labels-dock"
+                          checked={showLabels}
+                          disabled={!isExpanded}
+                          onCheckedChange={setShowLabels}
+                          className="scale-85 sm:scale-90 data-[state=checked]:bg-primary shadow-xs"
+                        />
+                      </div>
+
+                      <div className="w-px h-4 sm:h-5 bg-border/60" />
+
+                      {/* Show Legend Toggle */}
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <label htmlFor="show-legend-dock" className="text-xs font-medium cursor-pointer select-none">
+                          Legend
+                        </label>
+                        <Switch
+                          id="show-legend-dock"
+                          checked={showLegend}
+                          disabled={!isExpanded}
+                          onCheckedChange={setShowLegend}
+                          className="scale-85 sm:scale-90 data-[state=checked]:bg-primary shadow-xs"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Edit Data / Hide Data Button */}
+                    <Button 
+                      size="default" 
+                      disabled={!isExpanded}
+                      className={`rounded-full shadow-lg h-11 sm:h-12 px-3.5 sm:px-5 gap-1.5 sm:gap-2 font-medium text-xs sm:text-sm transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5 active:scale-95 ${
+                        isExpanded ? "pointer-events-auto" : "pointer-events-none"
+                      } ${
+                        isDockOpen 
+                          ? "bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-secondary/15" 
+                          : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/15"
+                      }`}
+                      onClick={() => setIsDockOpen(!isDockOpen)}
+                    >
+                      {isDockOpen ? (
+                        <>
+                          <ChevronDown className="w-4 h-4" /> Hide Data
+                        </>
+                      ) : (
+                        <>
+                          <Database className="w-4 h-4" /> Edit Data
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
               </div>
-
-              <div className="hidden sm:block w-px h-6 bg-border/50" />
-
-              {/* Show Labels Toggle */}
-              <div className="flex items-center gap-2.5 justify-between sm:justify-center w-[160px] sm:w-auto">
-                <label htmlFor="show-labels-dock" className="text-sm font-medium cursor-pointer select-none">
-                  Labels
-                </label>
-                <Switch
-                  id="show-labels-dock"
-                  checked={showLabels}
-                  onCheckedChange={setShowLabels}
-                  className="data-[state=checked]:bg-primary shadow-sm"
-                />
-              </div>
-
-              <div className="hidden sm:block w-px h-6 bg-border/50" />
-
-              {/* Show Legend Toggle */}
-              <div className="flex items-center gap-2.5 justify-between sm:justify-center w-[160px] sm:w-auto">
-                <label htmlFor="show-legend-dock" className="text-sm font-medium cursor-pointer select-none">
-                  Legend
-                </label>
-                <Switch
-                  id="show-legend-dock"
-                  checked={showLegend}
-                  onCheckedChange={setShowLegend}
-                  className="data-[state=checked]:bg-primary shadow-sm"
-                />
-              </div>
-            </div>
-            
-            <Button 
-              size="lg" 
-              className={`rounded-full shadow-xl h-14 px-6 gap-2 font-medium text-base transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 active:scale-95 ${
-                isDockOpen ? "bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-secondary/20" : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/20"
-              }`}
-              onClick={() => setIsDockOpen(!isDockOpen)}
-            >
-              {isDockOpen ? (
-                <>
-                  <ChevronDown className="w-5 h-5" /> Hide Data
-                </>
-              ) : (
-                <>
-                  <Database className="w-5 h-5" /> Edit Data
-                </>
-              )}
-            </Button>
-          </div>
+            );
+          })()}
         </div>
+      )}
 
         {/* --- Charts Section --- */}
         <div className={`space-y-6 ${showLabels ? 'fast-chart-labels-visible' : 'fast-chart-labels-hidden'}`}>
