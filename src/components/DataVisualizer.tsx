@@ -459,7 +459,13 @@ export default function DataVisualizer() {
             {(() => {
             const isExpanded = !isDockMinimized || isDockOpen;
             return (
-              <div className="relative flex items-center justify-center">
+              <div 
+                className={`relative flex items-center justify-center pointer-events-auto transition-opacity duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] transform-gpu ${
+                  isDockHovered || isDockOpen
+                    ? "opacity-100"
+                    : "opacity-60 hover:opacity-100 group-hover/dock:opacity-100 group-focus-within/dock:opacity-100 focus-within:opacity-100"
+                }`}
+              >
                 {/* Floating Upper Minimize Button (floats directly above controls with smooth slide/fade) */}
                 <div 
                   className={`absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none transform-gpu transition-[transform,opacity] duration-250 ease-[cubic-bezier(0.16,1,0.3,1)] ${
