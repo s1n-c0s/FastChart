@@ -1,5 +1,4 @@
 import * as React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { PieChart as RechartsPieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
 import type { Datum } from "@/types";
@@ -9,7 +8,7 @@ export interface PieChartProps {
   total: number;
   containerRef?: React.Ref<HTMLDivElement>;
   isFullscreen?: boolean;
-  
+  showLegend?: boolean;
   showFactText?: boolean;
   factIndex?: number;
   onFactIndexChange?: (index: number) => void;
@@ -35,16 +34,14 @@ const CustomTooltip = React.memo(({ active, payload }: any) => {
 
 const FactTextOverlay = (props: any) => {
   const {
-    chartWidth, pieCy, size, data, total, factIndex,
-    isFullscreen, textColor, textMainColor, onFactIndexChange
+    chartWidth, pieCy, innerRadius, size, total, factIndex,
+    isFullscreen, textColor, textMainColor, onFactIndexChange,
+    maxItem, minItem
   } = props;
   
   const cx = chartWidth / 2;
   const cy = pieCy;
-  const innerR = size * 0.20;
-  
-  const maxItem = data && data.length > 0 ? data.reduce((prev: any, current: any) => (prev.value > current.value) ? prev : current) : null;
-  const minItem = data && data.length > 0 ? data.reduce((prev: any, current: any) => (prev.value < current.value) ? prev : current) : null;
+  const innerR = innerRadius || (size ? size * 0.20 : 50);
   
   let factTitle = "Total";
   let factValue = total.toLocaleString();
@@ -63,10 +60,6 @@ const FactTextOverlay = (props: any) => {
     factLabel = minItem.label;
   }
   
-  const handlePrev = (e: React.MouseEvent) => { 
-    e.stopPropagation(); 
-    if (onFactIndexChange) onFactIndexChange((factIndex - 1 + 3) % 3);
-  };
   const handleNext = (e: React.MouseEvent) => { 
     e.stopPropagation(); 
     if (onFactIndexChange) onFactIndexChange((factIndex + 1) % 3);
@@ -94,12 +87,14 @@ const FactTextOverlay = (props: any) => {
     valueYOffset = isFullscreen ? 18 : 14;
     labelYOffset = 0;
   }
-  
-  const arrowY = cy - 16;
 
   return (
-    <g className="group" style={{ pointerEvents: 'all' }}>
-      <circle cx={cx} cy={cy} r={innerR} fill="transparent" />
+    <g 
+      className="group cursor-pointer select-none transition-opacity hover:opacity-80" 
+      style={{ pointerEvents: 'all' }}
+      onClick={handleNext}
+    >
+      <circle cx={cx} cy={cy} r={innerR} fill="transparent" style={{ cursor: 'pointer' }} />
       
       <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle" className="pointer-events-none select-none">
         <tspan
@@ -133,38 +128,23 @@ const FactTextOverlay = (props: any) => {
           </tspan>
         )}
       </text>
-      
-      <svg 
-        x={cx - innerR + (isFullscreen ? 30 : 10)} 
-        y={arrowY} 
-        width={32} height={32} 
-        onClick={handlePrev} 
-        className="opacity-0 group-hover:opacity-100 cursor-pointer pointer-events-auto text-muted-foreground transition-opacity"
-        color="currentColor"
-        data-hide-on-copy="true"
-      >
-        <rect width="32" height="32" fill="transparent" />
-        <ChevronLeft x={4} y={4} width={24} height={24} strokeWidth={2.5} />
-      </svg>
-
-      <svg 
-        x={cx + innerR - 32 - (isFullscreen ? 30 : 10)} 
-        y={arrowY} 
-        width={32} height={32} 
-        onClick={handleNext} 
-        className="opacity-0 group-hover:opacity-100 cursor-pointer pointer-events-auto text-muted-foreground transition-opacity"
-        color="currentColor"
-        data-hide-on-copy="true"
-      >
-        <rect width="32" height="32" fill="transparent" />
-        <ChevronRight x={4} y={4} width={24} height={24} strokeWidth={2.5} />
-      </svg>
     </g>
   );
 };
 
 
-const InnerRechartsPie = React.memo(({ size, data, pieCy, isFullscreen, renderCustomLabel, renderCustomLabelLine, top4Ids, targetFocusIndex, renderSvgLegend }: any) => {
+const InnerRechartsPie = React.memo(({ 
+  size, 
+  data, 
+  pieCy, 
+  innerRadius, 
+  outerRadius, 
+  isFullscreen, 
+  renderCustomLabel, 
+  top4Ids, 
+  targetFocusIndex, 
+  renderSvgLegend 
+}: any) => {
   const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   React.useEffect(() => {
@@ -173,13 +153,16 @@ const InnerRechartsPie = React.memo(({ size, data, pieCy, isFullscreen, renderCu
     };
   }, []);
 
+  const pieContainerRef = React.useRef<HTMLDivElement | null>(null);
+
   const onPieMouseEnter = React.useCallback((_: any, index: number) => {
     if (targetFocusIndex !== -1) return;
 
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     
-    document.querySelectorAll('.my-hovered-sector').forEach(el => el.classList.remove('my-hovered-sector'));
-    document.querySelectorAll(`.my-sector-${index}`).forEach(el => el.classList.add('my-hovered-sector'));
+    const root = pieContainerRef.current || document;
+    root.querySelectorAll('.my-hovered-sector').forEach(el => el.classList.remove('my-hovered-sector'));
+    root.querySelectorAll(`.my-sector-${index}`).forEach(el => el.classList.add('my-hovered-sector'));
   }, [targetFocusIndex]);
 
   const onPieMouseLeave = React.useCallback(() => {
@@ -187,105 +170,79 @@ const InnerRechartsPie = React.memo(({ size, data, pieCy, isFullscreen, renderCu
 
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
-      document.querySelectorAll('.my-hovered-sector').forEach(el => el.classList.remove('my-hovered-sector'));
+      const root = pieContainerRef.current || document;
+      root.querySelectorAll('.my-hovered-sector').forEach(el => el.classList.remove('my-hovered-sector'));
     }, 4000);
   }, [targetFocusIndex]);
 
   const cells = React.useMemo(() => {
     return data.map((item: Datum, index: number) => {
       const isFocused = index === targetFocusIndex;
+      const isOther = top4Ids && !top4Ids.includes(item.id);
       return (
         <Cell 
           key={item.id} 
           fill={item.color} 
+          opacity={isOther ? 0.55 : 1}
           stroke="none"
           className={`my-sector my-sector-${index} ${isFocused ? 'my-hovered-sector-static' : ''}`}
           style={{ transformOrigin: `50% ${pieCy}px` }}
         />
       );
     });
-  }, [data, targetFocusIndex, pieCy]);
-  
-  const overlayCells = React.useMemo(() => {
-    return data.map((item: Datum, index: number) => {
-      const isOther = top4Ids && !top4Ids.includes(item.id);
-      const isFocused = index === targetFocusIndex;
-      return (
-        <Cell 
-          key={`overlay-${item.id}`} 
-          fill={isOther ? "rgba(0,0,0,0.4)" : "transparent"} 
-          stroke="none"
-          className={`my-sector my-sector-${index} ${isFocused ? 'my-hovered-sector-static' : ''}`}
-          style={{ transformOrigin: `50% ${pieCy}px` }}
-        />
-      );
-    });
-  }, [data, top4Ids, targetFocusIndex, pieCy]);
+  }, [data, targetFocusIndex, top4Ids, pieCy]);
+
+  const actualInnerR = innerRadius || (size ? size * 0.20 : 50);
+  const actualOuterR = outerRadius || (isFullscreen ? (size ? size * 0.30 : 100) : (size ? size * 0.27 : 85));
+  const isAnimationActive = data.length <= 15;
 
   return (
-    <ResponsiveContainer width="100%" height="100%">
-      <RechartsPieChart style={{ overflow: 'visible' }}>
-        <defs>
-          <style>{`
-            .my-sector {
-              transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            }
-            .my-hovered-sector, .my-hovered-sector-static {
-              transform: scale(1.1);
-            }
-          `}</style>
-        </defs>
-        <Tooltip isAnimationActive={false} content={<CustomTooltip />} />
-        <Pie
-          data={data}
-          dataKey="value"
-          nameKey="label"
-          cx="50%"
-          cy={pieCy}
-          innerRadius={size * 0.20}
-          outerRadius={isFullscreen ? size * 0.30 : size * 0.27}
-          paddingAngle={2}
-          cornerRadius={6}
-          isAnimationActive={true}
-          animationDuration={500}
-          stroke="none"
-          label={renderCustomLabel}
-          labelLine={renderCustomLabelLine}
-          onMouseEnter={onPieMouseEnter}
-          onMouseLeave={onPieMouseLeave}
-          style={{ cursor: 'pointer' }}
-        >
-          {cells}
-        </Pie>
-        
-        <Pie
-          data={data}
-          dataKey="value"
-          nameKey="label"
-          cx="50%"
-          cy={pieCy}
-          innerRadius={size * 0.20}
-          outerRadius={isFullscreen ? size * 0.30 : size * 0.27}
-          paddingAngle={2}
-          cornerRadius={6}
-          isAnimationActive={true}
-          animationDuration={500}
-          stroke="none"
-          style={{ pointerEvents: 'none' }}
-          onMouseEnter={onPieMouseEnter}
-          onMouseLeave={onPieMouseLeave}
-        >
-          {overlayCells}
-        </Pie>
-        
-        {renderSvgLegend()}
-      </RechartsPieChart>
-    </ResponsiveContainer>
+    <div ref={pieContainerRef} className="w-full h-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <RechartsPieChart style={{ overflow: 'visible' }}>
+          <defs>
+            <style>{`
+              .my-sector {
+                transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s ease;
+              }
+              .my-hovered-sector, .my-hovered-sector-static {
+                transform: scale(1.08);
+                opacity: 1 !important;
+              }
+            `}</style>
+          </defs>
+          <Tooltip isAnimationActive={false} content={<CustomTooltip />} />
+          <Pie
+            data={data}
+            dataKey="value"
+            nameKey="label"
+            cx="50%"
+            cy={pieCy}
+            innerRadius={actualInnerR}
+            outerRadius={actualOuterR}
+            paddingAngle={2}
+            cornerRadius={6}
+            isAnimationActive={isAnimationActive}
+            animationDuration={400}
+            stroke="none"
+            label={renderCustomLabel}
+            labelLine={false}
+            onMouseEnter={onPieMouseEnter}
+            onMouseLeave={onPieMouseLeave}
+            style={{ cursor: 'pointer' }}
+          >
+            {cells}
+          </Pie>
+          
+          {renderSvgLegend()}
+        </RechartsPieChart>
+      </ResponsiveContainer>
+    </div>
   );
 });
 
 export const PieChart = React.memo(function PieChart({ data, total, containerRef, isFullscreen = false,  
-  
+  showLegend = true,
   showFactText = false,
   factIndex = 0,
   onFactIndexChange,
@@ -303,17 +260,11 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     };
   }, []);
 
-  const [size, setSize] = React.useState(() => {
-    if (isFullscreen) {
-      const minDimension = Math.min(window.innerWidth * 0.85, (window.innerHeight * 0.9) - 120);
-      return Math.max(450, minDimension);
-    }
-    return 320; 
+  const [dimensions, setDimensions] = React.useState({
+    width: 0,
+    height: isFullscreen ? 600 : 384,
   });
-
-  const [chartWidth, setChartWidth] = React.useState(size);
   const localRef = React.useRef<HTMLDivElement | null>(null);
-
 
   const setRefs = React.useCallback(
     (node: HTMLDivElement | null) => {
@@ -332,16 +283,21 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
   React.useEffect(() => {
     const node = localRef.current;
     if (node) {
-      setChartWidth(node.clientWidth);
+      setDimensions({ width: Math.round(node.clientWidth), height: Math.round(node.clientHeight) });
       const observer = new ResizeObserver((entries) => {
         if (entries[0]) {
-          setChartWidth(entries[0].contentRect.width);
+          const w = Math.round(entries[0].contentRect.width);
+          const h = Math.round(entries[0].contentRect.height);
+          setDimensions((prev) => (prev.width === w && prev.height === h ? prev : { width: w, height: h }));
         }
       });
       observer.observe(node);
       return () => observer.disconnect();
     }
   }, []);
+
+  const chartWidth = dimensions.width || (isFullscreen ? 800 : 400);
+  const totalHeight = dimensions.height || (isFullscreen ? 600 : 384);
 
   const textColor = "#71717a"; // muted-foreground
   const textMainColor = isDark ? "#fafafa" : "#09090b"; // foreground hex
@@ -353,22 +309,35 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     return [...data].sort((a, b) => b.value - a.value).slice(0, 4).map(d => d.id);
   }, [data]);
 
-  const maxItem = data && data.length > 0 ? data.reduce((prev: any, current: any) => (prev.value > current.value) ? prev : current) : null;
-  const minItem = data && data.length > 0 ? data.reduce((prev: any, current: any) => (prev.value < current.value) ? prev : current) : null;
+  const { maxItem, minItem } = React.useMemo(() => {
+    if (!data || data.length === 0) return { maxItem: null, minItem: null };
+    let max = data[0];
+    let min = data[0];
+    for (let i = 1; i < data.length; i++) {
+      const item = data[i];
+      if (item.value > max.value) max = item;
+      if (item.value < min.value) min = item;
+    }
+    return { maxItem: max, minItem: min };
+  }, [data]);
 
   const targetFocusIndex = factIndex === 1 && maxItem ? data.findIndex(d => d.id === maxItem.id) 
                          : factIndex === 2 && minItem ? data.findIndex(d => d.id === minItem.id) 
                          : -1;
 
-  const otherSum = React.useMemo(() => {
-    if (!top4Ids) return 0;
-    return data.filter(d => !top4Ids.includes(d.id)).reduce((sum, d) => sum + d.value, 0);
-  }, [data, top4Ids]);
-
-  const lastOtherId = React.useMemo(() => {
-    if (!top4Ids) return null;
-    const others = data.filter(d => !top4Ids.includes(d.id));
-    return others.length > 0 ? others[others.length - 1].id : null;
+  const { otherSum, lastOtherId } = React.useMemo(() => {
+    if (!top4Ids) return { otherSum: 0, lastOtherId: null };
+    const top4Set = new Set(top4Ids);
+    let sum = 0;
+    let lastId: string | number | null = null;
+    for (let i = 0; i < data.length; i++) {
+      const item = data[i];
+      if (!top4Set.has(item.id)) {
+        sum += item.value;
+        lastId = item.id;
+      }
+    }
+    return { otherSum: sum, lastOtherId: lastId };
   }, [data, top4Ids]);
 
   const prevDataRef = React.useRef(data);
@@ -376,172 +345,22 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     prevDataRef.current = data;
   }
 
-  const renderCustomLabelLine = React.useCallback((props: any) => {
-    const { payload, points } = props;
-    const datumId = payload?.payload?.id || payload?.id;
-    
-    if (top4Ids && !top4Ids.includes(datumId)) {
-      if (datumId !== lastOtherId) return null;
-    }
-    
-    if (!points || points.length < 3) return null;
-    
-    const isLeft = points[2].x < points[0].x;
-    const isTop = points[2].y < points[0].y;
-    const basePushX = isFullscreen ? 45 : 30; // cleanly extends the horizontal line
-    const basePushY = isFullscreen ? 30 : 20; // vertically push away from pie edge
-    
-    const chartWidth = localRef.current?.clientWidth || 0;
-    const chartHeight = localRef.current?.clientHeight || 0;
-    const boxWidth = isFullscreen ? 160 : 110;
-    const boxHeight = isFullscreen ? 56 : 52;
-    
-    let finalX = points[2].x + (isLeft ? -basePushX : basePushX);
-    let finalY = points[2].y + (isTop ? -basePushY : basePushY);
-    
-    if (chartWidth > 0 && chartHeight > 0) {
-      let fx = isLeft ? finalX - boxWidth : finalX;
-      let fy = finalY - boxHeight / 2;
-      fx = Math.max(10, Math.min(fx, chartWidth - boxWidth - 10));
-      fy = Math.max(10, Math.min(fy, chartHeight - boxHeight - 10));
-      finalX = isLeft ? fx + boxWidth : fx;
-      finalY = fy + boxHeight / 2;
-    }
-    
-    const newPoints = [
-      points[0],
-      { x: points[1].x, y: finalY },
-      { x: finalX, y: finalY }
-    ];
-    
-    return (
-      <polyline
-        points={newPoints.map(p => `${p.x},${p.y}`).join(" ")}
-        stroke={textColor}
-        strokeWidth={1}
-        className="chart-global-label"
-      />
-    );
-  }, [isFullscreen, top4Ids, lastOtherId, textColor]);
-  const renderCustomLabel = React.useCallback((props: any) => {
-    let { x, y, cx, cy, name, value, percent, payload } = props;
-    const datumId = payload?.payload?.id || payload?.id;
-    let color = payload?.payload?.color || payload?.color || "#a1a1aa";
-    
-    if (name === undefined) name = payload?.payload?.label || payload?.label;
-    if (value === undefined) value = payload?.payload?.value || payload?.value;
-    if (percent === undefined && total > 0) percent = (value || 0) / total;
+  // --- Dynamic Legend rows & size calculation ---
+  const { legendRows, legendHeight, legendConfig } = React.useMemo(() => {
+    const width = chartWidth;
+    const effectiveSize = Math.max(chartWidth || 0, totalHeight || 0);
 
-    if (top4Ids && !top4Ids.includes(datumId)) {
-      if (datumId !== lastOtherId) return null;
-      
-      name = "Other";
-      value = otherSum;
-      percent = otherSum / total;
-      color = isDark ? "#52525b" : "#a1a1aa";
-    }
-    const boxWidth = isFullscreen ? 160 : 110;
-    const boxHeight = isFullscreen ? 56 : 52;
-    const basePushX = isFullscreen ? 45 : 30;
-    const basePushY = isFullscreen ? 30 : 20;
-    const isLeft = x < cx;
-    const isTop = y < cy;
-    
-    let finalX = x + (isLeft ? -basePushX : basePushX);
-    let finalY = y + (isTop ? -basePushY : basePushY);
-    
-    let fx = isLeft ? finalX - boxWidth : finalX;
-    let fy = finalY - boxHeight / 2;
-    
-    const chartWidth = localRef.current?.clientWidth || 0;
-    const chartHeight = localRef.current?.clientHeight || 0;
-    if (chartWidth > 0 && chartHeight > 0) {
-      fx = Math.max(10, Math.min(fx, chartWidth - boxWidth - 10));
-      fy = Math.max(10, Math.min(fy, chartHeight - boxHeight - 10));
-    }
+    // Dynamically scale legend elements based on chart size and whether it's fullscreen
+    const scale = isFullscreen 
+      ? Math.min(1.5, Math.max(1.1, effectiveSize / 600))
+      : 1;
 
-    const safeName = String(name || '');
-    const maxLen = isFullscreen ? 18 : 12;
-    const displayName = safeName.length > maxLen ? safeName.substring(0, maxLen) + "..." : safeName;
+    const fontSize = Math.round(12 * scale);
+    const rectSize = Math.round(14 * scale);
+    const gap = Math.round(8 * scale);
+    const itemMargin = Math.round(20 * scale);
+    const spacingY = Math.round(25 * scale);
 
-    return (
-      <g 
-        className="chart-global-label"
-        style={{ 
-          overflow: 'visible',
-          transformOrigin: `${fx + boxWidth / 2}px ${fy + boxHeight / 2}px`
-        }}
-      >
-        <rect 
-          x={fx} 
-          y={fy} 
-          width={boxWidth} 
-          height={boxHeight} 
-          rx={6} 
-          fill={bgColor}
-          stroke={borderColor}
-          strokeWidth={1}
-        />
-        <rect
-          x={fx}
-          y={fy}
-          width={4}
-          height={boxHeight}
-          rx={2}
-          fill={color}
-        />
-        <text 
-          x={fx + 10} 
-          y={fy + 20} 
-          fill={textMainColor}
-          fontSize={isFullscreen ? 15 : 13} 
-          fontWeight="600"
-          fontFamily="sans-serif"
-        >
-          {displayName}
-        </text>
-        <text 
-          x={fx + 10} 
-          y={fy + 40} 
-          fill={textMainColor}
-          fontSize={isFullscreen ? 17 : 14} 
-          fontWeight="700"
-          fontFamily="sans-serif"
-        >
-          {Number(value || 0).toLocaleString()}
-        </text>
-        <text 
-          x={fx + boxWidth - 8} 
-          y={fy + 40} 
-          textAnchor="end"
-          fill={textColor}
-          fontSize={isFullscreen ? 15 : 13} 
-          fontWeight="500"
-          fontFamily="sans-serif"
-        >
-          {((percent || 0) * 100).toFixed(0)}%
-        </text>
-      </g>
-    );
-  }, [isFullscreen, isDark, bgColor, borderColor, textMainColor, textColor, top4Ids, lastOtherId, otherSum, total]);
-
-  React.useEffect(() => {
-    if (!isFullscreen) return;
-    const handleResize = () => {
-      const minDimension = Math.min(window.innerWidth * 0.85, (window.innerHeight * 0.9) - 120);
-      setSize(Math.max(450, minDimension));
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [isFullscreen]);
-
-  const { legendRows, legendHeight } = React.useMemo(() => {
-    const width = chartWidth || size;
-    const spacingY = 25;
-    const rectSize = 14; 
-    const gap = 8;
-    const itemMargin = 20;
-    
     const rows: { items: Datum[]; width: number; itemWidths: number[] }[] = [];
     let currentRow: Datum[] = [];
     let currentRowWidth = 0;
@@ -550,9 +369,9 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     data.forEach((item: Datum) => {
       const percentage = total > 0 ? Math.round((Math.max(0, item.value || 0) / total) * 100) : 0;
       const labelText = `${item.label}: ${Number(item.value || 0).toLocaleString()} (${percentage}%)`;
-      const textWidth = labelText.length * (isFullscreen ? 7.5 : 6.5); 
+      const textWidth = labelText.length * (fontSize * 0.62); 
       const itemWidth = rectSize + gap + textWidth + itemMargin;
-      const maxItemsPerRow = 4;
+      const maxItemsPerRow = isFullscreen && width > 700 ? 5 : 4;
 
       if ((currentRowWidth + itemWidth - itemMargin > width && currentRow.length > 0) || currentRow.length >= maxItemsPerRow) {
         rows.push({ items: currentRow, width: currentRowWidth - itemMargin, itemWidths: currentRowItemWidths });
@@ -572,18 +391,294 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
 
     return { 
       legendRows: rows, 
-      legendHeight: rows.length * spacingY 
+      legendHeight: rows.length * spacingY,
+      legendConfig: { fontSize, rectSize, gap, spacingY }
     };
-  }, [data, chartWidth, size, isFullscreen, total]);
+  }, [data, chartWidth, totalHeight, isFullscreen, total]);
+
+  // Bottom padding and startY for legend
+  const effectiveLegendHeight = showLegend ? legendHeight : 0;
+  const legendBottomMargin = showLegend ? 8 : 0;
+  const legendTopPadding = (showLegend && legendRows.length > 0) ? 14 : 0;
+  const legendStartY = showLegend
+    ? Math.max(140, totalHeight - effectiveLegendHeight - legendBottomMargin)
+    : totalHeight;
+
+  // Available vertical space for the pie and labels strictly above the legend
+  const availablePieHeight = showLegend ? (legendStartY - legendTopPadding) : totalHeight;
+  const pieCy = Math.round(availablePieHeight / 2);
+
+  // Callout box dimensions and offsets
+  const boxWidth = isFullscreen ? 150 : 110;
+  const boxHeight = isFullscreen ? 54 : 48;
+  const basePushX = isFullscreen ? 36 : 24;
+  const basePushY = isFullscreen ? 20 : 14;
+
+  // Safe radius calculation: ensure pie + top callout + bottom callout fit comfortably
+  const verticalAllowance = basePushY + boxHeight / 2 + 8;
+  const maxRadiusVertical = Math.max(35, Math.min(pieCy - 10, (availablePieHeight - pieCy) - 8) - verticalAllowance);
+  const maxRadiusHorizontal = Math.max(35, (chartWidth / 2) - basePushX - boxWidth - 10);
+
+  const baseIdealRadius = isFullscreen 
+    ? Math.min(chartWidth, totalHeight) * (showLegend ? 0.26 : 0.32)
+    : (showLegend ? 85 : Math.min(chartWidth, totalHeight) * 0.30);
+  const outerRadius = Math.max(45, Math.min(baseIdealRadius, maxRadiusVertical, maxRadiusHorizontal));
+  const innerRadius = Math.round(outerRadius * (isFullscreen ? 0.62 : 0.60));
+
+  // Precompute non-overlapping positions for visible callout data panels
+  const boxPositionsMap = React.useMemo(() => {
+    const map = new Map<string | number, {
+      fx: number;
+      fy: number;
+      curBoxWidth: number;
+      curBoxHeight: number;
+    }>();
+
+    if (!chartWidth || !data || data.length === 0 || total <= 0) return map;
+
+    const RADIAN = Math.PI / 180;
+    const pieCx = chartWidth / 2;
+    let accumulatedAngle = 0;
+    const anchorRadius = outerRadius + 30;
+
+    interface Candidate {
+      id: string | number;
+      isLeft: boolean;
+      fx: number;
+      initialFy: number;
+      fy: number;
+    }
+
+    const leftList: Candidate[] = [];
+    const rightList: Candidate[] = [];
+
+    data.forEach(item => {
+      const val = Math.max(0, item.value || 0);
+      const sliceSpan = (val / total) * 360;
+      const midAngle = accumulatedAngle + sliceSpan / 2;
+      accumulatedAngle += sliceSpan;
+
+      const isTarget = (top4Ids && top4Ids.includes(item.id)) || item.id === lastOtherId;
+      if (!isTarget) return;
+
+      const rad = -midAngle * RADIAN;
+      const x = pieCx + anchorRadius * Math.cos(rad);
+      const y = pieCy + anchorRadius * Math.sin(rad);
+
+      const isLeft = x < pieCx;
+      const isTop = y < pieCy;
+
+      const finalX = x + (isLeft ? -basePushX : basePushX);
+      const finalY = y + (isTop ? -basePushY : basePushY);
+
+      let fx = isLeft ? finalX - boxWidth : finalX;
+      let fy = finalY - boxHeight / 2;
+
+      // Safe horizontal clamping within chart container
+      fx = Math.max(8, Math.min(fx, chartWidth - boxWidth - 8));
+
+      const cand: Candidate = {
+        id: item.id,
+        isLeft,
+        fx,
+        initialFy: fy,
+        fy,
+      };
+
+      if (isLeft) {
+        leftList.push(cand);
+      } else {
+        rightList.push(cand);
+      }
+    });
+
+    const resolveOverlap = (list: Candidate[]) => {
+      if (list.length === 0) return;
+
+      // Sort by initialFy ascending (top to bottom)
+      list.sort((a, b) => a.initialFy - b.initialFy);
+
+      const count = list.length;
+      const minFy = 8;
+      const maxFy = Math.max(minFy, legendStartY - boxHeight - 8);
+      const availableSpan = Math.max(0, maxFy - minFy);
+
+      let curBoxHeight = boxHeight;
+      let minGap = isFullscreen ? 8 : 6;
+      const neededSpan = count * curBoxHeight + (count - 1) * minGap;
+
+      if (neededSpan > availableSpan && count > 1) {
+        minGap = Math.max(3, Math.floor((availableSpan - count * 36) / (count - 1)));
+        curBoxHeight = Math.max(34, Math.floor((availableSpan - (count - 1) * minGap) / count));
+      }
+
+      const step = curBoxHeight + minGap;
+
+      // Initialize with clamped positions
+      list.forEach(c => {
+        c.fy = Math.max(minFy, Math.min(maxFy, c.initialFy));
+      });
+
+      // Forward pass: push down overlapping boxes
+      for (let i = 1; i < count; i++) {
+        if (list[i].fy < list[i - 1].fy + step) {
+          list[i].fy = list[i - 1].fy + step;
+        }
+      }
+
+      // Backward pass: if bottom box exceeds maxFy, push up
+      if (list[count - 1].fy > maxFy) {
+        list[count - 1].fy = maxFy;
+        for (let i = count - 2; i >= 0; i--) {
+          if (list[i].fy > list[i + 1].fy - step) {
+            list[i].fy = list[i + 1].fy - step;
+          }
+        }
+      }
+
+      // Second forward pass: if top box was pushed above minFy
+      if (list[0].fy < minFy) {
+        list[0].fy = minFy;
+        for (let i = 1; i < count; i++) {
+          if (list[i].fy < list[i - 1].fy + step) {
+            list[i].fy = list[i - 1].fy + step;
+          }
+        }
+      }
+
+      // Populate map
+      list.forEach(c => {
+        map.set(c.id, {
+          fx: c.fx,
+          fy: Math.round(c.fy),
+          curBoxWidth: boxWidth,
+          curBoxHeight,
+        });
+      });
+    };
+
+    resolveOverlap(leftList);
+    resolveOverlap(rightList);
+
+    return map;
+  }, [chartWidth, data, total, top4Ids, lastOtherId, outerRadius, pieCy, isFullscreen, legendStartY, showLegend, basePushX, basePushY, boxWidth, boxHeight]);
+
+  const renderCustomLabel = React.useCallback((props: any) => {
+    let { x, y, cx, cy, name, value, percent, payload } = props;
+    const datumId = payload?.payload?.id || payload?.id;
+    let color = payload?.payload?.color || payload?.color || "#a1a1aa";
+    
+    if (name === undefined) name = payload?.payload?.label || payload?.label;
+    if (value === undefined) value = payload?.payload?.value || payload?.value;
+    if (percent === undefined && total > 0) percent = (value || 0) / total;
+
+    if (top4Ids && !top4Ids.includes(datumId)) {
+      if (datumId !== lastOtherId) return null;
+      
+      name = "Other";
+      value = otherSum;
+      percent = otherSum / total;
+      color = isDark ? "#52525b" : "#a1a1aa";
+    }
+
+    const pos = boxPositionsMap.get(datumId);
+    let fx: number;
+    let fy: number;
+    let curBoxWidth = boxWidth;
+    let curBoxHeight = boxHeight;
+
+    if (pos) {
+      fx = pos.fx;
+      fy = pos.fy;
+      curBoxWidth = pos.curBoxWidth;
+      curBoxHeight = pos.curBoxHeight;
+    } else {
+      const isLeft = x < cx;
+      const isTop = y < cy;
+      const finalX = x + (isLeft ? -basePushX : basePushX);
+      const finalY = y + (isTop ? -basePushY : basePushY);
+      fx = isLeft ? finalX - boxWidth : finalX;
+      fy = finalY - boxHeight / 2;
+      const maxAllowedY = (showLegend ? legendStartY : totalHeight) - boxHeight - 8;
+      fx = Math.max(8, Math.min(fx, chartWidth - boxWidth - 8));
+      fy = Math.max(8, Math.min(fy, maxAllowedY));
+    }
+
+    const safeName = String(name || '');
+    const maxLen = isFullscreen ? 16 : 11;
+    const displayName = safeName.length > maxLen ? safeName.substring(0, maxLen) + "..." : safeName;
+
+    const textRow1Y = fy + Math.round(curBoxHeight * 0.38);
+    const textRow2Y = fy + Math.round(curBoxHeight * 0.78);
+
+    return (
+      <g 
+        key={`custom-label-${datumId}`}
+        className="chart-global-label"
+        style={{ 
+          overflow: 'visible',
+          transformOrigin: `${fx + curBoxWidth / 2}px ${fy + curBoxHeight / 2}px`
+        }}
+      >
+        <rect 
+          x={fx} 
+          y={fy} 
+          width={curBoxWidth} 
+          height={curBoxHeight} 
+          rx={6} 
+          fill={bgColor} 
+          stroke={borderColor}
+          strokeWidth={1}
+          className="shadow-sm"
+        />
+        <rect 
+          x={fx} 
+          y={fy} 
+          width={4} 
+          height={curBoxHeight} 
+          fill={color} 
+          rx={2} 
+        />
+        <text 
+          x={fx + 10} 
+          y={textRow1Y} 
+          fill={textColor}
+          fontSize={isFullscreen ? 13 : 11} 
+          fontWeight="500"
+          fontFamily="sans-serif"
+        >
+          {displayName}
+        </text>
+        <text 
+          x={fx + 10} 
+          y={textRow2Y} 
+          fill={textMainColor}
+          fontSize={isFullscreen ? 16 : 13} 
+          fontWeight="700"
+          fontFamily="sans-serif"
+        >
+          {Number(value || 0).toLocaleString()}
+        </text>
+        <text 
+          x={fx + curBoxWidth - 8} 
+          y={textRow2Y} 
+          textAnchor="end"
+          fill={textColor}
+          fontSize={isFullscreen ? 14 : 11} 
+          fontWeight="500"
+          fontFamily="sans-serif"
+        >
+          {((percent || 0) * 100).toFixed(0)}%
+        </text>
+      </g>
+    );
+  }, [boxPositionsMap, basePushX, basePushY, boxWidth, boxHeight, legendStartY, showLegend, totalHeight, chartWidth, isFullscreen, isDark, bgColor, borderColor, textMainColor, textColor, top4Ids, lastOtherId, otherSum, total]);
 
   const renderSvgLegend = React.useCallback(() => {
-    if (!chartWidth || !size || legendRows.length === 0) return null;
+    if (!showLegend || !chartWidth || !totalHeight || legendRows.length === 0) return null;
 
-    const spacingY = 25;
-    const rectSize = 14; 
-    const gap = 8;
-    
-    const startY = size - legendHeight + (isFullscreen ? -60 : 22);
+    const { fontSize, rectSize, gap, spacingY } = legendConfig;
+    const startY = legendStartY;
 
     return (
       <g className="svg-legend">
@@ -597,12 +692,19 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
 
             return (
               <g key={`svg-leg-${item.id}`}>
-                <rect x={x} y={y - 12} width={rectSize} height={rectSize} fill={item.color} rx={4} />
+                <rect 
+                  x={x} 
+                  y={y - rectSize + 2} 
+                  width={rectSize} 
+                  height={rectSize} 
+                  fill={item.color} 
+                  rx={Math.max(3, Math.round(rectSize * 0.25))} 
+                />
                 <text
                   x={x + rectSize + gap}
                   y={y}
                   fill={textMainColor}
-                  fontSize={isFullscreen ? 14 : 12}
+                  fontSize={fontSize}
                   fontWeight="500"
                   fontFamily="sans-serif"
                   style={{ pointerEvents: 'none' }}
@@ -615,34 +717,29 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
         })}
       </g>
     );
-  }, [chartWidth, size, legendRows, legendHeight, isFullscreen, textMainColor, total]);
-
-  // Add extra safe area padding to ensure the bottom labels never overlap the legend
-  const safeAreaPadding = isFullscreen ? 60 : 40;
-  const pieCy = (size - legendHeight - safeAreaPadding) / 2;
+  }, [showLegend, chartWidth, totalHeight, legendRows, legendHeight, legendConfig, legendStartY, textMainColor, total]);
 
   return (
-      <div ref={setRefs} className={`flex h-full w-full items-center justify-center flex-col `}>
-        <div className="relative flex-shrink-0 w-full" style={{ height: size }}>
-          <InnerRechartsPie
-            size={size}
-            data={data}
-            pieCy={pieCy}
-            isFullscreen={isFullscreen}
-            renderCustomLabel={renderCustomLabel}
-            renderCustomLabelLine={renderCustomLabelLine as any}
-            top4Ids={top4Ids}
-            targetFocusIndex={targetFocusIndex}
-            renderSvgLegend={renderSvgLegend}
-          />
+    <div ref={setRefs} className="flex h-full w-full items-center justify-center flex-col overflow-hidden">
+      <div className="relative w-full h-full">
+        <InnerRechartsPie
+          data={data}
+          pieCy={pieCy}
+          innerRadius={innerRadius}
+          outerRadius={outerRadius}
+          isFullscreen={isFullscreen}
+          renderCustomLabel={renderCustomLabel}
+          top4Ids={top4Ids}
+          targetFocusIndex={targetFocusIndex}
+          renderSvgLegend={renderSvgLegend}
+        />
 
         {showFactText && (
           <svg className="fact-text-overlay absolute inset-0" width="100%" height="100%" style={{ overflow: 'visible', pointerEvents: 'none' }}>
             <FactTextOverlay
               chartWidth={chartWidth}
               pieCy={pieCy}
-              size={size}
-              
+              innerRadius={innerRadius}
               data={data}
               total={total}
               factIndex={factIndex}
@@ -650,6 +747,8 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
               textColor={textColor}
               textMainColor={textMainColor}
               onFactIndexChange={onFactIndexChange}
+              maxItem={maxItem}
+              minItem={minItem}
             />
           </svg>
         )}
@@ -659,11 +758,13 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
 }, (prevProps, nextProps) => {
   return (
     prevProps.isFullscreen === nextProps.isFullscreen &&
+    prevProps.showLegend === nextProps.showLegend &&
     prevProps.total === nextProps.total &&
     prevProps.data.length === nextProps.data.length &&
     prevProps.data.every((item, idx) => 
       item.id === nextProps.data[idx]?.id &&
       item.value === nextProps.data[idx]?.value &&
+      item.label === nextProps.data[idx]?.label &&
       item.color === nextProps.data[idx]?.color
     ) &&
     

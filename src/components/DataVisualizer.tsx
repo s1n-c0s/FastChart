@@ -33,7 +33,7 @@ import {
   LineChart,
   StackedChart
 } from "../components/charts";
-import { Database, X, ChevronDown, Copy, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Database, X, ChevronDown, ChevronUp, SlidersHorizontal, Copy, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -72,6 +72,8 @@ export default function DataVisualizer() {
   const [showGradientArea, setShowGradientArea] = useState(true);
   const [lineColor, setLineColor] = useState<string | undefined>(undefined);
   const [isDockOpen, setIsDockOpen] = useState(false);
+  const [isDockHovered, setIsDockHovered] = useState(false);
+  const [isDockMinimized, setIsDockMinimized] = useState(false);
   
   const fsRef = useRef<HTMLDivElement>(null);
 
@@ -265,228 +267,345 @@ export default function DataVisualizer() {
     };
   }, [isDockOpen]);
 
-
-
   return (
     <>
-      <div className="p-4 space-y-6" data-testid="data-visualizer">
+      <div className="p-4 pb-32 sm:pb-40 space-y-6" data-testid="data-visualizer">
 
         {/* --- Data Input Section (Float Dock) --- */}
-        <div 
-          ref={dockRef}
-          className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center transition-all duration-300 pointer-events-none`}
-        >
-          {/* Paper Panel */}
+        {!fullscreenChart && (
           <div 
-            className={`pointer-events-auto bg-background/90 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-border/50 rounded-2xl overflow-hidden transition-all duration-300 origin-bottom flex flex-col transform-gpu isolate ${
-              isDockOpen ? "w-[95vw] sm:w-[85vw] md:w-[800px] h-[75vh] max-h-[750px] opacity-100 mb-4 scale-100" : "w-0 h-0 opacity-0 mb-0 scale-95"
-            }`}
+            ref={dockRef}
+            onMouseEnter={() => setIsDockHovered(true)}
+            onMouseLeave={() => setIsDockHovered(false)}
+            className={`fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 ${
+              isDockOpen ? "z-[70]" : "z-50"
+            } flex flex-col items-center pointer-events-none group/dock`}
           >
-            <div className="flex items-center justify-between p-4 border-b bg-muted/40">
-              <h2 className="font-semibold text-lg flex items-center gap-2">
-                <Database className="w-5 h-5 text-primary" /> Data Manager
-              </h2>
-              <Button variant="ghost" size="icon" onClick={() => setIsDockOpen(false)} className="rounded-full h-8 w-8 hover:bg-muted">
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-6">
-              {/* Data Table */}
-              <div className="rounded-xl border bg-card p-4 sm:p-5 shadow-sm">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
-                  <h3 className="text-base font-medium flex items-center gap-2">
-                    Data Table {sortConfig && <span className="text-xs text-primary font-normal bg-primary/10 px-2 py-0.5 rounded-full">Sorted</span>}
-                  </h3>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="text-sm font-medium text-muted-foreground mr-1">Total: {total.toLocaleString()}</div>
-                    <Button variant="outline" size="sm" className="h-8" onClick={exportToCSV}>CSV</Button>
-                    <Button variant="outline" size="sm" className="h-8" onClick={exportToMarkdown}>MD</Button>
-                    <Button variant="default" size="sm" className="h-8 shadow-sm" onClick={addRow}>Add Row</Button>
+            {/* Paper Panel (Data Manager) - Smooth Accordion Rise matching dev/stable */}
+            <div 
+              className={`pointer-events-auto bg-background dark:bg-[#121214] shadow-2xl rounded-2xl overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] origin-bottom flex flex-col transform-gpu isolate ${
+                isDockOpen 
+                  ? "w-[95vw] sm:w-[85vw] md:w-[800px] h-[75vh] max-h-[calc(100vh-120px)] opacity-100 mb-3 sm:mb-4 scale-100 border border-border/80" 
+                  : "w-0 h-0 opacity-0 mb-0 scale-95 border-0 pointer-events-none select-none"
+              }`}
+            >
+              <div className="flex items-center justify-between p-4 border-b bg-muted/40">
+                <h2 className="font-semibold text-lg flex items-center gap-2">
+                  <Database className="w-5 h-5 text-primary" /> Data Manager
+                </h2>
+                <Button variant="ghost" size="icon" onClick={() => setIsDockOpen(false)} className="rounded-full h-8 w-8 hover:bg-muted">
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-6">
+                {/* Data Table */}
+                <div className="rounded-xl border bg-card p-4 sm:p-5 shadow-sm">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+                    <h3 className="text-base font-medium flex items-center gap-2">
+                      Data Table {sortConfig && <span className="text-xs text-primary font-normal bg-primary/10 px-2 py-0.5 rounded-full">Sorted</span>}
+                    </h3>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="text-sm font-medium text-muted-foreground mr-1">Total: {total.toLocaleString()}</div>
+                      <Button variant="outline" size="sm" className="h-8" onClick={exportToCSV}>CSV</Button>
+                      <Button variant="outline" size="sm" className="h-8" onClick={exportToMarkdown}>MD</Button>
+                      <Button variant="default" size="sm" className="h-8 shadow-sm" onClick={addRow}>Add Row</Button>
+                    </div>
+                  </div>
+                  <div className="overflow-x-auto rounded-lg border bg-background/50">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b bg-muted/50">
+                          <th className="text-left py-3 px-3 min-w-[160px] font-medium text-muted-foreground">
+                            <button
+                              className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+                              onClick={() => requestSort("label")}
+                            >
+                              Label
+                              {sortConfig?.key === "label" && (
+                                <span className="text-primary">{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
+                              )}
+                              {!sortConfig && <span className="text-[10px] uppercase tracking-wider ml-1 opacity-60">(Drag)</span>}
+                            </button>
+                          </th>
+                          <th className="text-left py-3 px-3 min-w-[120px] font-medium text-muted-foreground">
+                            <button
+                              className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+                              onClick={() => requestSort("value")}
+                            >
+                              Value
+                              {sortConfig?.key === "value" && (
+                                <span className="text-primary">{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
+                              )}
+                            </button>
+                          </th>
+                          <th className="text-left py-3 px-3 min-w-[120px] font-medium text-muted-foreground">Color</th>
+                          <th className="text-left py-3 px-3 w-[100px] font-medium text-muted-foreground">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                          <SortableContext items={data.map((d) => d.id)} strategy={verticalListSortingStrategy}>
+                            {sortedData.map((row) => (
+                              <SortableRow
+                                key={row.id}
+                                row={row}
+                                onUpdateLabel={updateLabel}
+                                onUpdateValue={updateValue}
+                                onUpdateColor={updateColor}
+                                onRemove={removeRow}
+                                presetColors={PRESET_COLORS}
+                              />
+                            ))}
+                          </SortableContext>
+                        </DndContext>
+                      </tbody>
+                    </table>
                   </div>
                 </div>
-                <div className="overflow-x-auto rounded-lg border bg-background/50">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="text-left py-3 px-3 min-w-[160px] font-medium text-muted-foreground">
-                          <button
-                            className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
-                            onClick={() => requestSort("label")}
-                          >
-                            Label
-                            {sortConfig?.key === "label" && (
-                              <span className="text-primary">{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
-                            )}
-                            {!sortConfig && <span className="text-[10px] uppercase tracking-wider ml-1 opacity-60">(Drag)</span>}
-                          </button>
-                        </th>
-                        <th className="text-left py-3 px-3 min-w-[120px] font-medium text-muted-foreground">
-                          <button
-                            className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
-                            onClick={() => requestSort("value")}
-                          >
-                            Value
-                            {sortConfig?.key === "value" && (
-                              <span className="text-primary">{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
-                            )}
-                          </button>
-                        </th>
-                        <th className="text-left py-3 px-3 min-w-[120px] font-medium text-muted-foreground">Color</th>
-                        <th className="text-left py-3 px-3 w-[100px] font-medium text-muted-foreground">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                        <SortableContext items={data.map((d) => d.id)} strategy={verticalListSortingStrategy}>
-                          {sortedData.map((row) => (
-                            <SortableRow
-                              key={row.id}
-                              row={row}
-                              onUpdateLabel={updateLabel}
-                              onUpdateValue={updateValue}
-                              onUpdateColor={updateColor}
-                              onRemove={removeRow}
-                              presetColors={PRESET_COLORS}
-                            />
-                          ))}
-                        </SortableContext>
-                      </DndContext>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
 
-              {/* Markdown Input */}
-              <div className="rounded-xl border bg-card p-4 sm:p-5 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-base font-medium">Paste Data</h3>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="h-8 gap-1.5 shadow-sm hover:bg-muted/50"
-                    onClick={() => {
-                      navigator.clipboard.writeText(markdownInput);
-                      toast.success("Data copied to clipboard!", { duration: 900 });
-                    }}
-                  >
-                    <Copy className="w-3.5 h-3.5" /> 
-                    <span className="hidden sm:inline">Copy Data</span>
-                  </Button>
-                </div>
-                <div className="grid grid-cols-1 gap-4">
-                  <textarea
-                    className="min-h-[140px] w-full rounded-xl border bg-background/50 px-4 py-3 font-mono text-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary focus-visible:outline-none resize-y placeholder:text-muted-foreground/50 transition-shadow"
-                    aria-label="Paste CSV or Markdown data"
-                    placeholder="Paste your data here (CSV or Markdown Table)..."
-                    value={markdownInput}
-                    onChange={(e) => setMarkdownInput(e.target.value)}
-                  />
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                    <Button onClick={transformData} className="w-full sm:w-auto shadow-sm">Transform to Table</Button>
-                    <div className="flex gap-2 w-full sm:w-auto">
-                      <Button variant="secondary" size="sm" className="flex-1 sm:flex-none" onClick={() => loadExample("csv")}>CSV Example</Button>
-                      <Button variant="secondary" size="sm" className="flex-1 sm:flex-none" onClick={() => loadExample("markdown")}>MD Example</Button>
+                {/* Markdown Input */}
+                <div className="rounded-xl border bg-card p-4 sm:p-5 shadow-sm">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-base font-medium">Paste Data</h3>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-8 gap-1.5 shadow-sm hover:bg-muted/50"
+                      onClick={() => {
+                        navigator.clipboard.writeText(markdownInput);
+                        toast.success("Data copied to clipboard!", { duration: 900 });
+                      }}
+                    >
+                      <Copy className="w-3.5 h-3.5" /> 
+                      <span className="hidden sm:inline">Copy Data</span>
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4">
+                    <textarea
+                      className="min-h-[140px] w-full rounded-xl border bg-background/50 px-4 py-3 font-mono text-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary focus-visible:outline-none resize-y placeholder:text-muted-foreground/50 transition-shadow"
+                      aria-label="Paste CSV or Markdown data"
+                      placeholder="Paste your data here (CSV or Markdown Table)..."
+                      value={markdownInput}
+                      onChange={(e) => setMarkdownInput(e.target.value)}
+                    />
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                      <Button onClick={transformData} className="w-full sm:w-auto shadow-sm">Transform to Table</Button>
+                      <div className="flex gap-2 w-full sm:w-auto">
+                        <Button variant="secondary" size="sm" className="flex-1 sm:flex-none" onClick={() => loadExample("csv")}>CSV Example</Button>
+                        <Button variant="secondary" size="sm" className="flex-1 sm:flex-none" onClick={() => loadExample("markdown")}>MD Example</Button>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Toggle Buttons */}
-          <div className="pointer-events-auto flex flex-wrap justify-center items-center gap-2 sm:gap-3 w-full px-2">
-            <div className="flex flex-col sm:flex-row justify-center items-center gap-y-3 sm:gap-4 bg-background/90 backdrop-blur-xl shadow-xl border border-border/50 py-3 sm:py-0 px-4 sm:px-5 min-h-[56px] rounded-[24px] sm:rounded-full transition-all duration-300 hover:shadow-2xl max-w-[95vw] transform-gpu isolate">
-              {/* Sort Dropdown */}
-              <div className="flex items-center gap-2 justify-between sm:justify-center w-[160px] sm:w-auto">
-                <button
-                  onClick={() => {
-                    if (sortConfig) {
-                      setSortConfig({ ...sortConfig, direction: sortConfig.direction === "asc" ? "desc" : "asc" });
-                    }
-                  }}
-                  disabled={!sortConfig}
-                  className={`flex items-center justify-center w-7 h-7 rounded-full transition-colors ${
-                    sortConfig 
-                      ? "hover:bg-muted/80 text-foreground cursor-pointer shadow-sm border border-border/40" 
-                      : "text-muted-foreground opacity-50 cursor-default"
+            {/* Dock Controls Container with Smooth Morphing Transition */}
+            {(() => {
+            const isExpanded = !isDockMinimized || isDockOpen;
+            return (
+              <div 
+                className={`relative flex items-center justify-center pointer-events-auto transition-opacity duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] transform-gpu ${
+                  isDockHovered || isDockOpen
+                    ? "opacity-100"
+                    : "opacity-60 hover:opacity-100 group-hover/dock:opacity-100 group-focus-within/dock:opacity-100 focus-within:opacity-100"
+                }`}
+              >
+                {/* Floating Upper Minimize Button (floats directly above controls with smooth slide/fade) */}
+                <div 
+                  className={`absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none transform-gpu transition-[transform,opacity] duration-250 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                    isExpanded && !isDockOpen
+                      ? "opacity-100 translate-y-0 scale-100 pointer-events-auto" 
+                      : "opacity-0 translate-y-2 scale-75 pointer-events-none select-none"
                   }`}
-                  title={sortConfig ? `Switch to ${sortConfig.direction === 'asc' ? 'descending' : 'ascending'}` : "Select a sort method first"}
                 >
-                  {!sortConfig && <ArrowUpDown className="w-3.5 h-3.5" />}
-                  {sortConfig?.direction === "asc" && <ArrowUp className="w-3.5 h-3.5" />}
-                  {sortConfig?.direction === "desc" && <ArrowDown className="w-3.5 h-3.5" />}
-                </button>
-                <span className="text-sm font-medium select-none hidden sm:inline ml-1">Sort:</span>
-                <Select
-                  value={sortConfig === null ? "none" : sortConfig.key}
-                  onValueChange={(val) => {
-                    if (val === "none") setSortConfig(null);
-                    if (val === "value") setSortConfig({ key: "value", direction: "desc" });
-                    if (val === "label") setSortConfig({ key: "label", direction: "asc" });
-                  }}
+                  <button
+                    type="button"
+                    onClick={() => setIsDockMinimized(true)}
+                    disabled={!isExpanded || isDockOpen}
+                    className={`flex items-center justify-center w-12 sm:w-14 h-7 sm:h-8 rounded-full bg-background/95 dark:bg-[#121214]/95 backdrop-blur-2xl border border-border/80 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-[opacity,transform,background-color,color] duration-150 transform-gpu active:scale-95 cursor-pointer origin-center ${
+                      isExpanded && !isDockOpen
+                        ? `pointer-events-auto ${
+                            isDockHovered 
+                              ? "opacity-100 scale-100 shadow-md" 
+                              : "opacity-40 scale-75 shadow-none group-hover/dock:opacity-100 group-hover/dock:scale-100 group-hover/dock:shadow-md group-focus-within/dock:opacity-100 group-focus-within/dock:scale-100"
+                          }` 
+                        : "opacity-0 scale-75 pointer-events-none"
+                    }`}
+                    title="Minimize dock"
+                    aria-label="Minimize dock"
+                  >
+                    <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.25]" />
+                  </button>
+                </div>
+
+                {/* Primary Morphing Pill Capsule */}
+                <div 
+                  className={`relative flex items-center justify-center bg-background/95 dark:bg-[#121214]/95 backdrop-blur-2xl shadow-xl border border-border/80 h-11 sm:h-12 rounded-full overflow-hidden transition-[width,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] transform-gpu isolate ${
+                    !isExpanded
+                      ? "w-[145px] sm:w-[168px] px-3 sm:px-4 cursor-pointer hover:shadow-2xl hover:bg-background active:scale-95 pointer-events-auto" 
+                      : "w-[272px] sm:w-[410px] px-2 sm:px-4 hover:shadow-2xl pointer-events-auto"
+                  }`}
+                  onClick={!isExpanded ? () => setIsDockMinimized(false) : undefined}
+                  role={!isExpanded ? "button" : undefined}
+                  tabIndex={!isExpanded ? 0 : undefined}
+                  onKeyDown={!isExpanded ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setIsDockMinimized(false); } } : undefined}
+                  aria-label={!isExpanded ? "Expand dock controls" : undefined}
                 >
-                  <SelectTrigger className="h-8 w-[80px] rounded-full text-xs font-medium border-border/50 bg-background/50 shadow-sm hover:bg-muted/50 transition-colors focus:ring-0 focus:ring-offset-0">
-                    <SelectValue placeholder="None" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl shadow-xl border-border/50 min-w-[100px]">
-                    <SelectItem value="none" className="text-sm cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-2">None</SelectItem>
-                    <SelectItem value="value" className="text-sm cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-2">Value</SelectItem>
-                    <SelectItem value="label" className="text-sm cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-2">Name</SelectItem>
-                  </SelectContent>
-                </Select>
+                  {/* Minimized Content: Icon + "Tools & Data" + Chevron */}
+                  <div 
+                    className={`absolute inset-0 flex items-center justify-center gap-2 sm:gap-2.5 px-3 sm:px-4 pointer-events-none select-none transition-[opacity,transform] duration-200 transform-gpu whitespace-nowrap ${
+                      !isExpanded
+                        ? "opacity-100 scale-100 delay-100 ease-out" 
+                        : "opacity-0 scale-90 duration-100 ease-in"
+                    }`}
+                    aria-hidden={isExpanded}
+                  >
+                    <SlidersHorizontal className="w-4 h-4 text-primary shrink-0" />
+                    <span className="text-xs sm:text-sm font-medium text-foreground">Tools & Data</span>
+                    <ChevronUp className="w-4 h-4 text-muted-foreground ml-0.5 shrink-0" />
+                  </div>
+
+                  {/* Expanded Controls: Sort + Labels + Legend */}
+                  <div 
+                    className={`flex items-center w-full h-full justify-between transition-[opacity,transform] duration-200 transform-gpu whitespace-nowrap ${
+                      isExpanded
+                        ? "opacity-100 scale-100 pointer-events-auto delay-75 ease-out" 
+                        : "opacity-0 scale-95 pointer-events-none duration-100 ease-in"
+                    }`}
+                    aria-hidden={!isExpanded}
+                  >
+                    {/* Sort Controls */}
+                    <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (sortConfig) {
+                            setSortConfig({ ...sortConfig, direction: sortConfig.direction === "asc" ? "desc" : "asc" });
+                          } else {
+                            setSortConfig({ key: "value", direction: "desc" });
+                          }
+                        }}
+                        disabled={!isExpanded}
+                        className="flex items-center justify-center w-7 h-7 rounded-full transition-colors hover:bg-muted/80 text-foreground cursor-pointer border border-border/40 shadow-xs active:scale-95 shrink-0"
+                        title={sortConfig ? `Switch to ${sortConfig.direction === 'asc' ? 'descending' : 'ascending'}` : "Click to sort by Value"}
+                        aria-label="Sort direction"
+                      >
+                        {!sortConfig && <ArrowUpDown className="w-3.5 h-3.5" />}
+                        {sortConfig?.direction === "asc" && <ArrowUp className="w-3.5 h-3.5" />}
+                        {sortConfig?.direction === "desc" && <ArrowDown className="w-3.5 h-3.5" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (sortConfig === null) {
+                            setSortConfig({ key: "label", direction: "asc" });
+                          } else if (sortConfig.key === "label") {
+                            setSortConfig({ key: "value", direction: "desc" });
+                          } else {
+                            setSortConfig(null);
+                          }
+                        }}
+                        disabled={!isExpanded}
+                        className="text-xs font-medium select-none hidden sm:inline cursor-pointer hover:text-primary transition-colors"
+                        title="Click to cycle sort: Name → Value → None"
+                      >
+                        Sort:
+                      </button>
+                      <Select
+                        value={sortConfig === null ? "none" : sortConfig.key}
+                        disabled={!isExpanded}
+                        onValueChange={(val) => {
+                          if (val === "none") setSortConfig(null);
+                          if (val === "value") setSortConfig({ key: "value", direction: "desc" });
+                          if (val === "label") setSortConfig({ key: "label", direction: "asc" });
+                        }}
+                      >
+                        <SelectTrigger className="h-7 w-[58px] sm:w-[78px] rounded-full text-[11px] sm:text-xs font-medium border-border/50 bg-background/50 shadow-none hover:bg-muted/50 transition-colors focus:ring-0 focus:ring-offset-0 px-1.5 sm:px-2.5">
+                          <SelectValue placeholder="None" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl shadow-xl border-border/50 min-w-[100px]">
+                          <SelectItem value="none" className="text-xs cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-1.5">None</SelectItem>
+                          <SelectItem value="value" className="text-xs cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-1.5">Value</SelectItem>
+                          <SelectItem value="label" className="text-xs cursor-pointer rounded-lg hover:bg-muted focus:bg-muted py-1.5">Name</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="w-px h-3.5 sm:h-5 bg-border/60 shrink-0 mx-0.5 sm:mx-1" />
+
+                    {/* Show Labels Toggle */}
+                    <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                      <label htmlFor="show-labels-dock" className="text-[11px] sm:text-xs font-medium cursor-pointer select-none">
+                        Labels
+                      </label>
+                      <Switch
+                        id="show-labels-dock"
+                        checked={showLabels}
+                        disabled={!isExpanded}
+                        onCheckedChange={setShowLabels}
+                        className="scale-80 sm:scale-90 data-[state=checked]:bg-primary shadow-xs origin-center shrink-0"
+                      />
+                    </div>
+
+                    <div className="w-px h-3.5 sm:h-5 bg-border/60 shrink-0 mx-0.5 sm:mx-1" />
+
+                    {/* Show Legend Toggle */}
+                    <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                      <label htmlFor="show-legend-dock" className="text-[11px] sm:text-xs font-medium cursor-pointer select-none">
+                        Legend
+                      </label>
+                      <Switch
+                        id="show-legend-dock"
+                        checked={showLegend}
+                        disabled={!isExpanded}
+                        onCheckedChange={setShowLegend}
+                        className="scale-80 sm:scale-90 data-[state=checked]:bg-primary shadow-xs origin-center shrink-0"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Edit Data / Hide Data Button Pill with smooth scale/width collapse */}
+                <div 
+                  className={`transition-[max-width,opacity,transform,margin] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] transform-gpu ${
+                    isExpanded 
+                      ? "max-w-[180px] opacity-100 scale-100 ml-1.5 sm:ml-2 pointer-events-auto overflow-visible" 
+                      : "max-w-0 opacity-0 scale-75 ml-0 pointer-events-none select-none overflow-hidden"
+                  }`}
+                  aria-hidden={!isExpanded}
+                >
+                  <Button 
+                    size="default" 
+                    disabled={!isExpanded}
+                    className={`rounded-full shadow-lg h-11 sm:h-12 px-2.5 sm:px-5 gap-1.5 sm:gap-2 font-medium text-xs sm:text-sm whitespace-nowrap transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5 active:scale-95 shrink-0 ${
+                      isDockOpen 
+                        ? "bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-secondary/15" 
+                        : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/15"
+                    }`}
+                    onClick={() => setIsDockOpen(!isDockOpen)}
+                  >
+                    {isDockOpen ? (
+                      <>
+                        <ChevronDown className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" /> 
+                        <span className="hidden min-[385px]:inline">Hide Data</span>
+                        <span className="inline min-[385px]:hidden">Hide</span>
+                      </>
+                    ) : (
+                      <>
+                        <Database className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" /> 
+                        <span className="hidden min-[385px]:inline">Edit Data</span>
+                        <span className="inline min-[385px]:hidden">Data</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
-
-              <div className="hidden sm:block w-px h-6 bg-border/50" />
-
-              {/* Show Labels Toggle */}
-              <div className="flex items-center gap-2.5 justify-between sm:justify-center w-[160px] sm:w-auto">
-                <label htmlFor="show-labels-dock" className="text-sm font-medium cursor-pointer select-none">
-                  Labels
-                </label>
-                <Switch
-                  id="show-labels-dock"
-                  checked={showLabels}
-                  onCheckedChange={setShowLabels}
-                  className="data-[state=checked]:bg-primary shadow-sm"
-                />
-              </div>
-
-              <div className="hidden sm:block w-px h-6 bg-border/50" />
-
-              {/* Show Legend Toggle */}
-              <div className="flex items-center gap-2.5 justify-between sm:justify-center w-[160px] sm:w-auto">
-                <label htmlFor="show-legend-dock" className="text-sm font-medium cursor-pointer select-none">
-                  Legend
-                </label>
-                <Switch
-                  id="show-legend-dock"
-                  checked={showLegend}
-                  onCheckedChange={setShowLegend}
-                  className="data-[state=checked]:bg-primary shadow-sm"
-                />
-              </div>
-            </div>
-            
-            <Button 
-              size="lg" 
-              className={`rounded-full shadow-xl h-14 px-6 gap-2 font-medium text-base transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 active:scale-95 ${
-                isDockOpen ? "bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-secondary/20" : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/20"
-              }`}
-              onClick={() => setIsDockOpen(!isDockOpen)}
-            >
-              {isDockOpen ? (
-                <>
-                  <ChevronDown className="w-5 h-5" /> Hide Data
-                </>
-              ) : (
-                <>
-                  <Database className="w-5 h-5" /> Edit Data
-                </>
-              )}
-            </Button>
-          </div>
+            );
+          })()}
         </div>
+      )}
 
         {/* --- Charts Section --- */}
         <div className={`space-y-6 ${showLabels ? 'fast-chart-labels-visible' : 'fast-chart-labels-hidden'}`}>
@@ -542,7 +661,7 @@ export default function DataVisualizer() {
               onFullscreen={() => openFullscreen("pie")}
             >
               <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
-                <PieChart data={sortedData} total={total} containerRef={pieCardRef as React.RefObject<HTMLDivElement>} showFactText={showFactText} factIndex={pieFactIndex} onFactIndexChange={setPieFactIndex} />
+                <PieChart data={sortedData} total={total} containerRef={pieCardRef as React.RefObject<HTMLDivElement>} showLegend={showLegend} showFactText={showFactText} factIndex={pieFactIndex} onFactIndexChange={setPieFactIndex} />
               </div>
             </ChartCard>
           </div>
@@ -585,7 +704,7 @@ export default function DataVisualizer() {
               }
             >
               <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
-                <StackedChart data={sortedData} isHorizontal={stackedHorizontal} containerRef={stackedCardRef as React.Ref<HTMLDivElement>} showLabels={showLabels} showRadial={stackedRadial} showFactText={showRadialFactText} factIndex={radialFactIndex} onFactIndexChange={setRadialFactIndex} />
+                <StackedChart data={sortedData} isHorizontal={stackedHorizontal} containerRef={stackedCardRef as React.Ref<HTMLDivElement>} showLabels={showLabels} showRadial={stackedRadial} showLegend={showLegend} showFactText={showRadialFactText} factIndex={radialFactIndex} onFactIndexChange={setRadialFactIndex} />
               </div>
             </ChartCard>
 
@@ -698,7 +817,9 @@ export default function DataVisualizer() {
         isHorizontal={barHorizontal}
         onToggleOrientation={() => setBarHorizontal(!barHorizontal)}
       >
-        <BarChart containerRef={fsRef} data={sortedData} isHorizontal={barHorizontal} showLabels={showLabels} />
+        {fullscreenChart === "bar" && (
+          <BarChart containerRef={fsRef} data={sortedData} isHorizontal={barHorizontal} showLabels={showLabels} />
+        )}
       </FullscreenModal>
 
       <FullscreenModal showLabels={showLabels}
@@ -733,7 +854,7 @@ export default function DataVisualizer() {
       >
         {fullscreenChart === "pie" && (
           <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
-            <PieChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} total={total} showFactText={showFactText} isFullscreen={fullscreenChart === "pie"} factIndex={pieFactIndex} onFactIndexChange={setPieFactIndex} />
+            <PieChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} total={total} showLegend={showLegend} showFactText={showFactText} isFullscreen={fullscreenChart === "pie"} factIndex={pieFactIndex} onFactIndexChange={setPieFactIndex} />
           </div>
         )}
       </FullscreenModal>
@@ -773,9 +894,11 @@ export default function DataVisualizer() {
           </div>
         }
       >
-        <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
-          <StackedChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} isHorizontal={stackedHorizontal} showLabels={showLabels} showRadial={stackedRadial} isFullscreen={fullscreenChart === "stacked"} showFactText={showRadialFactText} factIndex={radialFactIndex} onFactIndexChange={setRadialFactIndex} />
-        </div>
+        {fullscreenChart === "stacked" && (
+          <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
+            <StackedChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} isHorizontal={stackedHorizontal} showLabels={showLabels} showRadial={stackedRadial} isFullscreen={fullscreenChart === "stacked"} showLegend={showLegend} showFactText={showRadialFactText} factIndex={radialFactIndex} onFactIndexChange={setRadialFactIndex} />
+          </div>
+        )}
       </FullscreenModal>
 
       <FullscreenModal showLabels={showLabels}
@@ -830,7 +953,9 @@ export default function DataVisualizer() {
           </div>
         }
       >
-        <LineChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} showLabels={showLabels} showGradientArea={showGradientArea} lineColor={lineColor} />
+        {fullscreenChart === "line" && (
+          <LineChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} showLabels={showLabels} showGradientArea={showGradientArea} lineColor={lineColor} />
+        )}
       </FullscreenModal>
     </>
   );
