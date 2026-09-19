@@ -232,7 +232,6 @@ export default function DataVisualizer() {
 
   // --- 9. Click outside dock handler ---
   const dockRef = useRef<HTMLDivElement>(null);
-  const paperPanelRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -249,11 +248,7 @@ export default function DataVisualizer() {
         return;
       }
 
-      if (
-        isDockOpen && 
-        dockRef.current && !dockRef.current.contains(target) &&
-        paperPanelRef.current && !paperPanelRef.current.contains(target)
-      ) {
+      if (isDockOpen && dockRef.current && !dockRef.current.contains(target)) {
         setIsDockOpen(false);
       }
     };
@@ -265,12 +260,10 @@ export default function DataVisualizer() {
     };
 
     if (isDockOpen) {
-      document.body.style.overflow = "hidden";
       document.addEventListener("mousedown", handleClickOutside, true);
       document.addEventListener("keydown", handleEscapeDock);
     }
     return () => {
-      document.body.style.overflow = "unset";
       document.removeEventListener("mousedown", handleClickOutside, true);
       document.removeEventListener("keydown", handleEscapeDock);
     };
@@ -325,138 +318,6 @@ export default function DataVisualizer() {
     <>
       <div className="p-4 pb-28 sm:pb-36 space-y-6" data-testid="data-visualizer">
 
-        {/* Backdrop for open Data Manager with smooth fade in / fade out */}
-        <div 
-          className={`fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-sm z-[60] transition-opacity duration-300 ease-out cursor-pointer ${
-            isDockOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-          }`}
-          onClick={() => setIsDockOpen(false)}
-          aria-hidden={!isDockOpen}
-        />
-
-        {/* --- Data Manager Modal (Paper Panel) --- */}
-        {!fullscreenChart && (
-          <div 
-            ref={paperPanelRef}
-            className={`fixed bottom-[72px] sm:bottom-[84px] left-1/2 -translate-x-1/2 z-[70] w-[95vw] sm:w-[85vw] md:w-[800px] h-[75vh] max-h-[calc(100vh-100px)] bg-background dark:bg-[#121214] shadow-2xl border border-border/80 rounded-2xl overflow-hidden transition-[transform,opacity,visibility] duration-250 ease-out origin-bottom flex flex-col transform-gpu isolate ${
-              isDockOpen 
-                ? "pointer-events-auto opacity-100 translate-y-0 scale-100 visible" 
-                : "pointer-events-none opacity-0 translate-y-4 scale-[0.97] select-none invisible"
-            }`}
-          >
-            <div className="flex items-center justify-between p-4 border-b bg-muted/40">
-              <h2 className="font-semibold text-lg flex items-center gap-2">
-                <Database className="w-5 h-5 text-primary" /> Data Manager
-              </h2>
-              <Button variant="ghost" size="icon" onClick={() => setIsDockOpen(false)} className="rounded-full h-8 w-8 hover:bg-muted">
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-6">
-              {/* Data Table */}
-              <div className="rounded-xl border bg-card p-4 sm:p-5 shadow-sm">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
-                  <h3 className="text-base font-medium flex items-center gap-2">
-                    Data Table {sortConfig && <span className="text-xs text-primary font-normal bg-primary/10 px-2 py-0.5 rounded-full">Sorted</span>}
-                  </h3>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="text-sm font-medium text-muted-foreground mr-1">Total: {total.toLocaleString()}</div>
-                    <Button variant="outline" size="sm" className="h-8" onClick={exportToCSV}>CSV</Button>
-                    <Button variant="outline" size="sm" className="h-8" onClick={exportToMarkdown}>MD</Button>
-                    <Button variant="default" size="sm" className="h-8 shadow-sm" onClick={addRow}>Add Row</Button>
-                  </div>
-                </div>
-                <div className="overflow-x-auto rounded-lg border bg-background/50">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="text-left py-3 px-3 min-w-[160px] font-medium text-muted-foreground">
-                          <button
-                            className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
-                            onClick={() => requestSort("label")}
-                          >
-                            Label
-                            {sortConfig?.key === "label" && (
-                              <span className="text-primary">{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
-                            )}
-                            {!sortConfig && <span className="text-[10px] uppercase tracking-wider ml-1 opacity-60">(Drag)</span>}
-                          </button>
-                        </th>
-                        <th className="text-left py-3 px-3 min-w-[120px] font-medium text-muted-foreground">
-                          <button
-                            className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
-                            onClick={() => requestSort("value")}
-                          >
-                            Value
-                            {sortConfig?.key === "value" && (
-                              <span className="text-primary">{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
-                            )}
-                          </button>
-                        </th>
-                        <th className="text-left py-3 px-3 min-w-[120px] font-medium text-muted-foreground">Color</th>
-                        <th className="text-left py-3 px-3 w-[100px] font-medium text-muted-foreground">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                        <SortableContext items={data.map((d) => d.id)} strategy={verticalListSortingStrategy}>
-                          {sortedData.map((row) => (
-                            <SortableRow
-                              key={row.id}
-                              row={row}
-                              onUpdateLabel={updateLabel}
-                              onUpdateValue={updateValue}
-                              onUpdateColor={updateColor}
-                              onRemove={removeRow}
-                              presetColors={PRESET_COLORS}
-                            />
-                          ))}
-                        </SortableContext>
-                      </DndContext>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Markdown Input */}
-              <div className="rounded-xl border bg-card p-4 sm:p-5 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-base font-medium">Paste Data</h3>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="h-8 gap-1.5 shadow-sm hover:bg-muted/50"
-                    onClick={() => {
-                      navigator.clipboard.writeText(markdownInput);
-                      toast.success("Data copied to clipboard!", { duration: 900 });
-                    }}
-                  >
-                    <Copy className="w-3.5 h-3.5" /> 
-                    <span className="hidden sm:inline">Copy Data</span>
-                  </Button>
-                </div>
-                <div className="grid grid-cols-1 gap-4">
-                  <textarea
-                    className="min-h-[140px] w-full rounded-xl border bg-background/50 px-4 py-3 font-mono text-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary focus-visible:outline-none resize-y placeholder:text-muted-foreground/50 transition-shadow"
-                    aria-label="Paste CSV or Markdown data"
-                    placeholder="Paste your data here (CSV or Markdown Table)..."
-                    value={markdownInput}
-                    onChange={(e) => setMarkdownInput(e.target.value)}
-                  />
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                    <Button onClick={transformData} className="w-full sm:w-auto shadow-sm">Transform to Table</Button>
-                    <div className="flex gap-2 w-full sm:w-auto">
-                      <Button variant="secondary" size="sm" className="flex-1 sm:flex-none" onClick={() => loadExample("csv")}>CSV Example</Button>
-                      <Button variant="secondary" size="sm" className="flex-1 sm:flex-none" onClick={() => loadExample("markdown")}>MD Example</Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* --- Data Input Section (Float Dock) --- */}
         {!fullscreenChart && (
           <div 
@@ -474,6 +335,126 @@ export default function DataVisualizer() {
                 : "translate-y-0 opacity-100 scale-100"
             }`}
           >
+            {/* Paper Panel (Data Manager) - Smooth Accordion Rise matching dev/stable */}
+            <div 
+              className={`pointer-events-auto bg-background dark:bg-[#121214] shadow-2xl rounded-2xl overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] origin-bottom flex flex-col transform-gpu isolate ${
+                isDockOpen 
+                  ? "w-[95vw] sm:w-[85vw] md:w-[800px] h-[75vh] max-h-[calc(100vh-120px)] opacity-100 mb-3 sm:mb-4 scale-100 border border-border/80" 
+                  : "w-0 h-0 opacity-0 mb-0 scale-95 border-0 pointer-events-none select-none"
+              }`}
+            >
+              <div className="flex items-center justify-between p-4 border-b bg-muted/40">
+                <h2 className="font-semibold text-lg flex items-center gap-2">
+                  <Database className="w-5 h-5 text-primary" /> Data Manager
+                </h2>
+                <Button variant="ghost" size="icon" onClick={() => setIsDockOpen(false)} className="rounded-full h-8 w-8 hover:bg-muted">
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-6">
+                {/* Data Table */}
+                <div className="rounded-xl border bg-card p-4 sm:p-5 shadow-sm">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+                    <h3 className="text-base font-medium flex items-center gap-2">
+                      Data Table {sortConfig && <span className="text-xs text-primary font-normal bg-primary/10 px-2 py-0.5 rounded-full">Sorted</span>}
+                    </h3>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="text-sm font-medium text-muted-foreground mr-1">Total: {total.toLocaleString()}</div>
+                      <Button variant="outline" size="sm" className="h-8" onClick={exportToCSV}>CSV</Button>
+                      <Button variant="outline" size="sm" className="h-8" onClick={exportToMarkdown}>MD</Button>
+                      <Button variant="default" size="sm" className="h-8 shadow-sm" onClick={addRow}>Add Row</Button>
+                    </div>
+                  </div>
+                  <div className="overflow-x-auto rounded-lg border bg-background/50">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b bg-muted/50">
+                          <th className="text-left py-3 px-3 min-w-[160px] font-medium text-muted-foreground">
+                            <button
+                              className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+                              onClick={() => requestSort("label")}
+                            >
+                              Label
+                              {sortConfig?.key === "label" && (
+                                <span className="text-primary">{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
+                              )}
+                              {!sortConfig && <span className="text-[10px] uppercase tracking-wider ml-1 opacity-60">(Drag)</span>}
+                            </button>
+                          </th>
+                          <th className="text-left py-3 px-3 min-w-[120px] font-medium text-muted-foreground">
+                            <button
+                              className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+                              onClick={() => requestSort("value")}
+                            >
+                              Value
+                              {sortConfig?.key === "value" && (
+                                <span className="text-primary">{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
+                              )}
+                            </button>
+                          </th>
+                          <th className="text-left py-3 px-3 min-w-[120px] font-medium text-muted-foreground">Color</th>
+                          <th className="text-left py-3 px-3 w-[100px] font-medium text-muted-foreground">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                          <SortableContext items={data.map((d) => d.id)} strategy={verticalListSortingStrategy}>
+                            {sortedData.map((row) => (
+                              <SortableRow
+                                key={row.id}
+                                row={row}
+                                onUpdateLabel={updateLabel}
+                                onUpdateValue={updateValue}
+                                onUpdateColor={updateColor}
+                                onRemove={removeRow}
+                                presetColors={PRESET_COLORS}
+                              />
+                            ))}
+                          </SortableContext>
+                        </DndContext>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Markdown Input */}
+                <div className="rounded-xl border bg-card p-4 sm:p-5 shadow-sm">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-base font-medium">Paste Data</h3>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-8 gap-1.5 shadow-sm hover:bg-muted/50"
+                      onClick={() => {
+                        navigator.clipboard.writeText(markdownInput);
+                        toast.success("Data copied to clipboard!", { duration: 900 });
+                      }}
+                    >
+                      <Copy className="w-3.5 h-3.5" /> 
+                      <span className="hidden sm:inline">Copy Data</span>
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4">
+                    <textarea
+                      className="min-h-[140px] w-full rounded-xl border bg-background/50 px-4 py-3 font-mono text-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary focus-visible:outline-none resize-y placeholder:text-muted-foreground/50 transition-shadow"
+                      aria-label="Paste CSV or Markdown data"
+                      placeholder="Paste your data here (CSV or Markdown Table)..."
+                      value={markdownInput}
+                      onChange={(e) => setMarkdownInput(e.target.value)}
+                    />
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                      <Button onClick={transformData} className="w-full sm:w-auto shadow-sm">Transform to Table</Button>
+                      <div className="flex gap-2 w-full sm:w-auto">
+                        <Button variant="secondary" size="sm" className="flex-1 sm:flex-none" onClick={() => loadExample("csv")}>CSV Example</Button>
+                        <Button variant="secondary" size="sm" className="flex-1 sm:flex-none" onClick={() => loadExample("markdown")}>MD Example</Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Dock Controls Container with Smooth Morphing Transition */}
             {(() => {
             const isExpanded = !isDockMinimized || isDockOpen;
@@ -516,7 +497,7 @@ export default function DataVisualizer() {
                   className={`relative flex items-center justify-center bg-background/90 dark:bg-background/80 backdrop-blur-xl shadow-lg border border-border/60 h-11 sm:h-12 rounded-full overflow-hidden transition-[width,padding] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] transform-gpu isolate ${
                     !isExpanded
                       ? "w-[145px] sm:w-[168px] px-3 sm:px-4 cursor-pointer hover:shadow-xl hover:bg-background active:scale-95 pointer-events-auto" 
-                      : "w-[240px] sm:w-[382px] px-2 sm:px-4 hover:shadow-xl pointer-events-auto"
+                      : "w-[246px] sm:w-[382px] px-2 sm:px-4 hover:shadow-xl pointer-events-auto"
                   }`}
                   onClick={!isExpanded ? () => setIsDockMinimized(false) : undefined}
                   role={!isExpanded ? "button" : undefined}
@@ -540,7 +521,7 @@ export default function DataVisualizer() {
 
                   {/* Expanded Controls: Sort + Labels + Legend */}
                   <div 
-                    className={`flex items-center gap-1 sm:gap-2.5 w-[240px] sm:w-[382px] shrink-0 justify-between transition-[opacity,transform] duration-200 transform-gpu whitespace-nowrap px-0.5 sm:px-0 ${
+                    className={`flex items-center gap-1 sm:gap-2.5 w-[246px] sm:w-[382px] shrink-0 justify-between transition-[opacity,transform] duration-200 transform-gpu whitespace-nowrap px-0.5 sm:px-0 ${
                       isExpanded
                         ? "opacity-100 scale-100 pointer-events-auto delay-75 ease-out" 
                         : "opacity-0 scale-95 pointer-events-none duration-100 ease-in"
@@ -548,25 +529,24 @@ export default function DataVisualizer() {
                     aria-hidden={!isExpanded}
                   >
                     {/* Sort Controls */}
-                    <div className="flex items-center gap-0.5 sm:gap-1.5">
+                    <div className="flex items-center gap-1 sm:gap-1.5">
                       <button
                         type="button"
                         onClick={() => {
                           if (sortConfig) {
                             setSortConfig({ ...sortConfig, direction: sortConfig.direction === "asc" ? "desc" : "asc" });
+                          } else {
+                            setSortConfig({ key: "value", direction: "desc" });
                           }
                         }}
-                        disabled={!sortConfig || !isExpanded}
-                        className={`flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full transition-colors ${
-                          sortConfig 
-                            ? "hover:bg-muted/80 text-foreground cursor-pointer border border-border/40 shadow-xs" 
-                            : "text-muted-foreground opacity-40 cursor-default"
-                        }`}
-                        title={sortConfig ? `Switch to ${sortConfig.direction === 'asc' ? 'descending' : 'ascending'}` : "Select a sort method first"}
+                        disabled={!isExpanded}
+                        className="flex items-center justify-center w-7 h-7 rounded-full transition-colors hover:bg-muted/80 text-foreground cursor-pointer border border-border/40 shadow-xs active:scale-95 shrink-0"
+                        title={sortConfig ? `Switch to ${sortConfig.direction === 'asc' ? 'descending' : 'ascending'}` : "Click to sort by Value"}
+                        aria-label="Sort direction"
                       >
-                        {!sortConfig && <ArrowUpDown className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
-                        {sortConfig?.direction === "asc" && <ArrowUp className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
-                        {sortConfig?.direction === "desc" && <ArrowDown className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
+                        {!sortConfig && <ArrowUpDown className="w-3.5 h-3.5" />}
+                        {sortConfig?.direction === "asc" && <ArrowUp className="w-3.5 h-3.5" />}
+                        {sortConfig?.direction === "desc" && <ArrowDown className="w-3.5 h-3.5" />}
                       </button>
                       <button
                         type="button"
@@ -594,7 +574,7 @@ export default function DataVisualizer() {
                           if (val === "label") setSortConfig({ key: "label", direction: "asc" });
                         }}
                       >
-                        <SelectTrigger className="h-6 sm:h-7 w-[60px] sm:w-[78px] rounded-full text-[11px] sm:text-xs font-medium border-border/50 bg-background/50 shadow-none hover:bg-muted/50 transition-colors focus:ring-0 focus:ring-offset-0 px-1 sm:px-2.5">
+                        <SelectTrigger className="h-7 w-[64px] sm:w-[78px] rounded-full text-[11px] sm:text-xs font-medium border-border/50 bg-background/50 shadow-none hover:bg-muted/50 transition-colors focus:ring-0 focus:ring-offset-0 px-1.5 sm:px-2.5">
                           <SelectValue placeholder="None" />
                         </SelectTrigger>
                         <SelectContent className="rounded-xl shadow-xl border-border/50 min-w-[100px]">
