@@ -336,7 +336,7 @@ export default function DataVisualizer() {
               setIsDockVisible(true);
             }}
             onMouseLeave={() => setIsDockHovered(false)}
-            className={`fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center pointer-events-none transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] transform-gpu group/dock ${
+            className={`fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center pointer-events-none transition-[transform,opacity] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] transform-gpu group/dock ${
               !isDockVisible && !isDockOpen 
                 ? "translate-y-36 opacity-0 scale-95 pointer-events-none select-none" 
                 : "translate-y-0 opacity-100 scale-100"
@@ -466,23 +466,19 @@ export default function DataVisualizer() {
           {(() => {
             const isExpanded = !isDockMinimized || isDockOpen;
             return (
-              <div className="relative flex flex-col items-center w-full">
+              <div className="relative flex flex-col items-center">
                 {/* Minimized Dock Trigger */}
                 <div 
                   className={`transform-gpu ${
                     !isExpanded
-                      ? "relative opacity-100 scale-100 translate-y-0 pointer-events-auto transition-all duration-300 delay-75 ease-[cubic-bezier(0.16,1,0.3,1)]" 
-                      : "absolute bottom-0 left-1/2 -translate-x-1/2 opacity-0 scale-90 translate-y-2 pointer-events-none select-none transition-all duration-150 ease-out"
+                      ? "relative opacity-100 pointer-events-auto transition-opacity duration-200 delay-50 ease-out" 
+                      : "absolute bottom-0 left-1/2 -translate-x-1/2 opacity-0 pointer-events-none select-none transition-opacity duration-150 ease-out"
                   }`}
                   aria-hidden={isExpanded}
                 >
                   <button 
                     type="button"
-                    className={`flex items-center gap-2.5 bg-background/90 dark:bg-background/80 backdrop-blur-xl border border-border/60 h-11 px-4 rounded-full transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] cursor-pointer text-xs sm:text-sm font-medium text-foreground select-none active:scale-95 ${
-                      isDockHovered
-                        ? "opacity-100 shadow-xl"
-                        : "opacity-75 shadow-md group-hover/dock:opacity-100 group-hover/dock:shadow-xl group-focus-within/dock:opacity-100"
-                    }`}
+                    className="flex items-center gap-2.5 bg-background/90 dark:bg-background/80 backdrop-blur-xl border border-border/60 h-11 px-4 rounded-full transition-colors duration-200 cursor-pointer text-xs sm:text-sm font-medium text-foreground select-none active:scale-95 shadow-md hover:shadow-lg hover:bg-background"
                     onClick={() => setIsDockMinimized(false)}
                     disabled={isExpanded}
                     title="Expand dock controls"
@@ -498,8 +494,8 @@ export default function DataVisualizer() {
                 <div 
                   className={`flex flex-col items-center max-w-[95vw] transform-gpu ${
                     isExpanded
-                      ? "relative opacity-100 scale-100 translate-y-0 pointer-events-auto transition-all duration-300 delay-75 ease-[cubic-bezier(0.16,1,0.3,1)]" 
-                      : "absolute bottom-0 left-1/2 -translate-x-1/2 opacity-0 scale-90 translate-y-2 pointer-events-none select-none transition-all duration-150 ease-out"
+                      ? "relative opacity-100 pointer-events-auto transition-opacity duration-200 delay-50 ease-out" 
+                      : "absolute bottom-0 left-1/2 -translate-x-1/2 opacity-0 pointer-events-none select-none transition-opacity duration-150 ease-out"
                   }`}
                   aria-hidden={!isExpanded}
                 >
@@ -509,14 +505,14 @@ export default function DataVisualizer() {
                       type="button"
                       onClick={() => setIsDockMinimized(true)}
                       disabled={!isExpanded}
-                      className={`flex items-center justify-center w-12 sm:w-14 h-7 sm:h-8 rounded-full bg-background/90 dark:bg-background/80 backdrop-blur-xl border border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] transform-gpu active:scale-95 cursor-pointer origin-center ${
+                      className={`flex items-center justify-center w-12 sm:w-14 h-7 sm:h-8 rounded-full bg-background/90 dark:bg-background/80 backdrop-blur-xl border border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-all duration-200 transform-gpu active:scale-95 cursor-pointer origin-center ${
                         isExpanded 
-                          ? `pointer-events-auto delay-75 ${
+                          ? `pointer-events-auto ${
                               isDockHovered 
                                 ? "opacity-100 scale-100 shadow-md" 
                                 : "opacity-40 scale-75 shadow-none group-hover/dock:opacity-100 group-hover/dock:scale-100 group-hover/dock:shadow-md group-focus-within/dock:opacity-100 group-focus-within/dock:scale-100"
                             }` 
-                          : "opacity-0 scale-50 translate-y-3 pointer-events-none"
+                          : "opacity-0 scale-0 pointer-events-none"
                       }`}
                       title="Minimize dock"
                       aria-label="Minimize dock"
@@ -525,7 +521,7 @@ export default function DataVisualizer() {
                     </button>
                   </div>
 
-                  <div className={`flex items-center justify-center gap-2 transition-opacity duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                  <div className={`flex items-center justify-center gap-2 transition-opacity duration-200 ${
                     isExpanded ? "pointer-events-auto" : "pointer-events-none"
                   } ${
                     isDockHovered || isDockOpen
