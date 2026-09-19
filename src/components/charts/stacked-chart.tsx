@@ -14,7 +14,6 @@ import {
   PolarAngleAxis,
   Label as RechartsLabel
 } from "recharts"
-import { ChevronLeft, ChevronRight } from "lucide-react"
 import {
   ChartContainer,
   type ChartConfig,
@@ -528,28 +527,32 @@ export const StackedChart = React.memo(function StackedChart({
                       }
                     }
 
-                    const handlePrev = (e: any) => { 
-                      e.stopPropagation(); 
-                      if (onFactIndexChange) onFactIndexChange(((factIndex || 0) - 1 + 3) % 3);
-                    };
-                    const handleNext = (e: any) => { 
+                    const handleNext = (e: React.MouseEvent) => { 
                       e.stopPropagation(); 
                       if (onFactIndexChange) onFactIndexChange(((factIndex || 0) + 1) % 3);
                     };
                     
                     // Radial chart is a half circle ending at cy. All content must sit ABOVE cy.
-                    // We use fixed Y coordinates so the text and arrows don't jiggle when toggling
+                    // We use fixed Y coordinates so the text doesn't jiggle when toggling
                     const labelY = cy - (4 * scaleFactor);
                     const valueY = labelY - labelSize - (4 * scaleFactor);
                     const titleY = valueY - (textSize * 0.8) - (4 * scaleFactor);
                     
-                    // Compute the visual center of the text block to perfectly align the arrows
-                    const textCenterY = (titleY - titleSize + labelY) / 2;
-                    const arrowY = textCenterY - 16;
-                    
                     return (
-                      <g className="group" style={{ pointerEvents: 'all' }}>
-                        <text x={cx} y={cy} textAnchor="middle">
+                      <g 
+                        className="group cursor-pointer select-none transition-opacity hover:opacity-80" 
+                        style={{ pointerEvents: 'all' }}
+                        onClick={handleNext}
+                      >
+                        <rect 
+                          x={cx - innerRadius} 
+                          y={cy - innerRadius} 
+                          width={innerRadius * 2} 
+                          height={innerRadius} 
+                          fill="transparent" 
+                          style={{ cursor: 'pointer' }} 
+                        />
+                        <text x={cx} y={cy} textAnchor="middle" className="pointer-events-none select-none">
                           <tspan
                             x={cx}
                             y={titleY}
@@ -574,35 +577,6 @@ export const StackedChart = React.memo(function StackedChart({
                             </tspan>
                           )}
                         </text>
-                        {showFactText && (
-                          <g>
-                            <svg 
-                              x={cx - innerRadius + (isFullscreen ? 60 : 35)} 
-                              y={arrowY} 
-                              width={32} height={32} 
-                              onClick={handlePrev} 
-                              className="opacity-0 group-hover:opacity-100 cursor-pointer pointer-events-auto text-muted-foreground transition-opacity"
-                              color="currentColor"
-                              data-hide-on-copy="true"
-                            >
-                              <rect width="32" height="32" fill="transparent" />
-                              <ChevronLeft x={4} y={4} width={24} height={24} strokeWidth={2.5} />
-                            </svg>
-
-                            <svg 
-                              x={cx + innerRadius - 32 - (isFullscreen ? 60 : 35)} 
-                              y={arrowY} 
-                              width={32} height={32} 
-                              onClick={handleNext} 
-                              className="opacity-0 group-hover:opacity-100 cursor-pointer pointer-events-auto text-muted-foreground transition-opacity"
-                              color="currentColor"
-                              data-hide-on-copy="true"
-                            >
-                              <rect width="32" height="32" fill="transparent" />
-                              <ChevronRight x={4} y={4} width={24} height={24} strokeWidth={2.5} />
-                            </svg>
-                          </g>
-                        )}
                       </g>
                     )
                   }
