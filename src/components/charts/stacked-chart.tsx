@@ -28,10 +28,10 @@ export interface StackedChartProps {
   showLabels?: boolean
   showRadial?: boolean
   isFullscreen?: boolean
+  showLegend?: boolean
   showFactText?: boolean
   factIndex?: number
   onFactIndexChange?: (index: number) => void
-  
 }
 
 interface StackedTooltipProps {
@@ -167,10 +167,10 @@ export const StackedChart = React.memo(function StackedChart({
   showLabels = false,
   showRadial = false,
   isFullscreen = false,
+  showLegend = true,
   showFactText = false,
   factIndex = 0,
   onFactIndexChange,
-  
 }: StackedChartProps) {
 
   const [isDark, setIsDark] = React.useState(false);
@@ -332,7 +332,7 @@ export const StackedChart = React.memo(function StackedChart({
   }, [data, dimensions, isFullscreen, totalValue]);
 
   const renderSvgLegend = (isStandalone = false) => {
-    if (!dimensions.width || !dimensions.height || legendRows.length === 0) return null;
+    if (!showLegend || !dimensions.width || !dimensions.height || legendRows.length === 0) return null;
 
     const { fontSize, rectSize, gap, spacingY } = legendConfig;
     const textColor = isDark ? "#e4e4e7" : "#3f3f46"; 
@@ -383,21 +383,22 @@ export const StackedChart = React.memo(function StackedChart({
     const baseWidth = dimensions.width || (isFullscreen ? 800 : 400);
     const baseHeight = dimensions.height || (isFullscreen ? 500 : 384);
     
-    const legendBottomMargin = 8;
-    const legendStartY = Math.max(
-      120,
-      baseHeight - legendHeight - legendBottomMargin
-    );
+    const legendBottomMargin = showLegend ? 8 : 0;
+    const legendStartY = showLegend
+      ? Math.max(120, baseHeight - legendHeight - legendBottomMargin)
+      : baseHeight;
 
     // Radial semi-circle ends at cy. All content (arc, text, arrows) sits strictly ABOVE cy.
     // Ensure safe area padding and clean spacing between radialCy and legendStartY
-    const radialGap = legendRows.length > 0 ? (isFullscreen ? 40 : 32) : 0;
-    const radialCy = Math.max(120, legendStartY - radialGap);
+    const radialGap = showLegend && legendRows.length > 0 ? (isFullscreen ? 40 : 32) : 0;
+    const radialCy = showLegend
+      ? Math.max(120, legendStartY - radialGap)
+      : Math.max(160, baseHeight - (isFullscreen ? 36 : 24));
     
     // Give proper headroom above the radial arc so it breathes comfortably
     const topHeadroom = isFullscreen ? 50 : 35;
-    const availableRadiusW = (baseWidth / 2) * 0.82; 
-    const availableRadiusH = Math.max(60, (radialCy - topHeadroom) * 0.88); 
+    const availableRadiusW = (baseWidth / 2) * (showLegend ? 0.82 : 0.85); 
+    const availableRadiusH = Math.max(60, (radialCy - topHeadroom) * (showLegend ? 0.88 : 0.92)); 
     const maxRadius = Math.min(availableRadiusW, availableRadiusH);
     
     const outerRadius = Math.max(65, isFullscreen ? maxRadius * 0.95 : maxRadius);
@@ -568,6 +569,8 @@ export const StackedChart = React.memo(function StackedChart({
     )
   }
 
+  const chartBottomMargin = showLegend ? (legendHeight + (legendRows.length > 0 ? 16 : 10)) : 10;
+
   // Horizontal mode: bars grow to the right
   if (isHorizontal) {
     return (
@@ -578,7 +581,7 @@ export const StackedChart = React.memo(function StackedChart({
             data={stackedData}
             stackOffset="expand"
             layout="vertical"
-            margin={{ top: 5, right: 15, bottom: legendHeight + (legendRows.length > 0 ? 16 : 10), left: 5 }}
+            margin={{ top: 5, right: 15, bottom: chartBottomMargin, left: 5 }}
           >
             <CartesianGrid className="stroke-border opacity-80" strokeDasharray="4 4" />
             <YAxis
@@ -631,7 +634,7 @@ export const StackedChart = React.memo(function StackedChart({
           data={stackedData}
           stackOffset="expand"
           layout="horizontal"
-          margin={{ top: 5, right: 15, bottom: legendHeight + (legendRows.length > 0 ? 16 : 10), left: 5 }}
+          margin={{ top: 5, right: 15, bottom: chartBottomMargin, left: 5 }}
         >
           <CartesianGrid className="stroke-border opacity-80" strokeDasharray="4 4" />
           <XAxis
@@ -680,6 +683,7 @@ export const StackedChart = React.memo(function StackedChart({
     prevProps.showLabels === nextProps.showLabels &&
     prevProps.showRadial === nextProps.showRadial &&
     prevProps.isFullscreen === nextProps.isFullscreen &&
+    prevProps.showLegend === nextProps.showLegend &&
     prevProps.showFactText === nextProps.showFactText &&
     prevProps.factIndex === nextProps.factIndex &&
     prevProps.data.length === nextProps.data.length &&

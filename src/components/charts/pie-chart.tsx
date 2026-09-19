@@ -9,7 +9,7 @@ export interface PieChartProps {
   total: number;
   containerRef?: React.Ref<HTMLDivElement>;
   isFullscreen?: boolean;
-  
+  showLegend?: boolean;
   showFactText?: boolean;
   factIndex?: number;
   onFactIndexChange?: (index: number) => void;
@@ -271,7 +271,7 @@ const InnerRechartsPie = React.memo(({
 });
 
 export const PieChart = React.memo(function PieChart({ data, total, containerRef, isFullscreen = false,  
-  
+  showLegend = true,
   showFactText = false,
   factIndex = 0,
   onFactIndexChange,
@@ -426,15 +426,15 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
   }, [data, chartWidth, totalHeight, isFullscreen, total]);
 
   // Bottom padding and startY for legend
-  const legendBottomMargin = 8;
-  const legendTopPadding = legendRows.length > 0 ? 14 : 0;
-  const legendStartY = Math.max(
-    140,
-    totalHeight - legendHeight - legendBottomMargin
-  );
+  const effectiveLegendHeight = showLegend ? legendHeight : 0;
+  const legendBottomMargin = showLegend ? 8 : 0;
+  const legendTopPadding = (showLegend && legendRows.length > 0) ? 14 : 0;
+  const legendStartY = showLegend
+    ? Math.max(140, totalHeight - effectiveLegendHeight - legendBottomMargin)
+    : totalHeight;
 
   // Available vertical space for the pie and labels strictly above the legend
-  const availablePieHeight = legendStartY - legendTopPadding;
+  const availablePieHeight = showLegend ? (legendStartY - legendTopPadding) : totalHeight;
   const pieCy = Math.round(availablePieHeight / 2);
 
   // Callout box dimensions and offsets
@@ -448,7 +448,9 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
   const maxRadiusVertical = Math.max(35, Math.min(pieCy - 10, (availablePieHeight - pieCy) - 8) - verticalAllowance);
   const maxRadiusHorizontal = Math.max(35, (chartWidth / 2) - basePushX - boxWidth - 10);
 
-  const baseIdealRadius = isFullscreen ? Math.min(chartWidth, totalHeight) * 0.26 : 85;
+  const baseIdealRadius = isFullscreen 
+    ? Math.min(chartWidth, totalHeight) * (showLegend ? 0.26 : 0.32)
+    : (showLegend ? 85 : Math.min(chartWidth, totalHeight) * 0.30);
   const outerRadius = Math.max(45, Math.min(baseIdealRadius, maxRadiusVertical, maxRadiusHorizontal));
   const innerRadius = Math.round(outerRadius * (isFullscreen ? 0.62 : 0.60));
 
@@ -588,7 +590,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
     resolveOverlap(rightList);
 
     return map;
-  }, [chartWidth, data, total, top4Ids, lastOtherId, outerRadius, pieCy, isFullscreen, legendStartY, basePushX, basePushY, boxWidth, boxHeight]);
+  }, [chartWidth, data, total, top4Ids, lastOtherId, outerRadius, pieCy, isFullscreen, legendStartY, showLegend, basePushX, basePushY, boxWidth, boxHeight]);
 
   const renderCustomLabel = React.useCallback((props: any) => {
     let { x, y, cx, cy, name, value, percent, payload } = props;
@@ -626,7 +628,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
       const finalY = y + (isTop ? -basePushY : basePushY);
       fx = isLeft ? finalX - boxWidth : finalX;
       fy = finalY - boxHeight / 2;
-      const maxAllowedY = legendStartY - boxHeight - 8;
+      const maxAllowedY = (showLegend ? legendStartY : totalHeight) - boxHeight - 8;
       fx = Math.max(8, Math.min(fx, chartWidth - boxWidth - 8));
       fy = Math.max(8, Math.min(fy, maxAllowedY));
     }
@@ -640,6 +642,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
 
     return (
       <g 
+        key={`custom-label-${datumId}`}
         className="chart-global-label"
         style={{ 
           overflow: 'visible',
@@ -698,10 +701,10 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
         </text>
       </g>
     );
-  }, [boxPositionsMap, basePushX, basePushY, boxWidth, boxHeight, legendStartY, chartWidth, isFullscreen, isDark, bgColor, borderColor, textMainColor, textColor, top4Ids, lastOtherId, otherSum, total]);
+  }, [boxPositionsMap, basePushX, basePushY, boxWidth, boxHeight, legendStartY, showLegend, totalHeight, chartWidth, isFullscreen, isDark, bgColor, borderColor, textMainColor, textColor, top4Ids, lastOtherId, otherSum, total]);
 
   const renderSvgLegend = React.useCallback(() => {
-    if (!chartWidth || !totalHeight || legendRows.length === 0) return null;
+    if (!showLegend || !chartWidth || !totalHeight || legendRows.length === 0) return null;
 
     const { fontSize, rectSize, gap, spacingY } = legendConfig;
     const startY = legendStartY;
@@ -743,7 +746,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
         })}
       </g>
     );
-  }, [chartWidth, totalHeight, legendRows, legendHeight, legendConfig, legendStartY, textMainColor, total]);
+  }, [showLegend, chartWidth, totalHeight, legendRows, legendHeight, legendConfig, legendStartY, textMainColor, total]);
 
   return (
     <div ref={setRefs} className="flex h-full w-full items-center justify-center flex-col overflow-hidden">
@@ -784,6 +787,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
 }, (prevProps, nextProps) => {
   return (
     prevProps.isFullscreen === nextProps.isFullscreen &&
+    prevProps.showLegend === nextProps.showLegend &&
     prevProps.total === nextProps.total &&
     prevProps.data.length === nextProps.data.length &&
     prevProps.data.every((item, idx) => 
