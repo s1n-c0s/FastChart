@@ -38,8 +38,14 @@ export function useCharts() {
         }
 
         // Resolve CSS-variable-based colors & fonts into absolute values.
-        if (cs.fill) (el as SVGElement).setAttribute('fill', cs.fill);
-        if (cs.stroke) (el as SVGElement).setAttribute('stroke', cs.stroke);
+        if (cs.fill) {
+          (el as SVGElement).setAttribute('fill', cs.fill);
+          (el as SVGElement).style.fill = cs.fill;
+        }
+        if (cs.stroke) {
+          (el as SVGElement).setAttribute('stroke', cs.stroke);
+          (el as SVGElement).style.stroke = cs.stroke;
+        }
         if (cs.strokeWidth) (el as SVGElement).setAttribute('stroke-width', cs.strokeWidth);
         if (cs.strokeDasharray) (el as SVGElement).setAttribute('stroke-dasharray', cs.strokeDasharray);
         if (cs.strokeOpacity && cs.strokeOpacity !== '1') (el as SVGElement).setAttribute('stroke-opacity', cs.strokeOpacity);
@@ -220,6 +226,31 @@ export function useCharts() {
         containerEl.insertBefore(titleEl, containerEl.firstChild);
       }
 
+      // Explicitly inline computed styles on text/labels & grid lines for accurate PNG rendering
+      const textNodes = Array.from(containerEl.querySelectorAll('text, tspan, .chart-global-label, .recharts-cartesian-axis-tick text'));
+      const origTextStyles = textNodes.map((node) => {
+        const svgEl = node as SVGElement;
+        const cs = window.getComputedStyle(svgEl);
+        const originalFill = svgEl.getAttribute("fill");
+        const originalColor = svgEl.style.color;
+        const originalFillStyle = svgEl.style.fill;
+
+        if (cs.fill && cs.fill !== "none") {
+          svgEl.setAttribute("fill", cs.fill);
+          svgEl.style.fill = cs.fill;
+        }
+        if (cs.color) {
+          svgEl.style.color = cs.color;
+        }
+
+        return {
+          el: svgEl,
+          fill: originalFill,
+          color: originalColor,
+          fillStyle: originalFillStyle,
+        };
+      });
+
       // Explicitly inline computed stroke & opacity on CartesianGrid lines for PNG rendering
       const gridLines = Array.from(containerEl.querySelectorAll('.recharts-cartesian-grid line, .recharts-cartesian-grid-horizontal line, .recharts-cartesian-grid-vertical line'));
       const origLineStyles = gridLines.map((line) => {
@@ -251,6 +282,14 @@ export function useCharts() {
         filter: (node) => {
           return node.getAttribute ? node.getAttribute("data-hide-on-copy") !== "true" : true;
         }
+      });
+
+      // Restore inline styles on text/labels
+      origTextStyles.forEach(({ el, fill, color, fillStyle }) => {
+        if (fill !== null) el.setAttribute("fill", fill);
+        else el.removeAttribute("fill");
+        el.style.color = color;
+        el.style.fill = fillStyle;
       });
 
       // Restore inline styles on grid lines
