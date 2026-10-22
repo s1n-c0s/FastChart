@@ -189,7 +189,7 @@ export function useCharts() {
       const xml = new XMLSerializer().serializeToString(cloneTemp);
       await navigator.clipboard.writeText(xml);
       toast.success("SVG Copied to Clipboard!", {
-        duration: 850,
+        duration: 1500,
         style: {
           background: "#0EC04F",
           color: "#ffffff",
@@ -328,7 +328,13 @@ export function useCharts() {
           await navigator.clipboard.write([
             new ClipboardItem({ "image/png": blob })
           ]);
-          toast.success("PNG Copied to Clipboard!");
+          toast.success("PNG Copied to Clipboard!", {
+            duration: 1500,
+            style: {
+              background: "#0EC04F",
+              color: "#ffffff",
+            },
+          });
         } else {
           throw new Error("Unable to create image blob");
         }
@@ -387,7 +393,11 @@ export function useCharts() {
       await navigator.clipboard.writeText(iframeCode);
       
       toast.success("Embed Code Copied!", {
-        duration: 850,
+        duration: 1500,
+        style: {
+          background: "#0EC04F",
+          color: "#ffffff",
+        },
       });
     } catch {
       toast.error("Failed to copy embed code.");

@@ -147,7 +147,7 @@ export default function DataVisualizer() {
     const rows = parseMarkdownTable(markdownInput);
     if (rows.length) {
       setData(() => rows);
-      toast.success("Data transformed successfully!", { duration: 900 });
+      toast.success("Data transformed successfully!", { duration: 1500 });
     } else {
       toast.error("Error: Invalid data format or no data found.");
     }
@@ -159,7 +159,7 @@ export default function DataVisualizer() {
       markdown: "| Label | Value | Color |\n|------:|------:|:-----:|\n| A     | 12    | #3b82f6 |\n| B     | 30    | #22c55e |\n| C     | 18    | #ef4444 |"
     };
     setMarkdownInput(examples[type]);
-    toast.success(`${type.toUpperCase()} Example loaded!`, { duration: 900 });
+    toast.success(`${type.toUpperCase()} Example loaded!`, { duration: 1500 });
   }, []);
 
   const exportToMarkdown = useCallback(() => {
@@ -168,7 +168,7 @@ export default function DataVisualizer() {
     const rows = sortedData.map(d => `| ${d.label} | ${d.value} | ${d.color} |`).join("\n");
     const markdown = `${header}\n${separator}\n${rows}`;
     setMarkdownInput(markdown);
-    toast.success("Data exported to Markdown!", { duration: 900 });
+    toast.success("Data exported to Markdown!", { duration: 1500 });
   }, [sortedData]);
 
   const exportToCSV = useCallback(() => {
@@ -176,7 +176,7 @@ export default function DataVisualizer() {
     const rows = sortedData.map(d => `${d.label},${d.value},${d.color}`).join("\n");
     const csv = `${header}\n${rows}`;
     setMarkdownInput(csv);
-    toast.success("Data exported to CSV!", { duration: 900 });
+    toast.success("Data exported to CSV!", { duration: 1500 });
   }, [sortedData]);
 
   const addRow = useCallback(() => {
@@ -190,7 +190,7 @@ export default function DataVisualizer() {
         color: PRESET_COLORS[nextIndex % PRESET_COLORS.length],
       },
     ]);
-    toast.success("Row added!", { duration: 900 });
+    toast.success("Row added!", { duration: 1500 });
   }, [data.length, setData]);
 
   // --- 7. Drag and Drop Sensors ---
@@ -433,7 +433,7 @@ export default function DataVisualizer() {
                       className="h-8 gap-1.5 shadow-sm hover:bg-muted/50"
                       onClick={() => {
                         navigator.clipboard.writeText(markdownInput);
-                        toast.success("Data copied to clipboard!", { duration: 900 });
+                        toast.success("Data copied to clipboard!", { duration: 1500 });
                       }}
                     >
                       <Copy className="w-3.5 h-3.5" /> 
