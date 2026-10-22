@@ -47,6 +47,7 @@ export default function EmbedChart() {
           <PieChart 
             data={data} 
             total={total} 
+            showLabels={options.showLabels}
             showLegend={options.showLegend !== false}
             showFactText={options.showFactText} 
             factIndex={pieFactIndex}

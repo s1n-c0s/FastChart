@@ -27,12 +27,21 @@ export function useCharts() {
       const allTempElements = cloneTemp.querySelectorAll('*');
       const origTempElements = svg.querySelectorAll('*');
 
+      const isLabelsHidden = Boolean(containerEl?.closest('.fast-chart-labels-hidden'));
+      const isLegendHidden = Boolean(containerEl?.closest('.fast-chart-legend-hidden'));
+
       allTempElements.forEach((el, index) => {
         const origEl = origTempElements[index] as Element;
         if (!origEl) return;
         const cs = window.getComputedStyle(origEl);
 
-        if (cs.opacity === '0' || cs.display === 'none' || cs.visibility === 'hidden') {
+        if (
+          cs.opacity === '0' || 
+          cs.display === 'none' || 
+          cs.visibility === 'hidden' ||
+          (isLabelsHidden && (origEl.classList?.contains('chart-global-label') || origEl.closest?.('.chart-global-label'))) ||
+          (isLegendHidden && (origEl.classList?.contains('svg-legend') || origEl.closest?.('.svg-legend')))
+        ) {
           (el as SVGElement).setAttribute('data-hide-on-copy', 'true');
           return;
         }
@@ -226,8 +235,20 @@ export function useCharts() {
         containerEl.insertBefore(titleEl, containerEl.firstChild);
       }
 
+      const isLabelsHidden = Boolean(containerEl.closest('.fast-chart-labels-hidden'));
+      const isLegendHidden = Boolean(containerEl.closest('.fast-chart-legend-hidden'));
+
       // Explicitly inline computed styles on text/labels & grid lines for accurate PNG rendering
-      const textNodes = Array.from(containerEl.querySelectorAll('text, tspan, .chart-global-label, .recharts-cartesian-axis-tick text'));
+      const textNodes = Array.from(containerEl.querySelectorAll('text, tspan, .chart-global-label, .recharts-cartesian-axis-tick text'))
+        .filter((node) => {
+          if (isLabelsHidden && (node.classList?.contains("chart-global-label") || node.closest?.(".chart-global-label"))) {
+            return false;
+          }
+          if (isLegendHidden && (node.classList?.contains("svg-legend") || node.closest?.(".svg-legend"))) {
+            return false;
+          }
+          return true;
+        });
       const origTextStyles = textNodes.map((node) => {
         const svgEl = node as SVGElement;
         const cs = window.getComputedStyle(svgEl);
@@ -279,8 +300,16 @@ export function useCharts() {
       const blob = await htmlToImage.toBlob(containerEl, {
         backgroundColor: undefined, // Transparent
         pixelRatio: 2, // High resolution
-        filter: (node) => {
-          return node.getAttribute ? node.getAttribute("data-hide-on-copy") !== "true" : true;
+        filter: (node: any) => {
+          if (!node) return true;
+          if (node.getAttribute && node.getAttribute("data-hide-on-copy") === "true") return false;
+          if (isLabelsHidden && (node.classList?.contains("chart-global-label") || node.closest?.(".chart-global-label"))) {
+            return false;
+          }
+          if (isLegendHidden && (node.classList?.contains("svg-legend") || node.closest?.(".svg-legend"))) {
+            return false;
+          }
+          return true;
         }
       });
 

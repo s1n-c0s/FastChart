@@ -724,7 +724,7 @@ export default function DataVisualizer() {
               onFullscreen={() => openFullscreen("pie")}
             >
               <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
-                <PieChart data={sortedData} total={total} containerRef={pieCardRef as React.RefObject<HTMLDivElement>} showLegend={showLegend} showFactText={showFactText} factIndex={pieFactIndex} onFactIndexChange={setPieFactIndex} />
+                <PieChart data={sortedData} total={total} containerRef={pieCardRef as React.RefObject<HTMLDivElement>} showLabels={showLabels} showLegend={showLegend} showFactText={showFactText} factIndex={pieFactIndex} onFactIndexChange={setPieFactIndex} />
               </div>
             </ChartCard>
           </div>
@@ -921,7 +921,7 @@ export default function DataVisualizer() {
       >
         {fullscreenChart === "pie" && (
           <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
-            <PieChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} total={total} showLegend={showLegend} showFactText={showFactText} isFullscreen={fullscreenChart === "pie"} factIndex={pieFactIndex} onFactIndexChange={setPieFactIndex} />
+            <PieChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} total={total} showLabels={showLabels} showLegend={showLegend} showFactText={showFactText} isFullscreen={fullscreenChart === "pie"} factIndex={pieFactIndex} onFactIndexChange={setPieFactIndex} />
           </div>
         )}
       </FullscreenModal>
