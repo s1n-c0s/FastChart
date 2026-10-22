@@ -122,8 +122,8 @@ export function ChartCard({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-2 mb-4">
-        <div className="flex items-center gap-2 max-w-full sm:max-w-[50%]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           {onCopyHtml && (
             <Button
               size="sm"
@@ -135,9 +135,10 @@ export function ChartCard({
               <Code className="w-4 h-4" />
             </Button>
           )}
+
           {showTitle && (
             isEditingTitle ? (
-              <div className="flex items-center gap-1.5 min-w-0">
+              <div className="flex items-center gap-1.5 min-w-0 flex-1 max-w-md">
                 <input
                   ref={inputRef}
                   type="text"
@@ -145,17 +146,22 @@ export function ChartCard({
                   onChange={(e) => setCurrentTitle(e.target.value)}
                   onBlur={handleFinishEditing}
                   onKeyDown={handleKeyDown}
-                  className="text-lg font-semibold bg-muted/60 px-2 py-0.5 rounded border border-primary/50 outline-none w-full min-w-[120px]"
+                  className="text-lg font-semibold bg-muted/70 px-2.5 py-0.5 rounded-md border border-primary outline-none ring-2 ring-primary/20 w-full"
                   aria-label="Edit chart title"
+                  onClick={(e) => e.stopPropagation()}
                 />
               </div>
             ) : (
               <div 
-                className={`group/title flex items-center gap-1.5 min-w-0 ${onTitleChange ? "cursor-pointer" : ""}`}
+                className={`group/title flex items-center gap-2 min-w-0 py-0.5 px-1.5 -ml-1.5 rounded-md transition-colors ${
+                  onTitleChange ? "cursor-pointer hover:bg-muted/50" : ""
+                }`}
                 onClick={onTitleChange ? () => setIsEditingTitle(true) : undefined}
                 title={onTitleChange ? "Click to edit title" : undefined}
               >
-                <h3 className="text-lg font-semibold truncate">{currentTitle}</h3>
+                <h3 className="text-lg font-semibold tracking-tight text-foreground truncate select-none">
+                  {currentTitle}
+                </h3>
                 {onTitleChange && (
                   <Pencil className="w-3.5 h-3.5 text-muted-foreground/60 opacity-0 group-hover/title:opacity-100 transition-opacity shrink-0" />
                 )}
@@ -163,7 +169,8 @@ export function ChartCard({
             )
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           {customActions}
           {showOrientation && (
             <Button
