@@ -22,8 +22,6 @@ export function useCharts() {
       const svg = containerEl?.querySelector("svg.recharts-surface") as SVGSVGElement | null;
       if (!svg) return;
 
-      const isDark = document.documentElement.classList.contains("dark");
-
       // Clone once — we only use this single clone for the final output.
       const cloneTemp = svg.cloneNode(true) as SVGSVGElement;
       const allTempElements = cloneTemp.querySelectorAll('*');
@@ -40,21 +38,9 @@ export function useCharts() {
         }
 
         // Resolve CSS-variable-based colors & fonts into absolute values.
-        // Special case: don't overwrite fill on elements using url(#gradientId) or gradient definitions
-        const currentFillAttr = (el as SVGElement).getAttribute("fill") || "";
-        const isGradientElement = currentFillAttr.startsWith("url(") || el.tagName.toLowerCase() === "stop" || el.tagName.toLowerCase() === "lineargradient";
-
-        if (cs.fill && !isGradientElement) {
-          let resolvedSvgFill = cs.fill;
-          if (!isDark && (resolvedSvgFill === "rgb(255, 255, 255)" || resolvedSvgFill === "#ffffff") && (el.tagName.toLowerCase() === "text" || el.tagName.toLowerCase() === "tspan")) {
-            resolvedSvgFill = "#111827";
-          }
-          (el as SVGElement).setAttribute('fill', resolvedSvgFill);
-          (el as SVGElement).style.fill = resolvedSvgFill;
-        }
-        if (el.tagName.toLowerCase() === "stop") {
-          if (cs.stopColor) (el as SVGElement).setAttribute('stop-color', cs.stopColor);
-          if (cs.stopOpacity) (el as SVGElement).setAttribute('stop-opacity', cs.stopOpacity);
+        if (cs.fill) {
+          (el as SVGElement).setAttribute('fill', cs.fill);
+          (el as SVGElement).style.fill = cs.fill;
         }
         if (cs.stroke) {
           (el as SVGElement).setAttribute('stroke', cs.stroke);
@@ -241,9 +227,6 @@ export function useCharts() {
       }
 
       // Explicitly inline computed styles on text/labels & grid lines for accurate PNG rendering
-      const isDark = document.documentElement.classList.contains("dark");
-      const defaultTextColor = isDark ? "#f3f4f6" : "#111827";
-
       const textNodes = Array.from(containerEl.querySelectorAll('text, tspan, .chart-global-label, .recharts-cartesian-axis-tick text'));
       const origTextStyles = textNodes.map((node) => {
         const svgEl = node as SVGElement;
@@ -252,17 +235,13 @@ export function useCharts() {
         const originalColor = svgEl.style.color;
         const originalFillStyle = svgEl.style.fill;
 
-        let resolvedFill = cs.fill;
-        // Fix for "out of ink" / white text issue: if fill is transparent/none or evaluates to white on a light theme
-        if (!resolvedFill || resolvedFill === "none" || resolvedFill === "rgba(0, 0, 0, 0)" || (!isDark && (resolvedFill === "rgb(255, 255, 255)" || resolvedFill === "#ffffff"))) {
-          resolvedFill = cs.color && cs.color !== "rgba(0, 0, 0, 0)" && cs.color !== "none" && (!isDark ? cs.color !== "rgb(255, 255, 255)" : true)
-            ? cs.color 
-            : defaultTextColor;
+        if (cs.fill && cs.fill !== "none") {
+          svgEl.setAttribute("fill", cs.fill);
+          svgEl.style.fill = cs.fill;
         }
-
-        svgEl.setAttribute("fill", resolvedFill);
-        svgEl.style.fill = resolvedFill;
-        svgEl.style.color = resolvedFill;
+        if (cs.color) {
+          svgEl.style.color = cs.color;
+        }
 
         return {
           el: svgEl,
@@ -272,111 +251,89 @@ export function useCharts() {
         };
       });
 
-      // Hide CartesianGrid during PNG capture so transparent export is clean without "out of ink" streaks
-      const gridElements = Array.from(
-        containerEl.querySelectorAll('.recharts-cartesian-grid, .recharts-cartesian-grid-horizontal, .recharts-cartesian-grid-vertical')
-      );
-      const origGridStyles = gridElements.map((el) => {
-        const svgEl = el as SVGElement;
-        const origDisplay = svgEl.style.display;
-        svgEl.style.display = "none";
-        return { el: svgEl, display: origDisplay };
-      });
+      // Explicitly inline computed stroke & opacity on CartesianGrid lines for PNG rendering
+      const gridLines = Array.from(containerEl.querySelectorAll('.recharts-cartesian-grid line, .recharts-cartesian-grid-horizontal line, .recharts-cartesian-grid-vertical line'));
+      const origLineStyles = gridLines.map((line) => {
+        const svgLine = line as SVGLineElement;
+        const cs = window.getComputedStyle(svgLine);
+        const originalStroke = svgLine.getAttribute("stroke");
+        const originalStrokeOpacity = svgLine.getAttribute("stroke-opacity");
+        const originalOpacity = svgLine.getAttribute("opacity");
+        const originalStrokeWidth = svgLine.getAttribute("stroke-width");
 
-      // Explicitly inline gradient stops so foreignObject rasterizer doesn't band/posterize colors
-      const stopNodes = Array.from(containerEl.querySelectorAll('linearGradient stop, defs stop'));
-      const origStopStyles = stopNodes.map((stop) => {
-        const stopEl = stop as SVGStopElement;
-        const cs = window.getComputedStyle(stopEl);
-        const origStopColor = stopEl.getAttribute("stop-color");
-        const origStopOpacity = stopEl.getAttribute("stop-opacity");
-        const origColorStyle = stopEl.style.stopColor;
-        const origOpacityStyle = stopEl.style.stopOpacity;
-
-        const resolvedColor = stopEl.style.stopColor || origStopColor || cs.stopColor || "";
-        const resolvedOpacity = stopEl.style.stopOpacity || origStopOpacity || cs.stopOpacity || "";
-
-        if (resolvedColor) {
-          stopEl.setAttribute("stop-color", resolvedColor);
-          stopEl.style.stopColor = resolvedColor;
-        }
-        if (resolvedOpacity) {
-          stopEl.setAttribute("stop-opacity", resolvedOpacity);
-          stopEl.style.stopOpacity = resolvedOpacity;
-        }
+        if (cs.stroke) svgLine.setAttribute("stroke", cs.stroke);
+        if (cs.strokeOpacity) svgLine.setAttribute("stroke-opacity", cs.strokeOpacity);
+        if (cs.opacity) svgLine.setAttribute("opacity", cs.opacity);
+        if (cs.strokeWidth) svgLine.setAttribute("stroke-width", cs.strokeWidth);
 
         return {
-          el: stopEl,
-          color: origStopColor,
-          opacity: origStopOpacity,
-          colorStyle: origColorStyle,
-          opacityStyle: origOpacityStyle,
+          el: svgLine,
+          stroke: originalStroke,
+          strokeOpacity: originalStrokeOpacity,
+          opacity: originalOpacity,
+          strokeWidth: originalStrokeWidth,
         };
       });
 
-      try {
-        // Convert directly into PNG blob with transparent background
-        const blob = await htmlToImage.toBlob(containerEl, {
-          backgroundColor: undefined, // Transparent
-          pixelRatio: 3, // Ultra-high 3x resolution for smooth gradients without color banding
-          filter: (node) => {
-            return node.getAttribute ? node.getAttribute("data-hide-on-copy") !== "true" : true;
-          }
-        });
-
-        if (blob) {
-          await navigator.clipboard.write([
-            new ClipboardItem({ "image/png": blob })
-          ]);
-          toast.success("PNG Copied to Clipboard!", {
-            duration: 1500,
-            style: {
-              background: "#0EC04F",
-              color: "#ffffff",
-            },
-          });
-        } else {
-          throw new Error("Unable to create image blob");
+      // Convert directly into PNG blob with transparent background
+      const blob = await htmlToImage.toBlob(containerEl, {
+        backgroundColor: undefined, // Transparent
+        pixelRatio: 2, // High resolution
+        filter: (node) => {
+          return node.getAttribute ? node.getAttribute("data-hide-on-copy") !== "true" : true;
         }
-      } finally {
-        // Restore inline styles on gradient stops
-        origStopStyles.forEach(({ el, color, opacity, colorStyle, opacityStyle }) => {
-          if (color !== null) el.setAttribute("stop-color", color);
-          else el.removeAttribute("stop-color");
+      });
 
-          if (opacity !== null) el.setAttribute("stop-opacity", opacity);
-          else el.removeAttribute("stop-opacity");
+      // Restore inline styles on text/labels
+      origTextStyles.forEach(({ el, fill, color, fillStyle }) => {
+        if (fill !== null) el.setAttribute("fill", fill);
+        else el.removeAttribute("fill");
+        el.style.color = color;
+        el.style.fill = fillStyle;
+      });
 
-          el.style.stopColor = colorStyle;
-          el.style.stopOpacity = opacityStyle;
-        });
+      // Restore inline styles on grid lines
+      origLineStyles.forEach(({ el, stroke, strokeOpacity, opacity, strokeWidth }) => {
+        if (stroke !== null) el.setAttribute("stroke", stroke);
+        else el.removeAttribute("stroke");
 
-        // Restore inline styles on text/labels
-        origTextStyles.forEach(({ el, fill, color, fillStyle }) => {
-          if (fill !== null) el.setAttribute("fill", fill);
-          else el.removeAttribute("fill");
-          el.style.color = color;
-          el.style.fill = fillStyle;
-        });
+        if (strokeOpacity !== null) el.setAttribute("stroke-opacity", strokeOpacity);
+        else el.removeAttribute("stroke-opacity");
 
-        // Restore grid elements display
-        origGridStyles.forEach(({ el, display }) => {
-          el.style.display = display;
-        });
+        if (opacity !== null) el.setAttribute("opacity", opacity);
+        else el.removeAttribute("opacity");
 
-        // Restore container element
-        if (titleEl && titleEl.parentNode) {
-          titleEl.parentNode.removeChild(titleEl);
+        if (strokeWidth !== null) el.setAttribute("stroke-width", strokeWidth);
+        else el.removeAttribute("stroke-width");
+      });
+
+      // Restore container element
+      if (titleEl && titleEl.parentNode) {
+        titleEl.parentNode.removeChild(titleEl);
+      }
+      if (hasTitle) {
+        containerEl.style.overflow = origOverflow;
+        containerEl.style.height = origHeight;
+      }
+      hiddenElements.forEach((el, index) => {
+        if (parents[index]) {
+          parents[index]?.insertBefore(el, nextSiblings[index]);
         }
-        if (hasTitle) {
-          containerEl.style.overflow = origOverflow;
-          containerEl.style.height = origHeight;
-        }
-        hiddenElements.forEach((el, index) => {
-          if (parents[index]) {
-            parents[index]?.insertBefore(el, nextSiblings[index]);
-          }
+      });
+
+      if (blob) {
+        await navigator.clipboard.write([
+          new ClipboardItem({ "image/png": blob })
+        ]);
+        toast.success("PNG Copied to Clipboard!", {
+          duration: 1500,
+          style: {
+            background: "#0EC04F",
+            color: "#ffffff",
+          },
         });
+      } else {
+        throw new Error("Unable to create image blob");
       }
     } catch (error: any) {
       console.error("Failed to copy PNG:", error);
