@@ -71,7 +71,7 @@ export default function DataVisualizer() {
   const [showRadialFactText, setShowRadialFactText] = useState(true);
   const [showGradientArea, setShowGradientArea] = useState(true);
   const [lineColor, setLineColor] = useState<string | undefined>(undefined);
-  const [showTitle, setShowTitle] = useState(true);
+  const [showTitle, setShowTitle] = useState(false);
   const [chartTitle, setChartTitle] = useState("Chart Overview");
   const [isDockOpen, setIsDockOpen] = useState(false);
   const [isDockHovered, setIsDockHovered] = useState(false);

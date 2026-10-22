@@ -21,7 +21,7 @@ interface ChartCardProps {
 
 export function ChartCard({
   title,
-  showTitle = true,
+  showTitle = false,
   onTitleChange,
   chartRef,
   onCopySvg,
