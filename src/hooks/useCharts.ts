@@ -14,7 +14,7 @@ export function useCharts() {
   const stackedCardRef = useRef<HTMLDivElement>(null);
   const lineCardRef = useRef<HTMLDivElement>(null);
 
-  const copyChartSvg = useCallback(async (containerEl: HTMLElement | null) => {
+  const copyChartSvg = useCallback(async (containerEl: HTMLElement | null, chartTitle?: string) => {
     try {
       // Short pause so the chart (including axis labels after a toggle) finishes layout.
       await new Promise(res => setTimeout(res, 80));
@@ -27,19 +27,38 @@ export function useCharts() {
       const allTempElements = cloneTemp.querySelectorAll('*');
       const origTempElements = svg.querySelectorAll('*');
 
+      const isLabelsHidden = Boolean(containerEl?.closest('.fast-chart-labels-hidden'));
+      const isLegendHidden = Boolean(containerEl?.closest('.fast-chart-legend-hidden'));
+
       allTempElements.forEach((el, index) => {
         const origEl = origTempElements[index] as Element;
         if (!origEl) return;
         const cs = window.getComputedStyle(origEl);
 
-        if (cs.opacity === '0' || cs.display === 'none' || cs.visibility === 'hidden') {
+        if (
+          cs.opacity === '0' || 
+          cs.display === 'none' || 
+          cs.visibility === 'hidden' ||
+          (isLabelsHidden && (origEl.classList?.contains('chart-global-label') || origEl.closest?.('.chart-global-label'))) ||
+          (isLegendHidden && (origEl.classList?.contains('svg-legend') || origEl.closest?.('.svg-legend')))
+        ) {
           (el as SVGElement).setAttribute('data-hide-on-copy', 'true');
           return;
         }
 
         // Resolve CSS-variable-based colors & fonts into absolute values.
-        if (cs.fill) (el as SVGElement).setAttribute('fill', cs.fill);
-        if (cs.stroke) (el as SVGElement).setAttribute('stroke', cs.stroke);
+        if (cs.fill) {
+          (el as SVGElement).setAttribute('fill', cs.fill);
+          (el as SVGElement).style.fill = cs.fill;
+        }
+        if (cs.stroke) {
+          (el as SVGElement).setAttribute('stroke', cs.stroke);
+          (el as SVGElement).style.stroke = cs.stroke;
+        }
+        if (cs.strokeWidth) (el as SVGElement).setAttribute('stroke-width', cs.strokeWidth);
+        if (cs.strokeDasharray) (el as SVGElement).setAttribute('stroke-dasharray', cs.strokeDasharray);
+        if (cs.strokeOpacity && cs.strokeOpacity !== '1') (el as SVGElement).setAttribute('stroke-opacity', cs.strokeOpacity);
+        if (cs.opacity && cs.opacity !== '1') (el as SVGElement).setAttribute('opacity', cs.opacity);
         if (cs.color) {
           (el as SVGElement).setAttribute('color', cs.color);
           (el as SVGElement).style.color = cs.color;
@@ -74,6 +93,61 @@ export function useCharts() {
         const overlayClone = factOverlayEl.cloneNode(true) as SVGSVGElement;
         overlayClone.querySelectorAll('[data-hide-on-copy="true"]').forEach((el: Element) => el.remove());
         cloneTemp.innerHTML += overlayClone.innerHTML;
+      }
+
+      // If title is provided, prepend a title banner and expand the top of the SVG cleanly
+      if (chartTitle && chartTitle.trim()) {
+        const titleHeight = 44;
+        const currentViewBox = cloneTemp.getAttribute("viewBox");
+        const svgRect = svg.getBoundingClientRect();
+        const baseWidth = svgRect.width || parseFloat(cloneTemp.getAttribute("width") || "500");
+        const baseHeight = svgRect.height || parseFloat(cloneTemp.getAttribute("height") || "384");
+
+        // Wrap existing content in a <g> translated down
+        const contentGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        contentGroup.setAttribute("transform", `translate(0, ${titleHeight})`);
+        while (cloneTemp.firstChild) {
+          contentGroup.appendChild(cloneTemp.firstChild);
+        }
+
+        // Adjust viewBox or width/height
+        if (currentViewBox) {
+          const [vx, vy, vw, vh] = currentViewBox.split(/[\s,]+/).map(Number);
+          if (!isNaN(vx) && !isNaN(vy) && !isNaN(vw) && !isNaN(vh)) {
+            cloneTemp.setAttribute("viewBox", `${vx} ${vy} ${vw} ${vh + titleHeight}`);
+          }
+        } else {
+          cloneTemp.setAttribute("viewBox", `0 0 ${baseWidth} ${baseHeight + titleHeight}`);
+        }
+
+        if (cloneTemp.hasAttribute("height")) {
+          const origH = parseFloat(cloneTemp.getAttribute("height") || String(baseHeight));
+          cloneTemp.setAttribute("height", String(origH + titleHeight));
+        }
+
+        const isPieChart = Boolean(
+          containerEl?.querySelector('.my-sector, .recharts-pie') || 
+          containerEl?.classList.contains('items-center')
+        );
+
+        const isDark = document.documentElement.classList.contains("dark");
+        const textNode = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        if (isPieChart) {
+          textNode.setAttribute("x", String(baseWidth / 2));
+          textNode.setAttribute("text-anchor", "middle");
+        } else {
+          textNode.setAttribute("x", "16");
+          textNode.setAttribute("text-anchor", "start");
+        }
+        textNode.setAttribute("y", "28");
+        textNode.setAttribute("font-size", "24");
+        textNode.setAttribute("font-weight", "600");
+        textNode.setAttribute("font-family", window.getComputedStyle(document.body).fontFamily || "system-ui, sans-serif");
+        textNode.setAttribute("fill", isDark ? "#f3f4f6" : "#111827");
+        textNode.textContent = chartTitle.trim();
+
+        cloneTemp.appendChild(textNode);
+        cloneTemp.appendChild(contentGroup);
       }
 
       // Inject hover-state CSS (useful when pasting into browsers / SVG-aware viewers).
@@ -121,7 +195,7 @@ export function useCharts() {
       const xml = new XMLSerializer().serializeToString(cloneTemp);
       await navigator.clipboard.writeText(xml);
       toast.success("SVG Copied to Clipboard!", {
-        duration: 850,
+        duration: 1500,
         style: {
           background: "#0EC04F",
           color: "#ffffff",
@@ -132,45 +206,188 @@ export function useCharts() {
     }
   }, []);
 
-  const copyChartPng = useCallback(async (containerEl: HTMLElement | null) => {
+  const copyChartPng = useCallback(async (containerEl: HTMLElement | null, chartTitle?: string) => {
     if (!containerEl) return;
     try {
-      // Temporarily remove elements from DOM to guarantee they aren't copied
+      // Short pause so layout/animations settle
+      await new Promise(res => setTimeout(res, 80));
+
+      const hasTitle = Boolean(chartTitle && chartTitle.trim());
+      let titleEl: HTMLDivElement | null = null;
+      let origOverflow: string = "";
+      let origHeight: string = "";
+
+      // Temporarily remove overlay buttons or tooltips marked with data-hide-on-copy
       const hiddenElements = Array.from(containerEl.querySelectorAll('[data-hide-on-copy="true"]'));
       const parents = hiddenElements.map(el => el.parentNode);
       const nextSiblings = hiddenElements.map(el => el.nextSibling);
-      
       hiddenElements.forEach(el => el.remove());
 
-      const cardEl = containerEl.closest('.bg-card') || document.body;
-      const bgColor = window.getComputedStyle(cardEl).backgroundColor;
+      if (hasTitle) {
+        origOverflow = containerEl.style.overflow;
+        origHeight = containerEl.style.height;
 
-      const dataUrl = await htmlToImage.toPng(containerEl, {
-        backgroundColor: bgColor === 'rgba(0, 0, 0, 0)' ? '#ffffff' : bgColor,
+        const currentHeight = containerEl.getBoundingClientRect().height || 384;
+        const titleHeight = 44;
+
+        containerEl.style.overflow = "visible";
+        containerEl.style.height = `${currentHeight + titleHeight}px`;
+
+        const isPieChart = Boolean(
+          containerEl.querySelector('.my-sector, .recharts-pie') || 
+          containerEl.classList.contains('items-center')
+        );
+
+        const isDark = document.documentElement.classList.contains("dark");
+        titleEl = document.createElement("div");
+        titleEl.textContent = chartTitle!.trim();
+        titleEl.style.fontSize = "24px";
+        titleEl.style.fontWeight = "600";
+        titleEl.style.lineHeight = "1.3";
+        titleEl.style.padding = "4px 8px 14px 8px";
+        titleEl.style.color = isDark ? "#f3f4f6" : "#111827";
+        titleEl.style.fontFamily = window.getComputedStyle(document.body).fontFamily || "system-ui, sans-serif";
+
+        if (isPieChart) {
+          titleEl.style.width = "100%";
+          titleEl.style.textAlign = "center";
+        }
+
+        containerEl.insertBefore(titleEl, containerEl.firstChild);
+      }
+
+      const isLabelsHidden = Boolean(containerEl.closest('.fast-chart-labels-hidden'));
+      const isLegendHidden = Boolean(containerEl.closest('.fast-chart-legend-hidden'));
+
+      // Explicitly inline computed styles on text/labels & grid lines for accurate PNG rendering
+      const textNodes = Array.from(containerEl.querySelectorAll('text, tspan, .chart-global-label, .recharts-cartesian-axis-tick text'))
+        .filter((node) => {
+          if (isLabelsHidden && (node.classList?.contains("chart-global-label") || node.closest?.(".chart-global-label"))) {
+            return false;
+          }
+          if (isLegendHidden && (node.classList?.contains("svg-legend") || node.closest?.(".svg-legend"))) {
+            return false;
+          }
+          return true;
+        });
+      const origTextStyles = textNodes.map((node) => {
+        const svgEl = node as SVGElement;
+        const cs = window.getComputedStyle(svgEl);
+        const originalFill = svgEl.getAttribute("fill");
+        const originalColor = svgEl.style.color;
+        const originalFillStyle = svgEl.style.fill;
+
+        if (cs.fill && cs.fill !== "none") {
+          svgEl.setAttribute("fill", cs.fill);
+          svgEl.style.fill = cs.fill;
+        }
+        if (cs.color) {
+          svgEl.style.color = cs.color;
+        }
+
+        return {
+          el: svgEl,
+          fill: originalFill,
+          color: originalColor,
+          fillStyle: originalFillStyle,
+        };
+      });
+
+      // Explicitly inline computed stroke & opacity on CartesianGrid lines for PNG rendering
+      const gridLines = Array.from(containerEl.querySelectorAll('.recharts-cartesian-grid line, .recharts-cartesian-grid-horizontal line, .recharts-cartesian-grid-vertical line'));
+      const origLineStyles = gridLines.map((line) => {
+        const svgLine = line as SVGLineElement;
+        const cs = window.getComputedStyle(svgLine);
+        const originalStroke = svgLine.getAttribute("stroke");
+        const originalStrokeOpacity = svgLine.getAttribute("stroke-opacity");
+        const originalOpacity = svgLine.getAttribute("opacity");
+        const originalStrokeWidth = svgLine.getAttribute("stroke-width");
+
+        if (cs.stroke) svgLine.setAttribute("stroke", cs.stroke);
+        if (cs.strokeOpacity) svgLine.setAttribute("stroke-opacity", cs.strokeOpacity);
+        if (cs.opacity) svgLine.setAttribute("opacity", cs.opacity);
+        if (cs.strokeWidth) svgLine.setAttribute("stroke-width", cs.strokeWidth);
+
+        return {
+          el: svgLine,
+          stroke: originalStroke,
+          strokeOpacity: originalStrokeOpacity,
+          opacity: originalOpacity,
+          strokeWidth: originalStrokeWidth,
+        };
+      });
+
+      // Convert directly into PNG blob with transparent background
+      const blob = await htmlToImage.toBlob(containerEl, {
+        backgroundColor: undefined, // Transparent
         pixelRatio: 2, // High resolution
-        filter: (node) => {
-          return node.getAttribute ? node.getAttribute("data-hide-on-copy") !== "true" : true;
+        filter: (node: any) => {
+          if (!node) return true;
+          if (node.getAttribute && node.getAttribute("data-hide-on-copy") === "true") return false;
+          if (isLabelsHidden && (node.classList?.contains("chart-global-label") || node.closest?.(".chart-global-label"))) {
+            return false;
+          }
+          if (isLegendHidden && (node.classList?.contains("svg-legend") || node.closest?.(".svg-legend"))) {
+            return false;
+          }
+          return true;
         }
       });
-      
-      // Restore elements to the DOM
+
+      // Restore inline styles on text/labels
+      origTextStyles.forEach(({ el, fill, color, fillStyle }) => {
+        if (fill !== null) el.setAttribute("fill", fill);
+        else el.removeAttribute("fill");
+        el.style.color = color;
+        el.style.fill = fillStyle;
+      });
+
+      // Restore inline styles on grid lines
+      origLineStyles.forEach(({ el, stroke, strokeOpacity, opacity, strokeWidth }) => {
+        if (stroke !== null) el.setAttribute("stroke", stroke);
+        else el.removeAttribute("stroke");
+
+        if (strokeOpacity !== null) el.setAttribute("stroke-opacity", strokeOpacity);
+        else el.removeAttribute("stroke-opacity");
+
+        if (opacity !== null) el.setAttribute("opacity", opacity);
+        else el.removeAttribute("opacity");
+
+        if (strokeWidth !== null) el.setAttribute("stroke-width", strokeWidth);
+        else el.removeAttribute("stroke-width");
+      });
+
+      // Restore container element
+      if (titleEl && titleEl.parentNode) {
+        titleEl.parentNode.removeChild(titleEl);
+      }
+      if (hasTitle) {
+        containerEl.style.overflow = origOverflow;
+        containerEl.style.height = origHeight;
+      }
       hiddenElements.forEach((el, index) => {
         if (parents[index]) {
           parents[index]?.insertBefore(el, nextSiblings[index]);
         }
       });
-      
-      const response = await fetch(dataUrl);
-      const blob = await response.blob();
-      
+
       if (blob) {
         await navigator.clipboard.write([
           new ClipboardItem({ "image/png": blob })
         ]);
-        toast.success("PNG Copied to Clipboard!");
+        toast.success("PNG Copied to Clipboard!", {
+          duration: 1500,
+          style: {
+            background: "#0EC04F",
+            color: "#ffffff",
+          },
+        });
+      } else {
+        throw new Error("Unable to create image blob");
       }
-    } catch {
-      toast.error("Failed to copy PNG.");
+    } catch (error: any) {
+      console.error("Failed to copy PNG:", error);
+      toast.error(`Failed to copy PNG: ${error?.message || error}`);
     }
   }, []);
 
@@ -183,7 +400,11 @@ export function useCharts() {
       await navigator.clipboard.writeText(iframeCode);
       
       toast.success("Embed Code Copied!", {
-        duration: 850,
+        duration: 1500,
+        style: {
+          background: "#0EC04F",
+          color: "#ffffff",
+        },
       });
     } catch {
       toast.error("Failed to copy embed code.");

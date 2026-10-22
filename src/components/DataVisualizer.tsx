@@ -33,7 +33,7 @@ import {
   LineChart,
   StackedChart
 } from "../components/charts";
-import { Database, X, ChevronDown, ChevronUp, SlidersHorizontal, Copy, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Database, X, ChevronDown, ChevronUp, SlidersHorizontal, Copy, ArrowUpDown, ArrowUp, ArrowDown, Type } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -71,6 +71,8 @@ export default function DataVisualizer() {
   const [showRadialFactText, setShowRadialFactText] = useState(true);
   const [showGradientArea, setShowGradientArea] = useState(true);
   const [lineColor, setLineColor] = useState<string | undefined>(undefined);
+  const [showTitle, setShowTitle] = useState(false);
+  const [chartTitle, setChartTitle] = useState("Chart Overview");
   const [isDockOpen, setIsDockOpen] = useState(false);
   const [isDockHovered, setIsDockHovered] = useState(false);
   const [isDockMinimized, setIsDockMinimized] = useState(false);
@@ -145,7 +147,7 @@ export default function DataVisualizer() {
     const rows = parseMarkdownTable(markdownInput);
     if (rows.length) {
       setData(() => rows);
-      toast.success("Data transformed successfully!", { duration: 900 });
+      toast.success("Data transformed successfully!", { duration: 1500 });
     } else {
       toast.error("Error: Invalid data format or no data found.");
     }
@@ -157,7 +159,7 @@ export default function DataVisualizer() {
       markdown: "| Label | Value | Color |\n|------:|------:|:-----:|\n| A     | 12    | #3b82f6 |\n| B     | 30    | #22c55e |\n| C     | 18    | #ef4444 |"
     };
     setMarkdownInput(examples[type]);
-    toast.success(`${type.toUpperCase()} Example loaded!`, { duration: 900 });
+    toast.success(`${type.toUpperCase()} Example loaded!`, { duration: 1500 });
   }, []);
 
   const exportToMarkdown = useCallback(() => {
@@ -166,7 +168,7 @@ export default function DataVisualizer() {
     const rows = sortedData.map(d => `| ${d.label} | ${d.value} | ${d.color} |`).join("\n");
     const markdown = `${header}\n${separator}\n${rows}`;
     setMarkdownInput(markdown);
-    toast.success("Data exported to Markdown!", { duration: 900 });
+    toast.success("Data exported to Markdown!", { duration: 1500 });
   }, [sortedData]);
 
   const exportToCSV = useCallback(() => {
@@ -174,7 +176,7 @@ export default function DataVisualizer() {
     const rows = sortedData.map(d => `${d.label},${d.value},${d.color}`).join("\n");
     const csv = `${header}\n${rows}`;
     setMarkdownInput(csv);
-    toast.success("Data exported to CSV!", { duration: 900 });
+    toast.success("Data exported to CSV!", { duration: 1500 });
   }, [sortedData]);
 
   const addRow = useCallback(() => {
@@ -188,7 +190,7 @@ export default function DataVisualizer() {
         color: PRESET_COLORS[nextIndex % PRESET_COLORS.length],
       },
     ]);
-    toast.success("Row added!", { duration: 900 });
+    toast.success("Row added!", { duration: 1500 });
   }, [data.length, setData]);
 
   // --- 7. Drag and Drop Sensors ---
@@ -299,6 +301,63 @@ export default function DataVisualizer() {
               </div>
               
               <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-6">
+                {/* Global Chart Title Setting */}
+                <div 
+                  className={`rounded-xl border bg-card p-4 sm:p-5 shadow-sm space-y-3 transition-colors cursor-pointer ${
+                    showTitle ? "hover:border-primary/40" : "hover:border-primary/50 hover:bg-muted/30"
+                  }`}
+                  onClick={(e) => {
+                    const target = e.target as HTMLElement;
+                    // Don't toggle off if user clicks inside the text input
+                    if (target.closest("input#global-chart-title")) {
+                      return;
+                    }
+                    
+                    const nextState = !showTitle;
+                    setShowTitle(nextState);
+
+                    if (nextState) {
+                      setTimeout(() => {
+                        const input = document.getElementById("global-chart-title") as HTMLInputElement;
+                        if (input) {
+                          input.focus();
+                          input.select();
+                        }
+                      }, 50);
+                    }
+                  }}
+                  title={showTitle ? "Click card header area to deactivate" : "Click anywhere to activate and edit title"}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 select-none">
+                      <Type className="w-4 h-4 text-primary shrink-0" />
+                      <span className="text-base font-medium">Chart Title</span>
+                      <span className="text-xs text-muted-foreground hidden sm:inline">(Applies to all charts)</span>
+                    </div>
+                    <div className="flex items-center gap-2 select-none">
+                      <span className="text-xs font-medium text-muted-foreground">Show Title</span>
+                      <Switch
+                        id="show-title-toggle"
+                        checked={showTitle}
+                        onCheckedChange={setShowTitle}
+                        aria-label="Toggle chart title"
+                      />
+                    </div>
+                  </div>
+                  {showTitle && (
+                    <input
+                      id="global-chart-title"
+                      type="text"
+                      value={chartTitle}
+                      onChange={(e) => setChartTitle(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-full text-sm font-medium rounded-lg border bg-background/50 px-3 py-2 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-text"
+                      placeholder="Enter chart title..."
+                      autoFocus
+                    />
+                  )}
+                </div>
+
                 {/* Data Table */}
                 <div className="rounded-xl border bg-card p-4 sm:p-5 shadow-sm">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
@@ -374,7 +433,7 @@ export default function DataVisualizer() {
                       className="h-8 gap-1.5 shadow-sm hover:bg-muted/50"
                       onClick={() => {
                         navigator.clipboard.writeText(markdownInput);
-                        toast.success("Data copied to clipboard!", { duration: 900 });
+                        toast.success("Data copied to clipboard!", { duration: 1500 });
                       }}
                     >
                       <Copy className="w-3.5 h-3.5" /> 
@@ -611,11 +670,13 @@ export default function DataVisualizer() {
         <div className={`space-y-6 ${showLabels ? 'fast-chart-labels-visible' : 'fast-chart-labels-hidden'}`}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <ChartCard
-              title="Bar Chart"
+              title={chartTitle}
+              showTitle={showTitle}
+              onTitleChange={setChartTitle}
               chartRef={barCardRef}
-              onCopySvg={() => copyChartSvg(barCardRef.current)}
-              onCopyPng={() => copyChartPng(barCardRef.current)}
-              onCopyHtml={() => copyChartEmbed({ type: 'bar', data: sortedData, options: { isHorizontal: barHorizontal, showLabels } })}
+              onCopySvg={() => copyChartSvg(barCardRef.current, showTitle ? chartTitle : undefined)}
+              onCopyPng={() => copyChartPng(barCardRef.current, showTitle ? chartTitle : undefined)}
+              onCopyHtml={() => copyChartEmbed({ type: 'bar', data: sortedData, options: { isHorizontal: barHorizontal, showLabels, title: showTitle ? chartTitle : undefined } })}
               onFullscreen={() => openFullscreen("bar")}
               showOrientation
               isHorizontal={barHorizontal}
@@ -630,7 +691,9 @@ export default function DataVisualizer() {
             </ChartCard>
 
             <ChartCard
-              title="Donut Chart"
+              title={chartTitle}
+              showTitle={showTitle}
+              onTitleChange={setChartTitle}
               chartRef={pieCardRef}
               customActions={
                 <div className="flex flex-wrap items-center gap-2">
@@ -655,24 +718,26 @@ export default function DataVisualizer() {
                   />
                 </div>
               }
-              onCopySvg={() => copyChartSvg(pieCardRef.current)}
-              onCopyPng={() => copyChartPng(pieCardRef.current)}
-              onCopyHtml={() => copyChartEmbed({ type: 'pie', data: sortedData, total, options: { showFactText, factIndex: pieFactIndex, showLegend } })}
+              onCopySvg={() => copyChartSvg(pieCardRef.current, showTitle ? chartTitle : undefined)}
+              onCopyPng={() => copyChartPng(pieCardRef.current, showTitle ? chartTitle : undefined)}
+              onCopyHtml={() => copyChartEmbed({ type: 'pie', data: sortedData, total, options: { showFactText, factIndex: pieFactIndex, showLegend, title: showTitle ? chartTitle : undefined } })}
               onFullscreen={() => openFullscreen("pie")}
             >
               <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
-                <PieChart data={sortedData} total={total} containerRef={pieCardRef as React.RefObject<HTMLDivElement>} showLegend={showLegend} showFactText={showFactText} factIndex={pieFactIndex} onFactIndexChange={setPieFactIndex} />
+                <PieChart data={sortedData} total={total} containerRef={pieCardRef as React.RefObject<HTMLDivElement>} showLabels={showLabels} showLegend={showLegend} showFactText={showFactText} factIndex={pieFactIndex} onFactIndexChange={setPieFactIndex} />
               </div>
             </ChartCard>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <ChartCard
-              title="100% Stacked Chart"
+              title={chartTitle}
+              showTitle={showTitle}
+              onTitleChange={setChartTitle}
               chartRef={stackedCardRef}
-              onCopySvg={() => copyChartSvg(stackedCardRef.current)}
-              onCopyPng={() => copyChartPng(stackedCardRef.current)}
-              onCopyHtml={() => copyChartEmbed({ type: 'stacked', data: sortedData, options: { isHorizontal: stackedHorizontal, showLabels, showRadial: stackedRadial, showFactText: showRadialFactText, factIndex: radialFactIndex, showLegend } })}
+              onCopySvg={() => copyChartSvg(stackedCardRef.current, showTitle ? chartTitle : undefined)}
+              onCopyPng={() => copyChartPng(stackedCardRef.current, showTitle ? chartTitle : undefined)}
+              onCopyHtml={() => copyChartEmbed({ type: 'stacked', data: sortedData, options: { isHorizontal: stackedHorizontal, showLabels, showRadial: stackedRadial, showFactText: showRadialFactText, factIndex: radialFactIndex, showLegend, title: showTitle ? chartTitle : undefined } })}
               onFullscreen={() => openFullscreen("stacked")}
               showOrientation={!stackedRadial}
               isHorizontal={stackedHorizontal}
@@ -709,11 +774,13 @@ export default function DataVisualizer() {
             </ChartCard>
 
             <ChartCard
-              title="Line Chart - Linear"
+              title={chartTitle}
+              showTitle={showTitle}
+              onTitleChange={setChartTitle}
               chartRef={lineCardRef}
-              onCopySvg={() => copyChartSvg(lineCardRef.current)}
-              onCopyPng={() => copyChartPng(lineCardRef.current)}
-              onCopyHtml={() => copyChartEmbed({ type: 'line', data: sortedData, options: { showLabels, showGradientArea, lineColor, showLegend } })}
+              onCopySvg={() => copyChartSvg(lineCardRef.current, showTitle ? chartTitle : undefined)}
+              onCopyPng={() => copyChartPng(lineCardRef.current, showTitle ? chartTitle : undefined)}
+              onCopyHtml={() => copyChartEmbed({ type: 'line', data: sortedData, options: { showLabels, showGradientArea, lineColor, showLegend, title: showTitle ? chartTitle : undefined } })}
               onFullscreen={() => openFullscreen("line")}
               customActions={
                 <div className="flex flex-wrap items-center gap-4">
@@ -811,8 +878,8 @@ export default function DataVisualizer() {
         isOpen={fullscreenChart === "bar"}
         onClose={closeFullscreen}
         chartType="bar"
-        onCopySvg={() => copyChartSvg(fsRef.current)}
-        onCopyPng={() => copyChartPng(fsRef.current)}
+        onCopySvg={() => copyChartSvg(fsRef.current, showTitle ? chartTitle : undefined)}
+        onCopyPng={() => copyChartPng(fsRef.current, showTitle ? chartTitle : undefined)}
         showOrientation
         isHorizontal={barHorizontal}
         onToggleOrientation={() => setBarHorizontal(!barHorizontal)}
@@ -826,8 +893,8 @@ export default function DataVisualizer() {
         isOpen={fullscreenChart === "pie"}
         onClose={closeFullscreen}
         chartType="pie"
-        onCopySvg={() => copyChartSvg(fsRef.current)}
-        onCopyPng={() => copyChartPng(fsRef.current)}
+        onCopySvg={() => copyChartSvg(fsRef.current, showTitle ? chartTitle : undefined)}
+        onCopyPng={() => copyChartPng(fsRef.current, showTitle ? chartTitle : undefined)}
         customActions={
           <div className="flex items-center gap-2">
             
@@ -854,7 +921,7 @@ export default function DataVisualizer() {
       >
         {fullscreenChart === "pie" && (
           <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
-            <PieChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} total={total} showLegend={showLegend} showFactText={showFactText} isFullscreen={fullscreenChart === "pie"} factIndex={pieFactIndex} onFactIndexChange={setPieFactIndex} />
+            <PieChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} total={total} showLabels={showLabels} showLegend={showLegend} showFactText={showFactText} isFullscreen={fullscreenChart === "pie"} factIndex={pieFactIndex} onFactIndexChange={setPieFactIndex} />
           </div>
         )}
       </FullscreenModal>
@@ -863,8 +930,8 @@ export default function DataVisualizer() {
         isOpen={fullscreenChart === "stacked"}
         onClose={closeFullscreen}
         chartType="stacked"
-        onCopySvg={() => copyChartSvg(fsRef.current)}
-        onCopyPng={() => copyChartPng(fsRef.current)}
+        onCopySvg={() => copyChartSvg(fsRef.current, showTitle ? chartTitle : undefined)}
+        onCopyPng={() => copyChartPng(fsRef.current, showTitle ? chartTitle : undefined)}
         showOrientation={!stackedRadial}
         isHorizontal={stackedHorizontal}
         onToggleOrientation={() => setStackedHorizontal(!stackedHorizontal)}
@@ -905,8 +972,8 @@ export default function DataVisualizer() {
         isOpen={fullscreenChart === "line"}
         onClose={closeFullscreen}
         chartType="line"
-        onCopySvg={() => copyChartSvg(fsRef.current)}
-        onCopyPng={() => copyChartPng(fsRef.current)}
+        onCopySvg={() => copyChartSvg(fsRef.current, showTitle ? chartTitle : undefined)}
+        onCopyPng={() => copyChartPng(fsRef.current, showTitle ? chartTitle : undefined)}
         customActions={
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">

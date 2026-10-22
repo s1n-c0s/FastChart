@@ -8,6 +8,7 @@ export interface PieChartProps {
   total: number;
   containerRef?: React.Ref<HTMLDivElement>;
   isFullscreen?: boolean;
+  showLabels?: boolean;
   showLegend?: boolean;
   showFactText?: boolean;
   factIndex?: number;
@@ -140,6 +141,7 @@ const InnerRechartsPie = React.memo(({
   innerRadius, 
   outerRadius, 
   isFullscreen, 
+  showLabels = true,
   renderCustomLabel, 
   top4Ids, 
   targetFocusIndex, 
@@ -225,7 +227,7 @@ const InnerRechartsPie = React.memo(({
             isAnimationActive={isAnimationActive}
             animationDuration={400}
             stroke="none"
-            label={renderCustomLabel}
+            label={showLabels ? renderCustomLabel : false}
             labelLine={false}
             onMouseEnter={onPieMouseEnter}
             onMouseLeave={onPieMouseLeave}
@@ -242,6 +244,7 @@ const InnerRechartsPie = React.memo(({
 });
 
 export const PieChart = React.memo(function PieChart({ data, total, containerRef, isFullscreen = false,  
+  showLabels = true,
   showLegend = true,
   showFactText = false,
   factIndex = 0,
@@ -564,6 +567,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
   }, [chartWidth, data, total, top4Ids, lastOtherId, outerRadius, pieCy, isFullscreen, legendStartY, showLegend, basePushX, basePushY, boxWidth, boxHeight]);
 
   const renderCustomLabel = React.useCallback((props: any) => {
+    if (!showLabels) return null;
     let { x, y, cx, cy, name, value, percent, payload } = props;
     const datumId = payload?.payload?.id || payload?.id;
     let color = payload?.payload?.color || payload?.color || "#a1a1aa";
@@ -672,7 +676,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
         </text>
       </g>
     );
-  }, [boxPositionsMap, basePushX, basePushY, boxWidth, boxHeight, legendStartY, showLegend, totalHeight, chartWidth, isFullscreen, isDark, bgColor, borderColor, textMainColor, textColor, top4Ids, lastOtherId, otherSum, total]);
+  }, [showLabels, boxPositionsMap, basePushX, basePushY, boxWidth, boxHeight, legendStartY, showLegend, totalHeight, chartWidth, isFullscreen, isDark, bgColor, borderColor, textMainColor, textColor, top4Ids, lastOtherId, otherSum, total]);
 
   const renderSvgLegend = React.useCallback(() => {
     if (!showLegend || !chartWidth || !totalHeight || legendRows.length === 0) return null;
@@ -728,6 +732,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
           innerRadius={innerRadius}
           outerRadius={outerRadius}
           isFullscreen={isFullscreen}
+          showLabels={showLabels}
           renderCustomLabel={renderCustomLabel}
           top4Ids={top4Ids}
           targetFocusIndex={targetFocusIndex}
@@ -758,6 +763,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
 }, (prevProps, nextProps) => {
   return (
     prevProps.isFullscreen === nextProps.isFullscreen &&
+    prevProps.showLabels === nextProps.showLabels &&
     prevProps.showLegend === nextProps.showLegend &&
     prevProps.total === nextProps.total &&
     prevProps.data.length === nextProps.data.length &&

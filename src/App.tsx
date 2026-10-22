@@ -141,11 +141,27 @@ function App() {
       
       <Toaster
         position="bottom-center"
+        containerStyle={{
+          bottom: 80,
+          zIndex: 99999,
+        }}
         toastOptions={{
-          duration: 900,
-          style: { background: "black", color: "#fff" },
-          iconTheme: { primary: "white", secondary: "black" },
-          error: { iconTheme: { primary: "#ef4444", secondary: "black" } },
+          duration: 1800,
+          style: {
+            background: "#18181b",
+            color: "#ffffff",
+            borderRadius: "10px",
+            fontSize: "14px",
+            fontWeight: "500",
+            border: "1px solid rgba(255, 255, 255, 0.12)",
+            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.5)",
+          },
+          success: {
+            iconTheme: { primary: "#0EC04F", secondary: "#ffffff" },
+          },
+          error: {
+            iconTheme: { primary: "#ef4444", secondary: "#ffffff" },
+          },
         }}
       />
     </BrowserRouter>
