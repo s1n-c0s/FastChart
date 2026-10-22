@@ -81,6 +81,46 @@ export const LineChart = React.memo(function LineChart({
   const gradientId = React.useMemo(() => `gradient-${seriesId}`, [seriesId])
   const isAnimationActive = data.length <= 25
 
+  const maxDataValue = React.useMemo(() => {
+    let max = 0;
+    for (let i = 0; i < data.length; i++) {
+      const v = Number(data[i].value) || 0;
+      if (v > max) max = v;
+    }
+    return max;
+  }, [data]);
+
+  const { numericTicks, numericAxisMax } = React.useMemo(() => {
+    if (maxDataValue <= 0) {
+      return { numericTicks: [0, 2, 4, 6, 8, 10], numericAxisMax: 10 };
+    }
+
+    const targetIntervals = 5;
+    const targetMax = maxDataValue * 1.08;
+    const rawStep = targetMax / targetIntervals;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+    const normalized = rawStep / magnitude;
+
+    let stepMultiplier = 10;
+    const standardSteps = [1, 2, 2.5, 5, 10];
+    for (let i = 0; i < standardSteps.length; i++) {
+      if (normalized <= standardSteps[i]) {
+        stepMultiplier = standardSteps[i];
+        break;
+      }
+    }
+
+    const step = stepMultiplier * magnitude;
+    const ticks: number[] = [];
+    let current = 0;
+    while (current < maxDataValue || (current - maxDataValue) / Math.max(1, current) < 0.05) {
+      ticks.push(current);
+      current = Math.round((current + step) * 1e6) / 1e6;
+    }
+    ticks.push(current);
+    return { numericTicks: ticks, numericAxisMax: ticks[ticks.length - 1] };
+  }, [maxDataValue]);
+
   return (
     /* FIX: We force a specific height on mobile (h-[300px]) and h-full for desktop.
        We also use 'min-h-0' and 'overflow-hidden' to break the flexbox resize loop.
@@ -105,7 +145,11 @@ export const LineChart = React.memo(function LineChart({
                   <stop offset="100%" stopColor={lineColor} stopOpacity={0.05} />
                 </linearGradient>
               </defs>
-              <CartesianGrid className="stroke-border opacity-80" strokeDasharray="4 4" />
+              <CartesianGrid 
+                className="stroke-border/40" 
+                strokeWidth={1}
+                vertical={false}
+              />
               <XAxis
                 dataKey="label"
                 interval={0}
@@ -115,10 +159,14 @@ export const LineChart = React.memo(function LineChart({
                 style={{ fontSize: data.length > 15 ? '12px' : '14px' }}
               />
               <YAxis
+                type="number"
+                ticks={numericTicks}
+                domain={[0, numericAxisMax]}
                 tickLine={false}
                 axisLine={false}
-                width={55}
-                style={{ fontSize: '14px' }}
+                width={Math.max(50, String(numericAxisMax).length * 8.5 + 8)}
+                tickFormatter={(v) => Number(v).toLocaleString()}
+                style={{ fontSize: '13px' }}
               />
               <Tooltip
                 isAnimationActive={false}

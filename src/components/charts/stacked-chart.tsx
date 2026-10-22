@@ -626,7 +626,11 @@ export const StackedChart = React.memo(function StackedChart({
             barSize={horizontalBarSize}
             margin={{ top: isFullscreen ? 50 : 15, right: isFullscreen ? 30 : 15, bottom: chartBottomMargin, left: isFullscreen ? 20 : 5 }}
           >
-            <CartesianGrid className="stroke-border opacity-80" strokeDasharray="4 4" />
+            <CartesianGrid 
+              className="stroke-border/40" 
+              strokeWidth={1}
+              horizontal={false}
+            />
             <YAxis
               type="category"
               dataKey="name"
@@ -690,7 +694,11 @@ export const StackedChart = React.memo(function StackedChart({
           barSize={verticalBarSize}
           margin={{ top: isFullscreen ? 40 : 15, right: isFullscreen ? 30 : 15, bottom: chartBottomMargin, left: isFullscreen ? 20 : 5 }}
         >
-          <CartesianGrid className="stroke-border opacity-80" strokeDasharray="4 4" />
+          <CartesianGrid 
+            className="stroke-border/40" 
+            strokeWidth={1}
+            vertical={false}
+          />
           <XAxis
             type="category"
             dataKey="name"

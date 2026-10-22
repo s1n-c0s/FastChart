@@ -40,6 +40,10 @@ export function useCharts() {
         // Resolve CSS-variable-based colors & fonts into absolute values.
         if (cs.fill) (el as SVGElement).setAttribute('fill', cs.fill);
         if (cs.stroke) (el as SVGElement).setAttribute('stroke', cs.stroke);
+        if (cs.strokeWidth) (el as SVGElement).setAttribute('stroke-width', cs.strokeWidth);
+        if (cs.strokeDasharray) (el as SVGElement).setAttribute('stroke-dasharray', cs.strokeDasharray);
+        if (cs.strokeOpacity && cs.strokeOpacity !== '1') (el as SVGElement).setAttribute('stroke-opacity', cs.strokeOpacity);
+        if (cs.opacity && cs.opacity !== '1') (el as SVGElement).setAttribute('opacity', cs.opacity);
         if (cs.color) {
           (el as SVGElement).setAttribute('color', cs.color);
           (el as SVGElement).style.color = cs.color;
@@ -216,6 +220,30 @@ export function useCharts() {
         containerEl.insertBefore(titleEl, containerEl.firstChild);
       }
 
+      // Explicitly inline computed stroke & opacity on CartesianGrid lines for PNG rendering
+      const gridLines = Array.from(containerEl.querySelectorAll('.recharts-cartesian-grid line, .recharts-cartesian-grid-horizontal line, .recharts-cartesian-grid-vertical line'));
+      const origLineStyles = gridLines.map((line) => {
+        const svgLine = line as SVGLineElement;
+        const cs = window.getComputedStyle(svgLine);
+        const originalStroke = svgLine.getAttribute("stroke");
+        const originalStrokeOpacity = svgLine.getAttribute("stroke-opacity");
+        const originalOpacity = svgLine.getAttribute("opacity");
+        const originalStrokeWidth = svgLine.getAttribute("stroke-width");
+
+        if (cs.stroke) svgLine.setAttribute("stroke", cs.stroke);
+        if (cs.strokeOpacity) svgLine.setAttribute("stroke-opacity", cs.strokeOpacity);
+        if (cs.opacity) svgLine.setAttribute("opacity", cs.opacity);
+        if (cs.strokeWidth) svgLine.setAttribute("stroke-width", cs.strokeWidth);
+
+        return {
+          el: svgLine,
+          stroke: originalStroke,
+          strokeOpacity: originalStrokeOpacity,
+          opacity: originalOpacity,
+          strokeWidth: originalStrokeWidth,
+        };
+      });
+
       // Convert directly into PNG blob with transparent background
       const blob = await htmlToImage.toBlob(containerEl, {
         backgroundColor: undefined, // Transparent
@@ -223,6 +251,21 @@ export function useCharts() {
         filter: (node) => {
           return node.getAttribute ? node.getAttribute("data-hide-on-copy") !== "true" : true;
         }
+      });
+
+      // Restore inline styles on grid lines
+      origLineStyles.forEach(({ el, stroke, strokeOpacity, opacity, strokeWidth }) => {
+        if (stroke !== null) el.setAttribute("stroke", stroke);
+        else el.removeAttribute("stroke");
+
+        if (strokeOpacity !== null) el.setAttribute("stroke-opacity", strokeOpacity);
+        else el.removeAttribute("stroke-opacity");
+
+        if (opacity !== null) el.setAttribute("opacity", opacity);
+        else el.removeAttribute("opacity");
+
+        if (strokeWidth !== null) el.setAttribute("stroke-width", strokeWidth);
+        else el.removeAttribute("stroke-width");
       });
 
       // Restore container element
