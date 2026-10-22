@@ -141,8 +141,11 @@ export const LineChart = React.memo(function LineChart({
             >
               <defs>
                 <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={lineColor} stopOpacity={0.5} />
-                  <stop offset="100%" stopColor={lineColor} stopOpacity={0.05} />
+                  <stop offset="0%" stopColor={lineColor} stopOpacity={0.55} />
+                  <stop offset="25%" stopColor={lineColor} stopOpacity={0.35} />
+                  <stop offset="50%" stopColor={lineColor} stopOpacity={0.18} />
+                  <stop offset="75%" stopColor={lineColor} stopOpacity={0.06} />
+                  <stop offset="100%" stopColor={lineColor} stopOpacity={0.00} />
                 </linearGradient>
               </defs>
               <CartesianGrid 
