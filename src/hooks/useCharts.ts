@@ -125,10 +125,21 @@ export function useCharts() {
           cloneTemp.setAttribute("height", String(origH + titleHeight));
         }
 
+        const isPieChart = Boolean(
+          containerEl?.querySelector('.my-sector, .recharts-pie') || 
+          containerEl?.classList.contains('items-center')
+        );
+
         const isDark = document.documentElement.classList.contains("dark");
         const textNode = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        textNode.setAttribute("x", "16");
-        textNode.setAttribute("y", "32");
+        if (isPieChart) {
+          textNode.setAttribute("x", String(baseWidth / 2));
+          textNode.setAttribute("text-anchor", "middle");
+        } else {
+          textNode.setAttribute("x", "16");
+          textNode.setAttribute("text-anchor", "start");
+        }
+        textNode.setAttribute("y", "28");
         textNode.setAttribute("font-size", "24");
         textNode.setAttribute("font-weight", "600");
         textNode.setAttribute("font-family", window.getComputedStyle(document.body).fontFamily || "system-ui, sans-serif");
@@ -222,6 +233,11 @@ export function useCharts() {
         containerEl.style.overflow = "visible";
         containerEl.style.height = `${currentHeight + titleHeight}px`;
 
+        const isPieChart = Boolean(
+          containerEl.querySelector('.my-sector, .recharts-pie') || 
+          containerEl.classList.contains('items-center')
+        );
+
         const isDark = document.documentElement.classList.contains("dark");
         titleEl = document.createElement("div");
         titleEl.textContent = chartTitle!.trim();
@@ -231,6 +247,11 @@ export function useCharts() {
         titleEl.style.padding = "4px 8px 14px 8px";
         titleEl.style.color = isDark ? "#f3f4f6" : "#111827";
         titleEl.style.fontFamily = window.getComputedStyle(document.body).fontFamily || "system-ui, sans-serif";
+
+        if (isPieChart) {
+          titleEl.style.width = "100%";
+          titleEl.style.textAlign = "center";
+        }
 
         containerEl.insertBefore(titleEl, containerEl.firstChild);
       }
