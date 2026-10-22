@@ -146,7 +146,7 @@ export function ChartCard({
                   onChange={(e) => setCurrentTitle(e.target.value)}
                   onBlur={handleFinishEditing}
                   onKeyDown={handleKeyDown}
-                  className="text-lg font-semibold bg-muted/70 px-2.5 py-0.5 rounded-md border border-primary outline-none ring-2 ring-primary/20 w-full"
+                  className="text-2xl font-semibold bg-muted/70 px-2.5 py-0.5 rounded-md border border-primary outline-none ring-2 ring-primary/20 w-full"
                   aria-label="Edit chart title"
                   onClick={(e) => e.stopPropagation()}
                 />
@@ -159,7 +159,7 @@ export function ChartCard({
                 onClick={onTitleChange ? () => setIsEditingTitle(true) : undefined}
                 title={onTitleChange ? "Click to edit title" : undefined}
               >
-                <h3 className="text-lg font-semibold tracking-tight text-foreground truncate select-none">
+                <h3 className="text-2xl font-semibold tracking-tight text-foreground truncate select-none">
                   {currentTitle}
                 </h3>
                 {onTitleChange && (

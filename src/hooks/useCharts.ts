@@ -113,8 +113,8 @@ export function useCharts() {
         const isDark = document.documentElement.classList.contains("dark");
         const textNode = document.createElementNS("http://www.w3.org/2000/svg", "text");
         textNode.setAttribute("x", "16");
-        textNode.setAttribute("y", "28");
-        textNode.setAttribute("font-size", "18");
+        textNode.setAttribute("y", "32");
+        textNode.setAttribute("font-size", "24");
         textNode.setAttribute("font-weight", "600");
         textNode.setAttribute("font-family", window.getComputedStyle(document.body).fontFamily || "system-ui, sans-serif");
         textNode.setAttribute("fill", isDark ? "#f3f4f6" : "#111827");
@@ -210,7 +210,7 @@ export function useCharts() {
         const isDark = document.documentElement.classList.contains("dark");
         titleEl = document.createElement("div");
         titleEl.textContent = chartTitle!.trim();
-        titleEl.style.fontSize = "18px";
+        titleEl.style.fontSize = "24px";
         titleEl.style.fontWeight = "600";
         titleEl.style.lineHeight = "1.3";
         titleEl.style.padding = "4px 8px 14px 8px";
