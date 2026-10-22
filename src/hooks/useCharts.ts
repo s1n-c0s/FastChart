@@ -14,7 +14,7 @@ export function useCharts() {
   const stackedCardRef = useRef<HTMLDivElement>(null);
   const lineCardRef = useRef<HTMLDivElement>(null);
 
-  const copyChartSvg = useCallback(async (containerEl: HTMLElement | null) => {
+  const copyChartSvg = useCallback(async (containerEl: HTMLElement | null, chartTitle?: string) => {
     try {
       // Short pause so the chart (including axis labels after a toggle) finishes layout.
       await new Promise(res => setTimeout(res, 80));
@@ -76,6 +76,50 @@ export function useCharts() {
         cloneTemp.innerHTML += overlayClone.innerHTML;
       }
 
+      // If title is provided, prepend a title banner and expand the top of the SVG cleanly
+      if (chartTitle && chartTitle.trim()) {
+        const titleHeight = 44;
+        const currentViewBox = cloneTemp.getAttribute("viewBox");
+        const svgRect = svg.getBoundingClientRect();
+        const baseWidth = svgRect.width || parseFloat(cloneTemp.getAttribute("width") || "500");
+        const baseHeight = svgRect.height || parseFloat(cloneTemp.getAttribute("height") || "384");
+
+        // Wrap existing content in a <g> translated down
+        const contentGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        contentGroup.setAttribute("transform", `translate(0, ${titleHeight})`);
+        while (cloneTemp.firstChild) {
+          contentGroup.appendChild(cloneTemp.firstChild);
+        }
+
+        // Adjust viewBox or width/height
+        if (currentViewBox) {
+          const [vx, vy, vw, vh] = currentViewBox.split(/[\s,]+/).map(Number);
+          if (!isNaN(vx) && !isNaN(vy) && !isNaN(vw) && !isNaN(vh)) {
+            cloneTemp.setAttribute("viewBox", `${vx} ${vy} ${vw} ${vh + titleHeight}`);
+          }
+        } else {
+          cloneTemp.setAttribute("viewBox", `0 0 ${baseWidth} ${baseHeight + titleHeight}`);
+        }
+
+        if (cloneTemp.hasAttribute("height")) {
+          const origH = parseFloat(cloneTemp.getAttribute("height") || String(baseHeight));
+          cloneTemp.setAttribute("height", String(origH + titleHeight));
+        }
+
+        const isDark = document.documentElement.classList.contains("dark");
+        const textNode = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        textNode.setAttribute("x", "16");
+        textNode.setAttribute("y", "28");
+        textNode.setAttribute("font-size", "18");
+        textNode.setAttribute("font-weight", "600");
+        textNode.setAttribute("font-family", window.getComputedStyle(document.body).fontFamily || "system-ui, sans-serif");
+        textNode.setAttribute("fill", isDark ? "#f3f4f6" : "#111827");
+        textNode.textContent = chartTitle.trim();
+
+        cloneTemp.appendChild(textNode);
+        cloneTemp.appendChild(contentGroup);
+      }
+
       // Inject hover-state CSS (useful when pasting into browsers / SVG-aware viewers).
       const styleNode = document.createElementNS("http://www.w3.org/2000/svg", "style");
       styleNode.textContent = `
@@ -132,45 +176,80 @@ export function useCharts() {
     }
   }, []);
 
-  const copyChartPng = useCallback(async (containerEl: HTMLElement | null) => {
+  const copyChartPng = useCallback(async (containerEl: HTMLElement | null, chartTitle?: string) => {
     if (!containerEl) return;
     try {
-      // Temporarily remove elements from DOM to guarantee they aren't copied
+      // Short pause so layout/animations settle
+      await new Promise(res => setTimeout(res, 80));
+
+      const hasTitle = Boolean(chartTitle && chartTitle.trim());
+      let titleEl: HTMLDivElement | null = null;
+      let origOverflow: string = "";
+      let origHeight: string = "";
+
+      // Temporarily remove overlay buttons or tooltips marked with data-hide-on-copy
       const hiddenElements = Array.from(containerEl.querySelectorAll('[data-hide-on-copy="true"]'));
       const parents = hiddenElements.map(el => el.parentNode);
       const nextSiblings = hiddenElements.map(el => el.nextSibling);
-      
       hiddenElements.forEach(el => el.remove());
 
-      const cardEl = containerEl.closest('.bg-card') || document.body;
-      const bgColor = window.getComputedStyle(cardEl).backgroundColor;
+      if (hasTitle) {
+        origOverflow = containerEl.style.overflow;
+        origHeight = containerEl.style.height;
 
-      const dataUrl = await htmlToImage.toPng(containerEl, {
-        backgroundColor: bgColor === 'rgba(0, 0, 0, 0)' ? '#ffffff' : bgColor,
+        const currentHeight = containerEl.getBoundingClientRect().height || 384;
+        const titleHeight = 44;
+
+        containerEl.style.overflow = "visible";
+        containerEl.style.height = `${currentHeight + titleHeight}px`;
+
+        const isDark = document.documentElement.classList.contains("dark");
+        titleEl = document.createElement("div");
+        titleEl.textContent = chartTitle!.trim();
+        titleEl.style.fontSize = "18px";
+        titleEl.style.fontWeight = "600";
+        titleEl.style.lineHeight = "1.3";
+        titleEl.style.padding = "4px 8px 14px 8px";
+        titleEl.style.color = isDark ? "#f3f4f6" : "#111827";
+        titleEl.style.fontFamily = window.getComputedStyle(document.body).fontFamily || "system-ui, sans-serif";
+
+        containerEl.insertBefore(titleEl, containerEl.firstChild);
+      }
+
+      // Convert directly into PNG blob with transparent background
+      const blob = await htmlToImage.toBlob(containerEl, {
+        backgroundColor: undefined, // Transparent
         pixelRatio: 2, // High resolution
         filter: (node) => {
           return node.getAttribute ? node.getAttribute("data-hide-on-copy") !== "true" : true;
         }
       });
-      
-      // Restore elements to the DOM
+
+      // Restore container element
+      if (titleEl && titleEl.parentNode) {
+        titleEl.parentNode.removeChild(titleEl);
+      }
+      if (hasTitle) {
+        containerEl.style.overflow = origOverflow;
+        containerEl.style.height = origHeight;
+      }
       hiddenElements.forEach((el, index) => {
         if (parents[index]) {
           parents[index]?.insertBefore(el, nextSiblings[index]);
         }
       });
-      
-      const response = await fetch(dataUrl);
-      const blob = await response.blob();
-      
+
       if (blob) {
         await navigator.clipboard.write([
           new ClipboardItem({ "image/png": blob })
         ]);
         toast.success("PNG Copied to Clipboard!");
+      } else {
+        throw new Error("Unable to create image blob");
       }
-    } catch {
-      toast.error("Failed to copy PNG.");
+    } catch (error: any) {
+      console.error("Failed to copy PNG:", error);
+      toast.error(`Failed to copy PNG: ${error?.message || error}`);
     }
   }, []);
 

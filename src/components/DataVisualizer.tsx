@@ -33,7 +33,7 @@ import {
   LineChart,
   StackedChart
 } from "../components/charts";
-import { Database, X, ChevronDown, ChevronUp, SlidersHorizontal, Copy, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Database, X, ChevronDown, ChevronUp, SlidersHorizontal, Copy, ArrowUpDown, ArrowUp, ArrowDown, Type } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -71,6 +71,8 @@ export default function DataVisualizer() {
   const [showRadialFactText, setShowRadialFactText] = useState(true);
   const [showGradientArea, setShowGradientArea] = useState(true);
   const [lineColor, setLineColor] = useState<string | undefined>(undefined);
+  const [showTitle, setShowTitle] = useState(true);
+  const [chartTitle, setChartTitle] = useState("Chart Overview");
   const [isDockOpen, setIsDockOpen] = useState(false);
   const [isDockHovered, setIsDockHovered] = useState(false);
   const [isDockMinimized, setIsDockMinimized] = useState(false);
@@ -299,6 +301,38 @@ export default function DataVisualizer() {
               </div>
               
               <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-6">
+                {/* Global Chart Title Setting */}
+                <div className="rounded-xl border bg-card p-4 sm:p-5 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Type className="w-4 h-4 text-primary shrink-0" />
+                      <label htmlFor="global-chart-title" className="text-base font-medium cursor-pointer">
+                        Chart Title
+                      </label>
+                      <span className="text-xs text-muted-foreground hidden sm:inline">(Applies to all charts)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-muted-foreground">Show Title</span>
+                      <Switch
+                        id="show-title-toggle"
+                        checked={showTitle}
+                        onCheckedChange={setShowTitle}
+                        aria-label="Toggle chart title"
+                      />
+                    </div>
+                  </div>
+                  {showTitle && (
+                    <input
+                      id="global-chart-title"
+                      type="text"
+                      value={chartTitle}
+                      onChange={(e) => setChartTitle(e.target.value)}
+                      className="w-full text-sm font-medium rounded-lg border bg-background/50 px-3 py-1.5 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                      placeholder="Enter chart title..."
+                    />
+                  )}
+                </div>
+
                 {/* Data Table */}
                 <div className="rounded-xl border bg-card p-4 sm:p-5 shadow-sm">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
@@ -611,11 +645,13 @@ export default function DataVisualizer() {
         <div className={`space-y-6 ${showLabels ? 'fast-chart-labels-visible' : 'fast-chart-labels-hidden'}`}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <ChartCard
-              title="Bar Chart"
+              title={chartTitle}
+              showTitle={showTitle}
+              onTitleChange={setChartTitle}
               chartRef={barCardRef}
-              onCopySvg={() => copyChartSvg(barCardRef.current)}
-              onCopyPng={() => copyChartPng(barCardRef.current)}
-              onCopyHtml={() => copyChartEmbed({ type: 'bar', data: sortedData, options: { isHorizontal: barHorizontal, showLabels } })}
+              onCopySvg={() => copyChartSvg(barCardRef.current, showTitle ? chartTitle : undefined)}
+              onCopyPng={() => copyChartPng(barCardRef.current, showTitle ? chartTitle : undefined)}
+              onCopyHtml={() => copyChartEmbed({ type: 'bar', data: sortedData, options: { isHorizontal: barHorizontal, showLabels, title: showTitle ? chartTitle : undefined } })}
               onFullscreen={() => openFullscreen("bar")}
               showOrientation
               isHorizontal={barHorizontal}
@@ -630,7 +666,9 @@ export default function DataVisualizer() {
             </ChartCard>
 
             <ChartCard
-              title="Donut Chart"
+              title={chartTitle}
+              showTitle={showTitle}
+              onTitleChange={setChartTitle}
               chartRef={pieCardRef}
               customActions={
                 <div className="flex flex-wrap items-center gap-2">
@@ -655,9 +693,9 @@ export default function DataVisualizer() {
                   />
                 </div>
               }
-              onCopySvg={() => copyChartSvg(pieCardRef.current)}
-              onCopyPng={() => copyChartPng(pieCardRef.current)}
-              onCopyHtml={() => copyChartEmbed({ type: 'pie', data: sortedData, total, options: { showFactText, factIndex: pieFactIndex, showLegend } })}
+              onCopySvg={() => copyChartSvg(pieCardRef.current, showTitle ? chartTitle : undefined)}
+              onCopyPng={() => copyChartPng(pieCardRef.current, showTitle ? chartTitle : undefined)}
+              onCopyHtml={() => copyChartEmbed({ type: 'pie', data: sortedData, total, options: { showFactText, factIndex: pieFactIndex, showLegend, title: showTitle ? chartTitle : undefined } })}
               onFullscreen={() => openFullscreen("pie")}
             >
               <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
@@ -668,11 +706,13 @@ export default function DataVisualizer() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <ChartCard
-              title="100% Stacked Chart"
+              title={chartTitle}
+              showTitle={showTitle}
+              onTitleChange={setChartTitle}
               chartRef={stackedCardRef}
-              onCopySvg={() => copyChartSvg(stackedCardRef.current)}
-              onCopyPng={() => copyChartPng(stackedCardRef.current)}
-              onCopyHtml={() => copyChartEmbed({ type: 'stacked', data: sortedData, options: { isHorizontal: stackedHorizontal, showLabels, showRadial: stackedRadial, showFactText: showRadialFactText, factIndex: radialFactIndex, showLegend } })}
+              onCopySvg={() => copyChartSvg(stackedCardRef.current, showTitle ? chartTitle : undefined)}
+              onCopyPng={() => copyChartPng(stackedCardRef.current, showTitle ? chartTitle : undefined)}
+              onCopyHtml={() => copyChartEmbed({ type: 'stacked', data: sortedData, options: { isHorizontal: stackedHorizontal, showLabels, showRadial: stackedRadial, showFactText: showRadialFactText, factIndex: radialFactIndex, showLegend, title: showTitle ? chartTitle : undefined } })}
               onFullscreen={() => openFullscreen("stacked")}
               showOrientation={!stackedRadial}
               isHorizontal={stackedHorizontal}
@@ -709,11 +749,13 @@ export default function DataVisualizer() {
             </ChartCard>
 
             <ChartCard
-              title="Line Chart - Linear"
+              title={chartTitle}
+              showTitle={showTitle}
+              onTitleChange={setChartTitle}
               chartRef={lineCardRef}
-              onCopySvg={() => copyChartSvg(lineCardRef.current)}
-              onCopyPng={() => copyChartPng(lineCardRef.current)}
-              onCopyHtml={() => copyChartEmbed({ type: 'line', data: sortedData, options: { showLabels, showGradientArea, lineColor, showLegend } })}
+              onCopySvg={() => copyChartSvg(lineCardRef.current, showTitle ? chartTitle : undefined)}
+              onCopyPng={() => copyChartPng(lineCardRef.current, showTitle ? chartTitle : undefined)}
+              onCopyHtml={() => copyChartEmbed({ type: 'line', data: sortedData, options: { showLabels, showGradientArea, lineColor, showLegend, title: showTitle ? chartTitle : undefined } })}
               onFullscreen={() => openFullscreen("line")}
               customActions={
                 <div className="flex flex-wrap items-center gap-4">
@@ -811,8 +853,8 @@ export default function DataVisualizer() {
         isOpen={fullscreenChart === "bar"}
         onClose={closeFullscreen}
         chartType="bar"
-        onCopySvg={() => copyChartSvg(fsRef.current)}
-        onCopyPng={() => copyChartPng(fsRef.current)}
+        onCopySvg={() => copyChartSvg(fsRef.current, showTitle ? chartTitle : undefined)}
+        onCopyPng={() => copyChartPng(fsRef.current, showTitle ? chartTitle : undefined)}
         showOrientation
         isHorizontal={barHorizontal}
         onToggleOrientation={() => setBarHorizontal(!barHorizontal)}
@@ -826,8 +868,8 @@ export default function DataVisualizer() {
         isOpen={fullscreenChart === "pie"}
         onClose={closeFullscreen}
         chartType="pie"
-        onCopySvg={() => copyChartSvg(fsRef.current)}
-        onCopyPng={() => copyChartPng(fsRef.current)}
+        onCopySvg={() => copyChartSvg(fsRef.current, showTitle ? chartTitle : undefined)}
+        onCopyPng={() => copyChartPng(fsRef.current, showTitle ? chartTitle : undefined)}
         customActions={
           <div className="flex items-center gap-2">
             
@@ -863,8 +905,8 @@ export default function DataVisualizer() {
         isOpen={fullscreenChart === "stacked"}
         onClose={closeFullscreen}
         chartType="stacked"
-        onCopySvg={() => copyChartSvg(fsRef.current)}
-        onCopyPng={() => copyChartPng(fsRef.current)}
+        onCopySvg={() => copyChartSvg(fsRef.current, showTitle ? chartTitle : undefined)}
+        onCopyPng={() => copyChartPng(fsRef.current, showTitle ? chartTitle : undefined)}
         showOrientation={!stackedRadial}
         isHorizontal={stackedHorizontal}
         onToggleOrientation={() => setStackedHorizontal(!stackedHorizontal)}
@@ -905,8 +947,8 @@ export default function DataVisualizer() {
         isOpen={fullscreenChart === "line"}
         onClose={closeFullscreen}
         chartType="line"
-        onCopySvg={() => copyChartSvg(fsRef.current)}
-        onCopyPng={() => copyChartPng(fsRef.current)}
+        onCopySvg={() => copyChartSvg(fsRef.current, showTitle ? chartTitle : undefined)}
+        onCopyPng={() => copyChartPng(fsRef.current, showTitle ? chartTitle : undefined)}
         customActions={
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
