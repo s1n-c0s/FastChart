@@ -885,7 +885,7 @@ export default function DataVisualizer() {
         onToggleOrientation={() => setBarHorizontal(!barHorizontal)}
       >
         {fullscreenChart === "bar" && (
-          <BarChart containerRef={fsRef} data={sortedData} isHorizontal={barHorizontal} showLabels={showLabels} />
+          <BarChart containerRef={fsRef} data={sortedData} isHorizontal={barHorizontal} showLabels={showLabels} isFullscreen={fullscreenChart === "bar"} />
         )}
       </FullscreenModal>
 
@@ -1021,7 +1021,7 @@ export default function DataVisualizer() {
         }
       >
         {fullscreenChart === "line" && (
-          <LineChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} showLabels={showLabels} showGradientArea={showGradientArea} lineColor={lineColor} />
+          <LineChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} showLabels={showLabels} showGradientArea={showGradientArea} lineColor={lineColor} isFullscreen={fullscreenChart === "line"} />
         )}
       </FullscreenModal>
     </>
