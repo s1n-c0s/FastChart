@@ -153,17 +153,17 @@ export function ChartCard({
               </div>
             ) : (
               <div 
-                className={`group/title flex items-center gap-2 min-w-0 py-0.5 px-1.5 -ml-1.5 rounded-md transition-colors ${
+                className={`group/title flex items-start gap-2 min-w-0 py-0.5 px-1.5 -ml-1.5 rounded-md transition-colors ${
                   onTitleChange ? "cursor-pointer hover:bg-muted/50" : ""
                 }`}
                 onClick={onTitleChange ? () => setIsEditingTitle(true) : undefined}
-                title={onTitleChange ? "Click to edit title" : undefined}
+                title={currentTitle}
               >
-                <h3 className="text-2xl font-semibold tracking-tight text-foreground truncate select-none">
+                <h3 className="text-2xl font-semibold tracking-tight text-foreground select-none break-words leading-tight">
                   {currentTitle}
                 </h3>
                 {onTitleChange && (
-                  <Pencil className="w-3.5 h-3.5 text-muted-foreground/60 opacity-0 group-hover/title:opacity-100 transition-opacity shrink-0" />
+                  <Pencil className="w-3.5 h-3.5 text-muted-foreground/60 opacity-0 group-hover/title:opacity-100 transition-opacity shrink-0 mt-1" />
                 )}
               </div>
             )
@@ -206,7 +206,7 @@ export function ChartCard({
       </div>
       <div 
         ref={chartRef} 
-        className="w-full h-96 relative cursor-pointer overflow-hidden rounded-xl"
+        className="w-full h-96 relative cursor-pointer overflow-hidden rounded-xl pb-2"
         onClick={handleChartClick}
       >
         {showTooltip && (

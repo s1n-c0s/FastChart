@@ -401,7 +401,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
 
   // Bottom padding and startY for legend
   const effectiveLegendHeight = showLegend ? legendHeight : 0;
-  const legendBottomMargin = showLegend ? 8 : 0;
+  const legendBottomMargin = showLegend ? 12 : 0;
   const legendTopPadding = (showLegend && legendRows.length > 0) ? 14 : 0;
   const legendStartY = showLegend
     ? Math.max(140, totalHeight - effectiveLegendHeight - legendBottomMargin)

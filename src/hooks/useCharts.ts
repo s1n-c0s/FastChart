@@ -27,8 +27,8 @@ export function useCharts() {
       const allTempElements = cloneTemp.querySelectorAll('*');
       const origTempElements = svg.querySelectorAll('*');
 
-      const isLabelsHidden = Boolean(containerEl?.closest('.fast-chart-labels-hidden'));
-      const isLegendHidden = Boolean(containerEl?.closest('.fast-chart-legend-hidden'));
+      const isLabelsHidden = Boolean(containerEl?.closest('.fast-chart-labels-hidden') || containerEl?.querySelector('.fast-chart-labels-hidden'));
+      const isLegendHidden = Boolean(containerEl?.closest('.fast-chart-legend-hidden') || containerEl?.querySelector('.fast-chart-legend-hidden'));
 
       allTempElements.forEach((el, index) => {
         const origEl = origTempElements[index] as Element;
@@ -95,13 +95,40 @@ export function useCharts() {
         cloneTemp.innerHTML += overlayClone.innerHTML;
       }
 
-      // If title is provided, prepend a title banner and expand the top of the SVG cleanly
+      // If title is provided, wrap text into multiple lines if needed and expand SVG height cleanly
       if (chartTitle && chartTitle.trim()) {
-        const titleHeight = 44;
-        const currentViewBox = cloneTemp.getAttribute("viewBox");
         const svgRect = svg.getBoundingClientRect();
         const baseWidth = svgRect.width || parseFloat(cloneTemp.getAttribute("width") || "500");
         const baseHeight = svgRect.height || parseFloat(cloneTemp.getAttribute("height") || "384");
+
+        const isPieChart = Boolean(
+          containerEl?.querySelector('.my-sector, .recharts-pie') || 
+          containerEl?.classList.contains('items-center')
+        );
+
+        // Calculate line wrapping based on available width
+        const availableWidth = baseWidth - 32;
+        const maxCharsPerLine = Math.max(16, Math.floor(availableWidth / 14.5));
+        const words = chartTitle.trim().split(/\s+/);
+        const lines: string[] = [];
+        let curLine = "";
+
+        for (const w of words) {
+          if (!curLine) {
+            curLine = w;
+          } else if ((curLine + " " + w).length <= maxCharsPerLine) {
+            curLine += " " + w;
+          } else {
+            lines.push(curLine);
+            curLine = w;
+          }
+        }
+        if (curLine) lines.push(curLine);
+
+        const lineHeight = 32;
+        const titlePaddingBottom = 16;
+        const titleHeight = lines.length * lineHeight + titlePaddingBottom;
+        const currentViewBox = cloneTemp.getAttribute("viewBox");
 
         // Wrap existing content in a <g> translated down
         const contentGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
@@ -111,40 +138,43 @@ export function useCharts() {
         }
 
         // Adjust viewBox or width/height
+        // Note: the original SVG content is translated down by titleHeight.
+        // Therefore, the viewBox height must accommodate the original content height PLUS titleHeight,
+        // without altering the min-y coordinate (so min-y remains 0, while viewBox height extends).
         if (currentViewBox) {
           const [vx, vy, vw, vh] = currentViewBox.split(/[\s,]+/).map(Number);
           if (!isNaN(vx) && !isNaN(vy) && !isNaN(vw) && !isNaN(vh)) {
             cloneTemp.setAttribute("viewBox", `${vx} ${vy} ${vw} ${vh + titleHeight}`);
+          } else {
+            cloneTemp.setAttribute("viewBox", `0 0 ${baseWidth} ${baseHeight + titleHeight}`);
           }
         } else {
           cloneTemp.setAttribute("viewBox", `0 0 ${baseWidth} ${baseHeight + titleHeight}`);
         }
 
-        if (cloneTemp.hasAttribute("height")) {
-          const origH = parseFloat(cloneTemp.getAttribute("height") || String(baseHeight));
-          cloneTemp.setAttribute("height", String(origH + titleHeight));
-        }
-
-        const isPieChart = Boolean(
-          containerEl?.querySelector('.my-sector, .recharts-pie') || 
-          containerEl?.classList.contains('items-center')
-        );
+        // Always ensure explicit width and height match the new combined dimensions
+        const origW = parseFloat(cloneTemp.getAttribute("width") || String(baseWidth));
+        const origH = parseFloat(cloneTemp.getAttribute("height") || String(baseHeight));
+        cloneTemp.setAttribute("width", String(origW || baseWidth));
+        cloneTemp.setAttribute("height", String(origH + titleHeight));
 
         const isDark = document.documentElement.classList.contains("dark");
         const textNode = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        if (isPieChart) {
-          textNode.setAttribute("x", String(baseWidth / 2));
-          textNode.setAttribute("text-anchor", "middle");
-        } else {
-          textNode.setAttribute("x", "16");
-          textNode.setAttribute("text-anchor", "start");
-        }
-        textNode.setAttribute("y", "28");
-        textNode.setAttribute("font-size", "24");
+        const textX = isPieChart ? String(baseWidth / 2) : "16";
+        textNode.setAttribute("x", textX);
+        textNode.setAttribute("text-anchor", isPieChart ? "middle" : "start");
+        textNode.setAttribute("font-size", "22");
         textNode.setAttribute("font-weight", "600");
         textNode.setAttribute("font-family", window.getComputedStyle(document.body).fontFamily || "system-ui, sans-serif");
         textNode.setAttribute("fill", isDark ? "#f3f4f6" : "#111827");
-        textNode.textContent = chartTitle.trim();
+
+        lines.forEach((line, idx) => {
+          const tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+          tspan.setAttribute("x", textX);
+          tspan.setAttribute("y", String(26 + idx * lineHeight));
+          tspan.textContent = line;
+          textNode.appendChild(tspan);
+        });
 
         cloneTemp.appendChild(textNode);
         cloneTemp.appendChild(contentGroup);
@@ -227,12 +257,6 @@ export function useCharts() {
         origOverflow = containerEl.style.overflow;
         origHeight = containerEl.style.height;
 
-        const currentHeight = containerEl.getBoundingClientRect().height || 384;
-        const titleHeight = 44;
-
-        containerEl.style.overflow = "visible";
-        containerEl.style.height = `${currentHeight + titleHeight}px`;
-
         const isPieChart = Boolean(
           containerEl.querySelector('.my-sector, .recharts-pie') || 
           containerEl.classList.contains('items-center')
@@ -241,12 +265,14 @@ export function useCharts() {
         const isDark = document.documentElement.classList.contains("dark");
         titleEl = document.createElement("div");
         titleEl.textContent = chartTitle!.trim();
-        titleEl.style.fontSize = "24px";
+        titleEl.style.fontSize = "22px";
         titleEl.style.fontWeight = "600";
-        titleEl.style.lineHeight = "1.3";
-        titleEl.style.padding = "4px 8px 14px 8px";
+        titleEl.style.lineHeight = "1.35";
+        titleEl.style.padding = "4px 12px 14px 12px";
         titleEl.style.color = isDark ? "#f3f4f6" : "#111827";
         titleEl.style.fontFamily = window.getComputedStyle(document.body).fontFamily || "system-ui, sans-serif";
+        titleEl.style.wordBreak = "break-word";
+        titleEl.style.whiteSpace = "normal";
 
         if (isPieChart) {
           titleEl.style.width = "100%";
@@ -254,10 +280,18 @@ export function useCharts() {
         }
 
         containerEl.insertBefore(titleEl, containerEl.firstChild);
+
+        // Measure actual rendered height of multi-line title and expand container accordingly
+        const measuredTitleHeight = titleEl.getBoundingClientRect().height || 44;
+        const currentHeight = containerEl.getBoundingClientRect().height || 384;
+
+        containerEl.style.overflow = "visible";
+        // Ensure extra room for padding and legend at the bottom
+        containerEl.style.height = `${currentHeight + measuredTitleHeight + 16}px`;
       }
 
-      const isLabelsHidden = Boolean(containerEl.closest('.fast-chart-labels-hidden'));
-      const isLegendHidden = Boolean(containerEl.closest('.fast-chart-legend-hidden'));
+      const isLabelsHidden = Boolean(containerEl.closest('.fast-chart-labels-hidden') || containerEl.querySelector('.fast-chart-labels-hidden'));
+      const isLegendHidden = Boolean(containerEl.closest('.fast-chart-legend-hidden') || containerEl.querySelector('.fast-chart-legend-hidden'));
 
       // Explicitly inline computed styles on text/labels & grid lines for accurate PNG rendering
       const textNodes = Array.from(containerEl.querySelectorAll('text, tspan, .chart-global-label, .recharts-cartesian-axis-tick text'))
