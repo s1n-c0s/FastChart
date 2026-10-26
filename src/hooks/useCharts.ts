@@ -136,8 +136,10 @@ export function useCharts() {
         }
         if (curLine) lines.push(curLine);
 
-        const lineHeight = 32;
-        const titlePaddingBottom = 16;
+        const isFullscreenModal = Boolean(containerEl?.closest?.('[class*="fullscreenContent"], [class*="fullscreenModal"]') || (containerEl && (containerEl.clientHeight > 500 || containerEl.clientWidth > 900)));
+        const titleFontSize = isFullscreenModal ? 28 : 22;
+        const lineHeight = isFullscreenModal ? 38 : 32;
+        const titlePaddingBottom = isFullscreenModal ? 20 : 16;
         const titleHeight = lines.length * lineHeight + titlePaddingBottom;
         const currentViewBox = cloneTemp.getAttribute("viewBox");
 
@@ -174,15 +176,15 @@ export function useCharts() {
         const textX = isPieChart ? String(baseWidth / 2) : "16";
         textNode.setAttribute("x", textX);
         textNode.setAttribute("text-anchor", isPieChart ? "middle" : "start");
-        textNode.setAttribute("font-size", "22");
+        textNode.setAttribute("font-size", String(titleFontSize));
         textNode.setAttribute("font-weight", "600");
-        textNode.setAttribute("font-family", window.getComputedStyle(document.body).fontFamily || "system-ui, sans-serif");
+        textNode.setAttribute("font-family", "'Anuphan', system-ui, sans-serif");
         textNode.setAttribute("fill", isDark ? "#f3f4f6" : "#111827");
 
         lines.forEach((line, idx) => {
           const tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
           tspan.setAttribute("x", textX);
-          tspan.setAttribute("y", String(26 + idx * lineHeight));
+          tspan.setAttribute("y", String((isFullscreenModal ? 32 : 26) + idx * lineHeight));
           tspan.textContent = line;
           textNode.appendChild(tspan);
         });
@@ -274,14 +276,15 @@ export function useCharts() {
         );
 
         const isDark = document.documentElement.classList.contains("dark");
+        const isFullscreenModal = Boolean(containerEl.closest?.('[class*="fullscreenContent"], [class*="fullscreenModal"]') || containerEl.clientHeight > 500 || containerEl.clientWidth > 900);
         titleEl = document.createElement("div");
         titleEl.textContent = chartTitle!.trim();
-        titleEl.style.fontSize = "22px";
+        titleEl.style.fontSize = isFullscreenModal ? "28px" : "22px";
         titleEl.style.fontWeight = "600";
         titleEl.style.lineHeight = "1.35";
-        titleEl.style.padding = "4px 12px 14px 12px";
+        titleEl.style.padding = isFullscreenModal ? "6px 16px 18px 16px" : "4px 12px 14px 12px";
         titleEl.style.color = isDark ? "#f3f4f6" : "#111827";
-        titleEl.style.fontFamily = window.getComputedStyle(document.body).fontFamily || "system-ui, sans-serif";
+        titleEl.style.fontFamily = "'Anuphan', system-ui, sans-serif";
         titleEl.style.wordBreak = "break-word";
         titleEl.style.whiteSpace = "normal";
 
