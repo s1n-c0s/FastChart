@@ -340,11 +340,11 @@ export const StackedChart = React.memo(function StackedChart({
       ? Math.min(1.6, Math.max(1.2, effectiveSize / 600))
       : 1;
 
-    const fontSize = Math.round(12 * scale);
-    const rectSize = Math.round(14 * scale);
+    const fontSize = Math.round(13.5 * scale);
+    const rectSize = Math.round(15 * scale);
     const gap = Math.round(8 * scale);
     const itemMargin = Math.round(20 * scale);
-    const spacingY = Math.round(26 * scale);
+    const spacingY = Math.round(28 * scale);
     
     const rows: { items: Datum[]; width: number; itemWidths: number[] }[] = [];
     let currentRow: Datum[] = [];
@@ -416,7 +416,7 @@ export const StackedChart = React.memo(function StackedChart({
                   fill={textColor}
                   fontSize={fontSize}
                   fontWeight="500"
-                  fontFamily="sans-serif"
+                  fontFamily="'Anuphan', sans-serif"
                   style={{ pointerEvents: 'none' }}
                 >
                   {item.label}: {Number(item.value || 0).toLocaleString()} ({totalValue > 0 ? Math.round((Math.max(0, item.value || 0) / totalValue) * 100) : 0}%)

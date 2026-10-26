@@ -358,11 +358,11 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
       ? Math.min(1.5, Math.max(1.1, effectiveSize / 600))
       : 1;
 
-    const fontSize = Math.round(12 * scale);
-    const rectSize = Math.round(14 * scale);
+    const fontSize = Math.round(13.5 * scale);
+    const rectSize = Math.round(15 * scale);
     const gap = Math.round(8 * scale);
     const itemMargin = Math.round(20 * scale);
-    const spacingY = Math.round(25 * scale);
+    const spacingY = Math.round(27 * scale);
 
     const rows: { items: Datum[]; width: number; itemWidths: number[] }[] = [];
     let currentRow: Datum[] = [];
@@ -710,7 +710,7 @@ export const PieChart = React.memo(function PieChart({ data, total, containerRef
                   fill={textMainColor}
                   fontSize={fontSize}
                   fontWeight="500"
-                  fontFamily="sans-serif"
+                  fontFamily="'Anuphan', sans-serif"
                   style={{ pointerEvents: 'none' }}
                 >
                   {item.label}: {Number(item.value || 0).toLocaleString()} ({total > 0 ? Math.round((Math.max(0, item.value || 0) / total) * 100) : 0}%)
