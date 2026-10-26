@@ -106,7 +106,7 @@ export function useCharts() {
           containerEl?.classList.contains('items-center')
         );
 
-        // Calculate line wrapping based on available width
+        // Calculate line wrapping based on available width, splitting words if necessary
         const availableWidth = baseWidth - 32;
         const maxCharsPerLine = Math.max(16, Math.floor(availableWidth / 14.5));
         const words = chartTitle.trim().split(/\s+/);
@@ -114,7 +114,18 @@ export function useCharts() {
         let curLine = "";
 
         for (const w of words) {
-          if (!curLine) {
+          if (w.length > maxCharsPerLine) {
+            if (curLine) {
+              lines.push(curLine);
+              curLine = "";
+            }
+            let remaining = w;
+            while (remaining.length > maxCharsPerLine) {
+              lines.push(remaining.slice(0, maxCharsPerLine));
+              remaining = remaining.slice(maxCharsPerLine);
+            }
+            curLine = remaining;
+          } else if (!curLine) {
             curLine = w;
           } else if ((curLine + " " + w).length <= maxCharsPerLine) {
             curLine += " " + w;
