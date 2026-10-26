@@ -137,9 +137,9 @@ export function useCharts() {
         if (curLine) lines.push(curLine);
 
         const isFullscreenModal = Boolean(containerEl?.closest?.('[class*="fullscreenContent"], [class*="fullscreenModal"]') || (containerEl && (containerEl.clientHeight > 500 || containerEl.clientWidth > 900)));
-        const titleFontSize = isFullscreenModal ? 28 : 22;
-        const lineHeight = isFullscreenModal ? 38 : 32;
-        const titlePaddingBottom = isFullscreenModal ? 20 : 16;
+        const titleFontSize = isFullscreenModal ? 34 : 22;
+        const lineHeight = isFullscreenModal ? 46 : 32;
+        const titlePaddingBottom = isFullscreenModal ? 24 : 16;
         const titleHeight = lines.length * lineHeight + titlePaddingBottom;
         const currentViewBox = cloneTemp.getAttribute("viewBox");
 
@@ -184,7 +184,7 @@ export function useCharts() {
         lines.forEach((line, idx) => {
           const tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
           tspan.setAttribute("x", textX);
-          tspan.setAttribute("y", String((isFullscreenModal ? 32 : 26) + idx * lineHeight));
+          tspan.setAttribute("y", String((isFullscreenModal ? 38 : 26) + idx * lineHeight));
           tspan.textContent = line;
           textNode.appendChild(tspan);
         });
@@ -279,10 +279,10 @@ export function useCharts() {
         const isFullscreenModal = Boolean(containerEl.closest?.('[class*="fullscreenContent"], [class*="fullscreenModal"]') || containerEl.clientHeight > 500 || containerEl.clientWidth > 900);
         titleEl = document.createElement("div");
         titleEl.textContent = chartTitle!.trim();
-        titleEl.style.fontSize = isFullscreenModal ? "28px" : "22px";
+        titleEl.style.fontSize = isFullscreenModal ? "34px" : "22px";
         titleEl.style.fontWeight = "600";
         titleEl.style.lineHeight = "1.35";
-        titleEl.style.padding = isFullscreenModal ? "6px 16px 18px 16px" : "4px 12px 14px 12px";
+        titleEl.style.padding = isFullscreenModal ? "8px 20px 22px 20px" : "4px 12px 14px 12px";
         titleEl.style.color = isDark ? "#f3f4f6" : "#111827";
         titleEl.style.fontFamily = "'Anuphan', system-ui, sans-serif";
         titleEl.style.wordBreak = "break-word";
