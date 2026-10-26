@@ -157,9 +157,9 @@ export function ChartCard({
                   onTitleChange ? "cursor-pointer hover:bg-muted/50" : ""
                 }`}
                 onClick={onTitleChange ? () => setIsEditingTitle(true) : undefined}
-                title={onTitleChange ? "Click to edit title" : undefined}
+                title={currentTitle}
               >
-                <h3 className="text-2xl font-semibold tracking-tight text-foreground truncate select-none">
+                <h3 className="text-2xl font-semibold tracking-tight text-foreground select-none truncate">
                   {currentTitle}
                 </h3>
                 {onTitleChange && (
@@ -206,7 +206,7 @@ export function ChartCard({
       </div>
       <div 
         ref={chartRef} 
-        className="w-full h-96 relative cursor-pointer overflow-hidden rounded-xl"
+        className="w-full h-96 relative cursor-pointer overflow-hidden rounded-xl pb-2"
         onClick={handleChartClick}
       >
         {showTooltip && (

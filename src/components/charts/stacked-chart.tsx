@@ -340,11 +340,11 @@ export const StackedChart = React.memo(function StackedChart({
       ? Math.min(1.6, Math.max(1.2, effectiveSize / 600))
       : 1;
 
-    const fontSize = Math.round(12 * scale);
-    const rectSize = Math.round(14 * scale);
+    const fontSize = Math.round(13.5 * scale);
+    const rectSize = Math.round(15 * scale);
     const gap = Math.round(8 * scale);
     const itemMargin = Math.round(20 * scale);
-    const spacingY = Math.round(26 * scale);
+    const spacingY = Math.round(28 * scale);
     
     const rows: { items: Datum[]; width: number; itemWidths: number[] }[] = [];
     let currentRow: Datum[] = [];
@@ -387,7 +387,7 @@ export const StackedChart = React.memo(function StackedChart({
     const { fontSize, rectSize, gap, spacingY } = legendConfig;
     const textColor = isDark ? "#e4e4e7" : "#3f3f46"; 
     
-    const legendBottomMargin = showLegend ? (isFullscreen ? 24 : 10) : 0;
+    const legendBottomMargin = showLegend ? (isFullscreen ? 24 : 14) : 0;
     const startY = isStandalone ? 12 : Math.max(0, (dimensions.height || 384) - legendHeight - legendBottomMargin);
 
     return (
@@ -416,7 +416,7 @@ export const StackedChart = React.memo(function StackedChart({
                   fill={textColor}
                   fontSize={fontSize}
                   fontWeight="500"
-                  fontFamily="sans-serif"
+                  fontFamily="'Anuphan', sans-serif"
                   style={{ pointerEvents: 'none' }}
                 >
                   {item.label}: {Number(item.value || 0).toLocaleString()} ({totalValue > 0 ? Math.round((Math.max(0, item.value || 0) / totalValue) * 100) : 0}%)
@@ -434,7 +434,7 @@ export const StackedChart = React.memo(function StackedChart({
     const baseWidth = dimensions.width || (isFullscreen ? 800 : 400);
     const baseHeight = dimensions.height || (isFullscreen ? 500 : 384);
     
-    const legendBottomMargin = showLegend ? (isFullscreen ? 24 : 10) : 0;
+    const legendBottomMargin = showLegend ? (isFullscreen ? 24 : 14) : 0;
     const legendStartY = showLegend
       ? Math.max(120, baseHeight - legendHeight - legendBottomMargin)
       : baseHeight;
@@ -601,10 +601,10 @@ export const StackedChart = React.memo(function StackedChart({
   }
 
   const chartToLegendGap = isFullscreen ? 56 : 32;
-  const legendBottomMargin = showLegend ? (isFullscreen ? 24 : 10) : 0;
+  const legendBottomMargin = showLegend ? (isFullscreen ? 24 : 14) : 0;
   const chartBottomMargin = showLegend 
     ? (legendHeight + chartToLegendGap + legendBottomMargin) 
-    : (isFullscreen ? 24 : 10);
+    : (isFullscreen ? 24 : 14);
 
   const horizontalBarSize = isFullscreen ? 140 : 80;
   const verticalBarSize = isFullscreen ? 160 : 90;
