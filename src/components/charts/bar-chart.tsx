@@ -20,6 +20,7 @@ export interface BarChartProps {
   containerRef?: React.Ref<HTMLDivElement>
   children?: React.ReactNode
   showLabels?: boolean
+  isFullscreen?: boolean
 }
 
 export const BarChart = React.memo(function BarChart({
@@ -27,7 +28,7 @@ export const BarChart = React.memo(function BarChart({
   isHorizontal = true,
   containerRef,
   children,
-
+  isFullscreen = false,
 }: BarChartProps) {
   const chartConfig = React.useMemo(() => {
     const config: Record<string, { label: string; color: string }> = {}
@@ -152,7 +153,7 @@ export const BarChart = React.memo(function BarChart({
               tickLine={false} 
               axisLine={false}
               tickFormatter={(v) => Number(v).toLocaleString()}
-              style={{ fontSize: '14px' }}
+              style={{ fontSize: isFullscreen ? '16px' : '14px' }}
             />
             <YAxis
               dataKey="label"
@@ -161,7 +162,7 @@ export const BarChart = React.memo(function BarChart({
               tickLine={false}
               axisLine={false}
               width={yAxisWidth}
-              style={{ fontSize: data.length > 20 ? '12px' : '14px' }}
+              style={{ fontSize: isFullscreen ? '16px' : (data.length > 20 ? '12px' : '14px') }}
             />
             <ChartTooltip
               cursor={{ fill: 'var(--muted)', opacity: 0.65 }}
@@ -191,9 +192,9 @@ export const BarChart = React.memo(function BarChart({
               <LabelList
                 dataKey="value"
                 position="right"
-                offset={8}
+                offset={isFullscreen ? 12 : 8}
                 className="fill-foreground font-semibold chart-global-label"
-                fontSize={15}
+                fontSize={isFullscreen ? 18 : 15}
                 fontWeight={600}
                 formatter={(value: any) => (Number(value) || 0).toLocaleString()}
               />
@@ -214,8 +215,8 @@ export const BarChart = React.memo(function BarChart({
   const shouldAngle = availableWidthPerBar < approxLabelWidth && data.length > 6;
   
   const tickFontSize = shouldAngle 
-    ? (availableWidthPerBar < 30 ? 11 : 12) 
-    : (data.length > 15 ? 12 : 14);
+    ? (availableWidthPerBar < 30 ? (isFullscreen ? 13 : 11) : (isFullscreen ? 15 : 12)) 
+    : (isFullscreen ? 16 : (data.length > 15 ? 12 : 14));
 
   const xAxisHeight = shouldAngle 
     ? Math.min(Math.max(maxLabelLength * 5.5, 45), 90) 
@@ -256,7 +257,7 @@ export const BarChart = React.memo(function BarChart({
             axisLine={false}
             width={Math.max(45, String(numericAxisMax).length * 8.5 + 8)}
             tickFormatter={(v) => Number(v).toLocaleString()}
-            style={{ fontSize: '14px' }}
+            style={{ fontSize: isFullscreen ? '16px' : '14px' }}
           />
           <ChartTooltip
             cursor={{ fill: 'var(--muted)', opacity: 0.65 }}
@@ -291,9 +292,9 @@ export const BarChart = React.memo(function BarChart({
             <LabelList
               dataKey="value"
               position="top"
-              offset={8}
+              offset={isFullscreen ? 12 : 8}
               className="fill-foreground font-semibold chart-global-label"
-              fontSize={15}
+              fontSize={isFullscreen ? 18 : 15}
               fontWeight={600}
               formatter={(value: any) => (Number(value) || 0).toLocaleString()}
             />

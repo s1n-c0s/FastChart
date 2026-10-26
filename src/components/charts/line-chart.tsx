@@ -21,6 +21,7 @@ export interface LineChartProps {
   showLabels?: boolean
   showGradientArea?: boolean
   lineColor?: string
+  isFullscreen?: boolean
 }
 
 interface LineChartTooltipProps {
@@ -57,9 +58,9 @@ const LineChartTooltip = ({ active, payload, label, lineColor }: LineChartToolti
 export const LineChart = React.memo(function LineChart({ 
   data, 
   containerRef, 
- 
   showGradientArea = false,
-  lineColor: customLineColor
+  lineColor: customLineColor,
+  isFullscreen = false
 }: LineChartProps) {
   
   const chartConfig = React.useMemo(() => {
@@ -156,7 +157,7 @@ export const LineChart = React.memo(function LineChart({
                 tickLine={false}
                 axisLine={false}
                 tickMargin={12}
-                style={{ fontSize: data.length > 15 ? '12px' : '14px' }}
+                style={{ fontSize: isFullscreen ? '16px' : (data.length > 15 ? '12px' : '14px') }}
               />
               <YAxis
                 type="number"
@@ -164,9 +165,9 @@ export const LineChart = React.memo(function LineChart({
                 domain={[0, numericAxisMax]}
                 tickLine={false}
                 axisLine={false}
-                width={Math.max(50, String(numericAxisMax).length * 8.5 + 8)}
+                width={Math.max(isFullscreen ? 60 : 50, String(numericAxisMax).length * (isFullscreen ? 10 : 8.5) + 8)}
                 tickFormatter={(v) => Number(v).toLocaleString()}
-                style={{ fontSize: '13px' }}
+                style={{ fontSize: isFullscreen ? '15px' : '13px' }}
               />
               <Tooltip
                 isAnimationActive={false}
@@ -194,9 +195,9 @@ export const LineChart = React.memo(function LineChart({
                 <LabelList
                   dataKey="value"
                   position="top"
-                  offset={8}
+                  offset={isFullscreen ? 12 : 8}
                   className="fill-foreground font-semibold chart-global-label"
-                  fontSize={15}
+                  fontSize={isFullscreen ? 19 : 15}
                   fontWeight={600}
                   formatter={(value: any) => (Number(value) || 0).toLocaleString()}
                 />
@@ -210,7 +211,8 @@ export const LineChart = React.memo(function LineChart({
 }, (prevProps, nextProps) => {
   if (
     prevProps.showGradientArea !== nextProps.showGradientArea ||
-    prevProps.lineColor !== nextProps.lineColor
+    prevProps.lineColor !== nextProps.lineColor ||
+    prevProps.isFullscreen !== nextProps.isFullscreen
   ) {
     return false
   }
