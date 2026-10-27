@@ -30,14 +30,17 @@ export default function EmbedChart() {
     return <div className="flex items-center justify-center w-full h-screen">Loading or invalid config...</div>;
   }
 
-  const { type, data, total, options = {} } = config;
+  const { type, data, data2, total, total2, table1Name, table2Name, options = {} } = config;
 
   const renderChart = () => {
     switch (type) {
       case 'bar':
         return (
           <BarChart 
-            data={data} 
+            data={data}
+            data2={data2}
+            table1Name={table1Name}
+            table2Name={table2Name}
             isHorizontal={options.isHorizontal}
             showLabels={options.showLabels}
           />
@@ -45,8 +48,12 @@ export default function EmbedChart() {
       case 'pie':
         return (
           <PieChart 
-            data={data} 
-            total={total} 
+            data={data}
+            data2={data2}
+            table1Name={table1Name}
+            table2Name={table2Name}
+            total={total}
+            total2={total2}
             showLabels={options.showLabels}
             showLegend={options.showLegend !== false}
             showFactText={options.showFactText} 
@@ -57,7 +64,10 @@ export default function EmbedChart() {
       case 'stacked':
         return (
           <StackedChart 
-            data={data} 
+            data={data}
+            data2={data2}
+            table1Name={table1Name}
+            table2Name={table2Name}
             isHorizontal={options.isHorizontal} 
             showLabels={options.showLabels} 
             showRadial={options.showRadial} 
@@ -70,10 +80,14 @@ export default function EmbedChart() {
       case 'line':
         return (
           <LineChart 
-            data={data} 
+            data={data}
+            data2={data2}
+            table1Name={table1Name}
+            table2Name={table2Name}
             showLabels={options.showLabels}
             showGradientArea={options.showGradientArea}
             lineColor={options.lineColor}
+            lineColor2={options.lineColor2}
           />
         );
       default:
