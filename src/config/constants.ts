@@ -16,7 +16,15 @@ export const INITIAL_DATA: Datum[] = [
   { id: generateId(), label: "C", value: 18, color: PRESET_COLORS[2] },
 ];
 
+export const INITIAL_DATA_2: Datum[] = [
+  { id: generateId(), label: "A", value: 18, color: PRESET_COLORS[3] },
+  { id: generateId(), label: "B", value: 24, color: PRESET_COLORS[4] },
+  { id: generateId(), label: "C", value: 28, color: PRESET_COLORS[5] },
+];
+
 export const INITIAL_MARKDOWN = `Label,Value,Color\nitem1,"5",#F032E6\nitem2,"4",#46F0F0\nitem3,"5",#06b6d4`;
+
+export const INITIAL_MARKDOWN_2 = `Label,Value,Color\nitem1,"8",#f59e0b\nitem2,"6",#a855f7\nitem3,"7",#06b6d4`;
 
 export const TOAST_CONFIG = {
   position: "bottom-center" as const,

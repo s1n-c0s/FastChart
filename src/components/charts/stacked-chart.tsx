@@ -21,6 +21,9 @@ import type { Datum } from "@/types"
 
 export interface StackedChartProps {
   data: Datum[]
+  data2?: Datum[] | null
+  table1Name?: string
+  table2Name?: string
   isHorizontal?: boolean
   containerRef?: React.Ref<HTMLDivElement>
   showLabels?: boolean
@@ -31,8 +34,6 @@ export interface StackedChartProps {
   factIndex?: number
   onFactIndexChange?: (index: number) => void
 }
-
-
 
 const CustomStackedLabel = (props: any) => {
   const { x, y, width, height, value, rawData, top4KeysSet, barDataKey, isFullscreen, isHorizontal } = props;
@@ -53,20 +54,19 @@ const CustomStackedLabel = (props: any) => {
   }
 
   const percent = Math.round((value || 0) * 100);
+  if (percent <= 0) return null;
   
   const cx = x + width / 2;
   const cy = y + height / 2;
   
-  const baseFontSizePercent = isFullscreen ? 40 : (isHorizontal ? 24 : 20);
-  const baseFontSizeRaw = isFullscreen ? 20 : (isHorizontal ? 16 : 14);
+  const baseFontSizePercent = isFullscreen ? 36 : (isHorizontal ? 22 : 18);
+  const baseFontSizeRaw = isFullscreen ? 18 : (isHorizontal ? 15 : 13);
   
-  // Calculate text width approximately (0.6 is typical average character width ratio)
   const textStr = `${barDataKey} (${percent}%)`;
   const approxTextWidth = textStr.length * (baseFontSizePercent * 0.55);
   const approxTextHeight = baseFontSizePercent;
 
-  // Scale factor to fit inside the bar with some padding (4px each side minimum)
-  const paddingX = 8;
+  const paddingX = 6;
   const paddingY = 4;
   const scaleX = Math.min(1, Math.max(0.1, (width - paddingX) / approxTextWidth));
   const scaleY = Math.min(1, Math.max(0.1, (height - paddingY) / approxTextHeight));
@@ -75,7 +75,6 @@ const CustomStackedLabel = (props: any) => {
   const fontSizePercent = baseFontSizePercent * scale;
   const fontSizeRaw = baseFontSizeRaw * scale;
   
-  // If the bar is so tiny that scale drops below 0.3, just hide it to avoid illegible microscopic text
   if (scale < 0.3) return null;
   
   const str1 = barDataKey;
@@ -89,9 +88,6 @@ const CustomStackedLabel = (props: any) => {
   const splitX1 = cx - totalW / 2 + width1;
   const splitX2 = splitX1 + gap;
 
-  // We use two separate <text> elements with explicit X positions instead of <tspan>
-  // to ensure flawless compatibility with all SVG viewers (like Figma) while keeping 
-  // the different font sizes.
   return (
     <g style={{ pointerEvents: 'none' }}>
       <text 
@@ -124,6 +120,9 @@ const CustomStackedLabel = (props: any) => {
 
 export const StackedChart = React.memo(function StackedChart({
   data,
+  data2,
+  table1Name = "Table 1",
+  table2Name = "Table 2",
   isHorizontal = true,
   containerRef,
   showLabels = false,
@@ -134,6 +133,7 @@ export const StackedChart = React.memo(function StackedChart({
   factIndex = 0,
   onFactIndexChange,
 }: StackedChartProps) {
+  const isComparison = Boolean(data2 && data2.length > 0);
 
   const [isDark, setIsDark] = React.useState(false);
   React.useEffect(() => {
@@ -177,8 +177,7 @@ export const StackedChart = React.memo(function StackedChart({
     }
   }, []);
 
-  // Calculate total for radial chart
-  const totalValue = React.useMemo(() => {
+  const totalValue1 = React.useMemo(() => {
     let sum = 0;
     for (let i = 0; i < data.length; i++) {
       const v = data[i].value;
@@ -186,6 +185,28 @@ export const StackedChart = React.memo(function StackedChart({
     }
     return sum;
   }, [data]);
+
+  const totalValue2 = React.useMemo(() => {
+    if (!data2) return 0;
+    let sum = 0;
+    for (let i = 0; i < data2.length; i++) {
+      const v = data2[i].value;
+      if (isFinite(v) && v > 0) sum += v;
+    }
+    return sum;
+  }, [data2]);
+
+  const combinedItems = React.useMemo(() => {
+    if (!isComparison || !data2) return data;
+    const map = new Map<string, Datum>();
+    data.forEach(d => map.set(d.label, d));
+    data2.forEach(d => {
+      if (!map.has(d.label)) {
+        map.set(d.label, d);
+      }
+    });
+    return Array.from(map.values());
+  }, [data, data2, isComparison]);
 
   const [activeTooltip, setActiveTooltip] = React.useState<{
     label: string;
@@ -198,13 +219,13 @@ export const StackedChart = React.memo(function StackedChart({
 
   React.useEffect(() => {
     setActiveTooltip(null);
-  }, [data, showRadial, isHorizontal]);
+  }, [data, data2, showRadial, isHorizontal]);
 
-  const handleItemHover = React.useCallback((item: Datum, e: React.MouseEvent) => {
+  const handleItemHover = React.useCallback((item: Datum, e: React.MouseEvent, totalBase: number) => {
     const node = localRef.current;
     if (!node) return;
     const rect = node.getBoundingClientRect();
-    const percent = totalValue > 0 ? Math.round((Math.max(0, item.value || 0) / totalValue) * 100) : 0;
+    const percent = totalBase > 0 ? Math.round((Math.max(0, item.value || 0) / totalBase) * 100) : 0;
     setActiveTooltip({
       label: item.label,
       value: Number(item.value || 0),
@@ -213,13 +234,13 @@ export const StackedChart = React.memo(function StackedChart({
       x: Math.round(e.clientX - rect.left),
       y: Math.round(e.clientY - rect.top),
     });
-  }, [totalValue]);
+  }, []);
 
-  const handleItemMove = React.useCallback((item: Datum, e: React.MouseEvent) => {
+  const handleItemMove = React.useCallback((item: Datum, e: React.MouseEvent, totalBase: number) => {
     const node = localRef.current;
     if (!node) return;
     const rect = node.getBoundingClientRect();
-    const percent = totalValue > 0 ? Math.round((Math.max(0, item.value || 0) / totalValue) * 100) : 0;
+    const percent = totalBase > 0 ? Math.round((Math.max(0, item.value || 0) / totalBase) * 100) : 0;
     setActiveTooltip({
       label: item.label,
       value: Number(item.value || 0),
@@ -228,7 +249,7 @@ export const StackedChart = React.memo(function StackedChart({
       x: Math.round(e.clientX - rect.left),
       y: Math.round(e.clientY - rect.top),
     });
-  }, [totalValue]);
+  }, []);
 
   const handleItemLeave = React.useCallback(() => {
     setActiveTooltip(null);
@@ -287,58 +308,71 @@ export const StackedChart = React.memo(function StackedChart({
     return { maxItem: max, minItem: min };
   }, [data]);
 
-  // Transform data for stacked chart (O(N) with single object)
+  // Transform data for stacked chart
   const stackedData = React.useMemo(() => {
-    const row: Record<string, any> = { name: "All" };
-    const divisor = totalValue || 1;
-    data.forEach((d) => {
-      row[d.label] = Math.max(0, d.value || 0) / divisor;
-    });
-    return [row];
-  }, [data, totalValue]);
+    if (!isComparison || !data2) {
+      const row: Record<string, any> = { name: "All" };
+      const divisor = totalValue1 || 1;
+      data.forEach((d) => {
+        row[d.label] = Math.max(0, d.value || 0) / divisor;
+      });
+      return [row];
+    }
 
-  // Transform data for radial chart (O(N) with single object)
+    const row1: Record<string, any> = { name: table1Name };
+    const div1 = totalValue1 || 1;
+    data.forEach((d) => {
+      row1[d.label] = Math.max(0, d.value || 0) / div1;
+    });
+
+    const row2: Record<string, any> = { name: table2Name };
+    const div2 = totalValue2 || 1;
+    data2.forEach((d) => {
+      row2[d.label] = Math.max(0, d.value || 0) / div2;
+    });
+
+    return [row1, row2];
+  }, [data, data2, isComparison, table1Name, table2Name, totalValue1, totalValue2]);
+
+  // Transform data for radial chart
   const radialData = React.useMemo(() => {
     const row: Record<string, any> = {};
-    const divisor = totalValue || 1;
+    const divisor = totalValue1 || 1;
     data.forEach((d) => {
       row[d.label] = Math.max(0, d.value || 0) / divisor;
     });
     return [row];
-  }, [data, totalValue]);
+  }, [data, totalValue1]);
 
-  // Build chart config for radial
   const chartConfig = React.useMemo(() => {
     const cfg: ChartConfig = {};
-    data.forEach((d) => {
+    combinedItems.forEach((d) => {
       cfg[d.label] = {
         label: d.label,
         color: d.color,
       };
     });
     return cfg;
-  }, [data]);
+  }, [combinedItems]);
 
   const top4KeysSet = React.useMemo(() => {
-    if (!data || data.length <= 4) return null;
+    if (!combinedItems || combinedItems.length <= 4) return null;
     return new Set(
-      [...data]
+      [...combinedItems]
         .sort((a, b) => (b.value || 0) - (a.value || 0))
         .slice(0, 4)
         .map(d => d.label)
     );
-  }, [data]);
+  }, [combinedItems]);
 
-  const isAnimationActive = data.length <= 15;
+  const isAnimationActive = combinedItems.length <= 15;
 
   const { legendRows, legendHeight, legendConfig } = React.useMemo(() => {
     const { width, height } = dimensions;
     if (!width) return { legendRows: [], legendHeight: 0, legendConfig: { fontSize: 12, rectSize: 14, gap: 8, spacingY: 25 } };
     
     const effectiveSize = Math.max(width || 0, height || 0);
-    const scale = isFullscreen 
-      ? Math.min(1.6, Math.max(1.2, effectiveSize / 600))
-      : 1;
+    const scale = isFullscreen ? Math.min(1.6, Math.max(1.2, effectiveSize / 600)) : 1;
 
     const fontSize = Math.round(13.5 * scale);
     const rectSize = Math.round(15 * scale);
@@ -351,9 +385,9 @@ export const StackedChart = React.memo(function StackedChart({
     let currentRowWidth = 0;
     let currentRowItemWidths: number[] = [];
 
-    data.forEach((item: Datum) => {
-      const percentage = totalValue > 0 ? Math.round((Math.max(0, item.value || 0) / totalValue) * 100) : 0;
-      const labelText = `${item.label}: ${Number(item.value || 0).toLocaleString()} (${percentage}%)`;
+    combinedItems.forEach((item: Datum) => {
+      const percentage = !isComparison && totalValue1 > 0 ? ` (${Math.round((Math.max(0, item.value || 0) / totalValue1) * 100)}%)` : "";
+      const labelText = `${item.label}${!isComparison ? `: ${Number(item.value || 0).toLocaleString()}` : ""}${percentage}`;
       const textWidth = labelText.length * (fontSize * 0.62); 
       const itemWidth = rectSize + gap + textWidth + itemMargin;
       const maxItemsPerRow = isFullscreen && width > 700 ? 5 : 4;
@@ -379,7 +413,7 @@ export const StackedChart = React.memo(function StackedChart({
       legendHeight: rows.length * spacingY,
       legendConfig: { fontSize, rectSize, gap, spacingY }
     };
-  }, [data, dimensions, isFullscreen, totalValue]);
+  }, [combinedItems, dimensions, isFullscreen, isComparison, totalValue1]);
 
   const renderSvgLegend = (isStandalone = false) => {
     if (!showLegend || !dimensions.width || !dimensions.height || legendRows.length === 0) return null;
@@ -399,6 +433,7 @@ export const StackedChart = React.memo(function StackedChart({
             const x = currentX;
             const y = startY + (rowIndex * spacingY);
             currentX += row.itemWidths[colIndex];
+            const pct = !isComparison && totalValue1 > 0 ? ` (${Math.round((Math.max(0, item.value || 0) / totalValue1) * 100)}%)` : "";
 
             return (
               <g key={`legend-${item.id}`}>
@@ -419,7 +454,7 @@ export const StackedChart = React.memo(function StackedChart({
                   fontFamily="'Anuphan', sans-serif"
                   style={{ pointerEvents: 'none' }}
                 >
-                  {item.label}: {Number(item.value || 0).toLocaleString()} ({totalValue > 0 ? Math.round((Math.max(0, item.value || 0) / totalValue) * 100) : 0}%)
+                  {item.label}{!isComparison ? `: ${Number(item.value || 0).toLocaleString()}` : ""}{pct}
                 </text>
               </g>
             );
@@ -439,14 +474,11 @@ export const StackedChart = React.memo(function StackedChart({
       ? Math.max(120, baseHeight - legendHeight - legendBottomMargin)
       : baseHeight;
 
-    // Radial semi-circle ends at cy. All content (arc, text, arrows) sits strictly ABOVE cy.
-    // Ensure safe area padding and clean spacing between radialCy and legendStartY
     const radialGap = showLegend && legendRows.length > 0 ? (isFullscreen ? 56 : 32) : 0;
     const radialCy = showLegend
       ? Math.max(120, legendStartY - radialGap)
       : Math.max(160, baseHeight - (isFullscreen ? 36 : 24));
     
-    // Give proper headroom above the radial arc so it breathes comfortably
     const topHeadroom = isFullscreen ? 60 : 35;
     const availableRadiusW = (baseWidth / 2) * (showLegend ? 0.82 : 0.85); 
     const availableRadiusH = Math.max(60, (radialCy - topHeadroom) * (showLegend ? 0.88 : 0.92)); 
@@ -483,10 +515,9 @@ export const StackedChart = React.memo(function StackedChart({
                   if (viewBox && "cx" in viewBox && "cy" in viewBox) {
                     const cx = viewBox.cx || 0;
                     const cy = viewBox.cy || 0;
-                    const maxTextSize = isFullscreen ? 80 : 32
-                    const maxLabelSize = isFullscreen ? 24 : 16
+                    const maxTextSize = isFullscreen ? 80 : 32;
+                    const maxLabelSize = isFullscreen ? 24 : 16;
                     
-                    // Dynamically scale text to fit inside the innerRadius hole
                     const availableHeight = innerRadius; 
                     const scaleFactor = Math.min(1, availableHeight / (maxTextSize + maxLabelSize + 12));
                     
@@ -495,9 +526,8 @@ export const StackedChart = React.memo(function StackedChart({
                     const titleSize = labelSize * 0.9;
                     
                     let factTitle = "Total";
-                    let factValue = totalValue.toLocaleString();
+                    let factValue = totalValue1.toLocaleString();
                     let factColor = "var(--muted-foreground)";
-                    let factValueColor = "currentColor";
                     let factLabel = "";
                     
                     if (showFactText) {
@@ -505,13 +535,11 @@ export const StackedChart = React.memo(function StackedChart({
                         factTitle = "The most";
                         factValue = maxItem.value.toLocaleString();
                         factColor = maxItem.color;
-                        factValueColor = maxItem.color;
                         factLabel = maxItem.label;
                       } else if (factIndex === 2 && minItem) {
                         factTitle = "The Lowest";
                         factValue = minItem.value.toLocaleString();
                         factColor = minItem.color;
-                        factValueColor = minItem.color;
                         factLabel = minItem.label;
                       }
                     }
@@ -521,8 +549,6 @@ export const StackedChart = React.memo(function StackedChart({
                       if (onFactIndexChange) onFactIndexChange(((factIndex || 0) + 1) % 3);
                     };
                     
-                    // Radial chart is a half circle ending at cy. All content must sit ABOVE cy.
-                    // We use fixed Y coordinates so the text doesn't jiggle when toggling
                     const labelY = cy - (4 * scaleFactor);
                     const valueY = labelY - labelSize - (4 * scaleFactor);
                     const titleY = valueY - (textSize * 0.8) - (4 * scaleFactor);
@@ -552,7 +578,8 @@ export const StackedChart = React.memo(function StackedChart({
                           <tspan
                             x={cx}
                             y={valueY}
-                            style={{ fontSize: `${textSize}px`, fontWeight: 'bold', fill: factValueColor }}
+                            className="fill-foreground font-bold tracking-tight"
+                            style={{ fontSize: `${textSize}px`, fill: factColor }}
                           >
                             {factValue}
                           </tspan>
@@ -560,44 +587,36 @@ export const StackedChart = React.memo(function StackedChart({
                             <tspan
                               x={cx}
                               y={labelY}
-                              style={{ fontSize: `${labelSize}px`, fill: factColor, opacity: 0.8, fontWeight: '500' }}
+                              style={{ fontSize: `${labelSize}px`, fill: factColor, fontWeight: '500' }}
                             >
                               {factLabel}
                             </tspan>
                           )}
                         </text>
                       </g>
-                    )
+                    );
                   }
                   return null;
                 }}
               />
             </PolarRadiusAxis>
             {data.map((d) => (
-              <RadialBar 
-                isAnimationActive={isAnimationActive}
+              <RadialBar
                 key={d.id}
                 dataKey={d.label}
-                name={d.label}
-                stackId="a"
-                cornerRadius={4}
                 fill={d.color}
-                fillOpacity={activeTooltip ? (activeTooltip.label === d.label ? 1 : 0.5) : 1}
-                stroke={isDark ? "#18181b" : "#ffffff"}
-                strokeWidth={2.5}
-                onMouseEnter={(_data, _idx, e) => handleItemHover(d, e)}
-                onMouseMove={(_data, _idx, e) => handleItemMove(d, e)}
-                onMouseLeave={handleItemLeave}
-                style={{ cursor: 'pointer', transition: 'fill-opacity 150ms ease' }}
+                stackId="stack"
+                cornerRadius={5}
+                isAnimationActive={isAnimationActive}
+                className="stroke-transparent stroke-2"
               />
             ))}
             {renderSvgLegend()}
-          </RadialBarChart>
+            </RadialBarChart>
           </ChartContainer>
         </div>
-        {renderFloatingTooltip()}
       </div>
-    )
+    );
   }
 
   const chartToLegendGap = isFullscreen ? 56 : 32;
@@ -606,8 +625,8 @@ export const StackedChart = React.memo(function StackedChart({
     ? (legendHeight + chartToLegendGap + legendBottomMargin) 
     : (isFullscreen ? 24 : 14);
 
-  const horizontalBarSize = isFullscreen ? 140 : 80;
-  const verticalBarSize = isFullscreen ? 160 : 90;
+  const horizontalBarSize = isFullscreen ? (isComparison ? 80 : 140) : (isComparison ? 45 : 80);
+  const verticalBarSize = isFullscreen ? (isComparison ? 90 : 160) : (isComparison ? 55 : 90);
 
   // Horizontal mode: bars grow to the right
   if (isHorizontal) {
@@ -619,7 +638,7 @@ export const StackedChart = React.memo(function StackedChart({
       >
         <ResponsiveContainer width="100%" height="100%">
           <RechartsBarChart
-            key="horizontal-stacked-chart"
+            key={`horizontal-stacked-${isComparison ? "cmp" : "single"}`}
             data={stackedData}
             stackOffset="expand"
             layout="vertical"
@@ -636,8 +655,8 @@ export const StackedChart = React.memo(function StackedChart({
               dataKey="name"
               tickLine={false}
               axisLine={false}
-              width={isFullscreen ? 60 : 50}
-              style={{ fontSize: isFullscreen ? '14px' : '12px' }}
+              width={isFullscreen ? 80 : 65}
+              style={{ fontSize: isFullscreen ? '14px' : '12px', fontWeight: '500' }}
             />
             <XAxis
               type="number"
@@ -647,7 +666,7 @@ export const StackedChart = React.memo(function StackedChart({
               axisLine={false}
               style={{ fontSize: isFullscreen ? '13px' : '12px' }}
             />
-            {data.map((d) => (
+            {combinedItems.map((d) => (
               <Bar 
                 key={d.id} 
                 dataKey={d.label} 
@@ -657,15 +676,15 @@ export const StackedChart = React.memo(function StackedChart({
                 name={d.label}
                 barSize={horizontalBarSize}
                 isAnimationActive={isAnimationActive}
-                onMouseEnter={(_data, _idx, e) => handleItemHover(d, e)}
-                onMouseMove={(_data, _idx, e) => handleItemMove(d, e)}
+                onMouseEnter={(_data, _idx, e) => handleItemHover(d, e, totalValue1)}
+                onMouseMove={(_data, _idx, e) => handleItemMove(d, e, totalValue1)}
                 onMouseLeave={handleItemLeave}
                 style={{ cursor: 'pointer', transition: 'fill-opacity 150ms ease' }}
               >
                 {showLabels && (
                   <LabelList
                     dataKey={d.label}
-                    content={<CustomStackedLabel rawData={data} top4KeysSet={top4KeysSet} isFullscreen={isFullscreen} isHorizontal={isHorizontal} barDataKey={d.label} />}
+                    content={<CustomStackedLabel rawData={combinedItems} top4KeysSet={top4KeysSet} isFullscreen={isFullscreen} isHorizontal={isHorizontal} barDataKey={d.label} />}
                   />
                 )}
               </Bar>
@@ -675,7 +694,7 @@ export const StackedChart = React.memo(function StackedChart({
         </ResponsiveContainer>
         {renderFloatingTooltip()}
       </div>
-    )
+    );
   }
 
   // Vertical mode: bars grow upward
@@ -687,7 +706,7 @@ export const StackedChart = React.memo(function StackedChart({
     >
       <ResponsiveContainer width="100%" height="100%">
         <RechartsBarChart
-          key="vertical-stacked-chart"
+          key={`vertical-stacked-${isComparison ? "cmp" : "single"}`}
           data={stackedData}
           stackOffset="expand"
           layout="horizontal"
@@ -705,7 +724,7 @@ export const StackedChart = React.memo(function StackedChart({
             tickLine={false}
             axisLine={false}
             height={isFullscreen ? 50 : 40}
-            style={{ fontSize: isFullscreen ? '14px' : '12px' }}
+            style={{ fontSize: isFullscreen ? '14px' : '12px', fontWeight: '500' }}
           />
           <YAxis
             type="number"
@@ -716,7 +735,7 @@ export const StackedChart = React.memo(function StackedChart({
             width={isFullscreen ? 60 : 50}
             style={{ fontSize: isFullscreen ? '13px' : '12px' }}
           />
-          {data.map((d) => (
+          {combinedItems.map((d) => (
             <Bar 
               key={d.id} 
               dataKey={d.label} 
@@ -726,15 +745,15 @@ export const StackedChart = React.memo(function StackedChart({
               name={d.label}
               barSize={verticalBarSize}
               isAnimationActive={isAnimationActive}
-              onMouseEnter={(_data, _idx, e) => handleItemHover(d, e)}
-              onMouseMove={(_data, _idx, e) => handleItemMove(d, e)}
+              onMouseEnter={(_data, _idx, e) => handleItemHover(d, e, totalValue1)}
+              onMouseMove={(_data, _idx, e) => handleItemMove(d, e, totalValue1)}
               onMouseLeave={handleItemLeave}
               style={{ cursor: 'pointer', transition: 'fill-opacity 150ms ease' }}
             >
               {showLabels && (
                 <LabelList
                   dataKey={d.label}
-                  content={<CustomStackedLabel rawData={data} top4KeysSet={top4KeysSet} isFullscreen={isFullscreen} isHorizontal={isHorizontal} barDataKey={d.label} />}
+                  content={<CustomStackedLabel rawData={combinedItems} top4KeysSet={top4KeysSet} isFullscreen={isFullscreen} isHorizontal={isHorizontal} barDataKey={d.label} />}
                 />
               )}
             </Bar>
@@ -744,7 +763,7 @@ export const StackedChart = React.memo(function StackedChart({
       </ResponsiveContainer>
       {renderFloatingTooltip()}
     </div>
-  )
+  );
 }, (prevProps, nextProps) => {
   return (
     prevProps.isHorizontal === nextProps.isHorizontal &&
@@ -754,12 +773,21 @@ export const StackedChart = React.memo(function StackedChart({
     prevProps.showLegend === nextProps.showLegend &&
     prevProps.showFactText === nextProps.showFactText &&
     prevProps.factIndex === nextProps.factIndex &&
+    prevProps.table1Name === nextProps.table1Name &&
+    prevProps.table2Name === nextProps.table2Name &&
+    (prevProps.data2?.length ?? 0) === (nextProps.data2?.length ?? 0) &&
     prevProps.data.length === nextProps.data.length &&
     prevProps.data.every((item, idx) => 
       item.id === nextProps.data[idx]?.id &&
       item.value === nextProps.data[idx]?.value &&
       item.label === nextProps.data[idx]?.label &&
       item.color === nextProps.data[idx]?.color
-    )
-  )
-})
+    ) &&
+    (!prevProps.data2 || prevProps.data2.every((item, idx) =>
+      item.id === nextProps.data2?.[idx]?.id &&
+      item.value === nextProps.data2?.[idx]?.value &&
+      item.label === nextProps.data2?.[idx]?.label &&
+      item.color === nextProps.data2?.[idx]?.color
+    ))
+  );
+});
