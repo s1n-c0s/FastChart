@@ -239,8 +239,8 @@ export const BarChart = React.memo(function BarChart({
               data={isComparison && comparisonData ? comparisonData : data}
               layout="vertical"
               margin={{ top: 10, right: 60, bottom: 5, left: 5 }}
-              barCategoryGap={isComparison ? "20%" : "15%"}
-              barGap={isComparison ? 3 : 4}
+              barCategoryGap={isComparison ? "30%" : "15%"}
+              barGap={isComparison ? 2 : 4}
             >
               <CartesianGrid
                 className="stroke-border/40"
@@ -402,8 +402,8 @@ export const BarChart = React.memo(function BarChart({
             data={activeDataset}
             layout="horizontal"
             margin={{ top: 25, right: 15, bottom: shouldAngle ? 10 : 5, left: 5 }}
-            barCategoryGap={isComparison ? "20%" : "15%"}
-            barGap={isComparison ? 3 : 4}
+            barCategoryGap={isComparison ? "30%" : "15%"}
+            barGap={isComparison ? 2 : 4}
           >
             <CartesianGrid
               className="stroke-border/40"
