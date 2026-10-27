@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import toast from "react-hot-toast";
 import { generateId } from "@/lib/utils/data-parser";
-import { PRESET_COLORS, INITIAL_DATA, INITIAL_MARKDOWN } from "@/config/constants";
+import { PRESET_COLORS, INITIAL_DATA, INITIAL_DATA_2, INITIAL_MARKDOWN } from "@/config/constants";
 import type { Datum } from "@/types";
 import {
   DndContext,
@@ -33,7 +33,7 @@ import {
   LineChart,
   StackedChart
 } from "../components/charts";
-import { Database, X, ChevronDown, ChevronUp, SlidersHorizontal, Copy, ArrowUpDown, ArrowUp, ArrowDown, Type } from "lucide-react";
+import { Database, X, ChevronDown, ChevronUp, SlidersHorizontal, Copy, ArrowUpDown, ArrowUp, ArrowDown, Type, Plus, Trash2, Columns, Table as TableIcon } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -45,12 +45,25 @@ import {
 export default function DataVisualizer() {
   // --- 1. จัดการข้อมูล (Data Layer) ---
   const { 
-    data, setData, total, updateLabel, updateValue, updateColor, removeRow 
+    data: data1, setData: setData1, total: total1, updateLabel: updateLabel1, updateValue: updateValue1, updateColor: updateColor1, removeRow: removeRow1 
   } = useDataManipulation(INITIAL_DATA);
-  
-  const { sortedData, sortConfig, requestSort, setSortConfig } = useSort(data);
 
-  // --- 2. จัดการแผนภูมิ (Chart Layer) ---
+  const { 
+    data: data2, setData: setData2, total: total2, updateLabel: updateLabel2, updateValue: updateValue2, updateColor: updateColor2, removeRow: removeRow2 
+  } = useDataManipulation(INITIAL_DATA_2);
+  
+  const { sortedData: sortedData1, sortConfig, requestSort, setSortConfig } = useSort(data1);
+  const { sortedData: sortedData2 } = useSort(data2);
+
+  // --- 2. Multiple Tables & Comparison State ---
+  const [hasTable2, setHasTable2] = useState(false);
+  const [activeTableTab, setActiveTableTab] = useState<"table1" | "table2">("table1");
+  const [table1Name, setTable1Name] = useState("Table 1");
+  const [table2Name, setTable2Name] = useState("Table 2");
+  const [dataManagerView, setDataManagerView] = useState<"tabs" | "split">("tabs");
+  const [targetPasteTable, setTargetPasteTable] = useState<"table1" | "table2">("table1");
+
+  // --- 3. จัดการแผนภูมิ (Chart Layer) ---
   const {
     barHorizontal, setBarHorizontal,
     stackedHorizontal, setStackedHorizontal,
@@ -60,7 +73,7 @@ export default function DataVisualizer() {
     barCardRef, pieCardRef, stackedCardRef, lineCardRef
   } = useCharts();
 
-  // --- 3. Local UI State ---
+  // --- 4. Local UI State ---
   const [markdownInput, setMarkdownInput] = useState(INITIAL_MARKDOWN);
   const [showLabels, setShowLabels] = useState(true);
   const [showLegend, setShowLegend] = useState(true);
@@ -71,6 +84,7 @@ export default function DataVisualizer() {
   const [showRadialFactText, setShowRadialFactText] = useState(true);
   const [showGradientArea, setShowGradientArea] = useState(true);
   const [lineColor, setLineColor] = useState<string | undefined>(undefined);
+  const [lineColor2, setLineColor2] = useState<string | undefined>(undefined);
   const [showTitle, setShowTitle] = useState(false);
   const [chartTitle, setChartTitle] = useState("Chart Overview");
   const [isDockOpen, setIsDockOpen] = useState(false);
@@ -79,7 +93,12 @@ export default function DataVisualizer() {
   
   const fsRef = useRef<HTMLDivElement>(null);
 
-  // --- 6. Handlers for data transformation ---
+  // Sync target paste table when active tab changes
+  useEffect(() => {
+    setTargetPasteTable(activeTableTab);
+  }, [activeTableTab]);
+
+  // --- 5. Handlers for data transformation ---
   const parseMarkdownTable = useCallback((md: string): Datum[] => {
     const lines = md.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
     if (!lines.length) return [];
@@ -146,42 +165,73 @@ export default function DataVisualizer() {
   const transformData = useCallback(() => {
     const rows = parseMarkdownTable(markdownInput);
     if (rows.length) {
-      setData(() => rows);
-      toast.success("Data transformed successfully!", { duration: 1500 });
+      if (hasTable2 && targetPasteTable === "table2") {
+        setData2(() => rows);
+        toast.success(`Data transformed to ${table2Name}!`, { duration: 1500 });
+      } else {
+        setData1(() => rows);
+        toast.success(`Data transformed to ${table1Name}!`, { duration: 1500 });
+      }
     } else {
       toast.error("Error: Invalid data format or no data found.");
     }
-  }, [markdownInput, parseMarkdownTable, setData]);
+  }, [markdownInput, parseMarkdownTable, hasTable2, targetPasteTable, setData1, setData2, table1Name, table2Name]);
 
   const loadExample = useCallback((type: "csv" | "markdown") => {
+    const isT2 = hasTable2 && targetPasteTable === "table2";
     const examples = {
-      csv: `Label,Value,Color\nA, 12, #3b82f6\nB, 30, #22c55e\nC, 18, #ef4444`,
-      markdown: "| Label | Value | Color |\n|------:|------:|:-----:|\n| A     | 12    | #3b82f6 |\n| B     | 30    | #22c55e |\n| C     | 18    | #ef4444 |"
+      csv: isT2
+        ? `Label,Value,Color\nA, 18, #f59e0b\nB, 24, #a855f7\nC, 28, #06b6d4`
+        : `Label,Value,Color\nA, 12, #3b82f6\nB, 30, #22c55e\nC, 18, #ef4444`,
+      markdown: isT2
+        ? "| Label | Value | Color |\n|------:|------:|:-----:|\n| A     | 18    | #f59e0b |\n| B     | 24    | #a855f7 |\n| C     | 28    | #06b6d4 |"
+        : "| Label | Value | Color |\n|------:|------:|:-----:|\n| A     | 12    | #3b82f6 |\n| B     | 30    | #22c55e |\n| C     | 18    | #ef4444 |"
     };
     setMarkdownInput(examples[type]);
-    toast.success(`${type.toUpperCase()} Example loaded!`, { duration: 1500 });
-  }, []);
+    toast.success(`${type.toUpperCase()} Example loaded for ${isT2 ? table2Name : table1Name}!`, { duration: 1500 });
+  }, [hasTable2, targetPasteTable, table1Name, table2Name]);
 
-  const exportToMarkdown = useCallback(() => {
+  const exportToMarkdown1 = useCallback(() => {
     const header = "| Label | Value | Color |";
     const separator = "|------:|------:|:-----:|";
-    const rows = sortedData.map(d => `| ${d.label} | ${d.value} | ${d.color} |`).join("\n");
+    const rows = sortedData1.map(d => `| ${d.label} | ${d.value} | ${d.color} |`).join("\n");
     const markdown = `${header}\n${separator}\n${rows}`;
     setMarkdownInput(markdown);
-    toast.success("Data exported to Markdown!", { duration: 1500 });
-  }, [sortedData]);
+    setTargetPasteTable("table1");
+    toast.success(`${table1Name} exported to Markdown!`, { duration: 1500 });
+  }, [sortedData1, table1Name]);
 
-  const exportToCSV = useCallback(() => {
+  const exportToCSV1 = useCallback(() => {
     const header = "Label,Value,Color";
-    const rows = sortedData.map(d => `${d.label},${d.value},${d.color}`).join("\n");
+    const rows = sortedData1.map(d => `${d.label},${d.value},${d.color}`).join("\n");
     const csv = `${header}\n${rows}`;
     setMarkdownInput(csv);
-    toast.success("Data exported to CSV!", { duration: 1500 });
-  }, [sortedData]);
+    setTargetPasteTable("table1");
+    toast.success(`${table1Name} exported to CSV!`, { duration: 1500 });
+  }, [sortedData1, table1Name]);
 
-  const addRow = useCallback(() => {
-    const nextIndex = data.length;
-    setData((prev) => [
+  const exportToMarkdown2 = useCallback(() => {
+    const header = "| Label | Value | Color |";
+    const separator = "|------:|------:|:-----:|";
+    const rows = sortedData2.map(d => `| ${d.label} | ${d.value} | ${d.color} |`).join("\n");
+    const markdown = `${header}\n${separator}\n${rows}`;
+    setMarkdownInput(markdown);
+    setTargetPasteTable("table2");
+    toast.success(`${table2Name} exported to Markdown!`, { duration: 1500 });
+  }, [sortedData2, table2Name]);
+
+  const exportToCSV2 = useCallback(() => {
+    const header = "Label,Value,Color";
+    const rows = sortedData2.map(d => `${d.label},${d.value},${d.color}`).join("\n");
+    const csv = `${header}\n${rows}`;
+    setMarkdownInput(csv);
+    setTargetPasteTable("table2");
+    toast.success(`${table2Name} exported to CSV!`, { duration: 1500 });
+  }, [sortedData2, table2Name]);
+
+  const addRow1 = useCallback(() => {
+    const nextIndex = data1.length;
+    setData1((prev) => [
       ...prev,
       {
         id: generateId(),
@@ -190,29 +240,54 @@ export default function DataVisualizer() {
         color: PRESET_COLORS[nextIndex % PRESET_COLORS.length],
       },
     ]);
-    toast.success("Row added!", { duration: 1500 });
-  }, [data.length, setData]);
+    toast.success(`Row added to ${table1Name}!`, { duration: 1500 });
+  }, [data1.length, setData1, table1Name]);
 
-  // --- 7. Drag and Drop Sensors ---
+  const addRow2 = useCallback(() => {
+    const nextIndex = data2.length;
+    setData2((prev) => [
+      ...prev,
+      {
+        id: generateId(),
+        label: `Item ${nextIndex + 1}`,
+        value: 0,
+        color: PRESET_COLORS[(nextIndex + 3) % PRESET_COLORS.length],
+      },
+    ]);
+    toast.success(`Row added to ${table2Name}!`, { duration: 1500 });
+  }, [data2.length, setData2, table2Name]);
+
+  // --- 6. Drag and Drop Sensors ---
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
+  const handleDragEnd1 = useCallback((event: DragEndEvent) => {
     if (sortConfig) return;
-
     const { active, over } = event;
     if (over && active.id !== over.id) {
-      setData((prev) => {
+      setData1((prev) => {
         const oldIndex = prev.findIndex((d) => d.id === active.id);
         const newIndex = prev.findIndex((d) => d.id === over.id);
         return arrayMove(prev, oldIndex, newIndex);
       });
     }
-  }, [sortConfig, setData]);
+  }, [sortConfig, setData1]);
 
-  // --- 8. Fullscreen escape key handler ---
+  const handleDragEnd2 = useCallback((event: DragEndEvent) => {
+    if (sortConfig) return;
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setData2((prev) => {
+        const oldIndex = prev.findIndex((d) => d.id === active.id);
+        const newIndex = prev.findIndex((d) => d.id === over.id);
+        return arrayMove(prev, oldIndex, newIndex);
+      });
+    }
+  }, [sortConfig, setData2]);
+
+  // --- 7. Fullscreen escape key handler ---
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape" && fullscreenChart) {
@@ -230,20 +305,17 @@ export default function DataVisualizer() {
     }
   }, [fullscreenChart, closeFullscreen]);
 
-  // --- 9. Click outside dock handler ---
+  // --- 8. Click outside dock handler ---
   const dockRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
       
-      // If the target is no longer in the document, it was likely a portal/popover 
-      // (like a Radix Select item) that unmounted itself synchronously on click.
       if (!document.body.contains(target)) {
         return;
       }
       
-      // Prevent closing when clicking inside a Radix Select dropdown (which renders in a portal outside the dock)
       if (target.closest('[data-radix-popper-content-wrapper]') || target.closest('[role="listbox"]') || target.closest('[data-slot="select-content"]')) {
         return;
       }
@@ -269,6 +341,106 @@ export default function DataVisualizer() {
     };
   }, [isDockOpen]);
 
+  // Render Table Component helper for Data Manager
+  const renderSingleTable = (tableNum: 1 | 2) => {
+    const isT1 = tableNum === 1;
+    const tableName = isT1 ? table1Name : table2Name;
+    const setTableName = isT1 ? setTable1Name : setTable2Name;
+    const currentData = isT1 ? data1 : data2;
+    const currentSortedData = isT1 ? sortedData1 : sortedData2;
+    const currentTotal = isT1 ? total1 : total2;
+    const onExportCSV = isT1 ? exportToCSV1 : exportToCSV2;
+    const onExportMD = isT1 ? exportToMarkdown1 : exportToMarkdown2;
+    const onAddRow = isT1 ? addRow1 : addRow2;
+    const onUpdateLabel = isT1 ? updateLabel1 : updateLabel2;
+    const onUpdateValue = isT1 ? updateValue1 : updateValue2;
+    const onUpdateColor = isT1 ? updateColor1 : updateColor2;
+    const onRemoveRow = isT1 ? removeRow1 : removeRow2;
+    const onDragEnd = isT1 ? handleDragEnd1 : handleDragEnd2;
+
+    return (
+      <div className="rounded-xl border bg-card p-4 sm:p-5 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={tableName}
+              onChange={(e) => setTableName(e.target.value)}
+              className="text-base font-semibold bg-transparent hover:bg-muted/50 focus:bg-background px-2 py-1 rounded-md border border-transparent hover:border-border/60 focus:border-primary outline-none transition-all w-36 sm:w-44"
+              title="Click to rename table"
+            />
+            {sortConfig && (
+              <span className="text-xs text-primary font-normal bg-primary/10 px-2 py-0.5 rounded-full">Sorted</span>
+            )}
+            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full font-mono">
+              {currentData.length} rows
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="text-sm font-medium text-muted-foreground mr-1">
+              Total: {currentTotal.toLocaleString()}
+            </div>
+            <Button variant="outline" size="sm" className="h-8" onClick={onExportCSV}>CSV</Button>
+            <Button variant="outline" size="sm" className="h-8" onClick={onExportMD}>MD</Button>
+            <Button variant="default" size="sm" className="h-8 shadow-sm" onClick={onAddRow}>Add Row</Button>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto rounded-lg border bg-background/50">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-muted/50">
+                <th className="text-left py-3 px-3 min-w-[160px] font-medium text-muted-foreground">
+                  <button
+                    className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+                    onClick={() => requestSort("label")}
+                  >
+                    Label
+                    {sortConfig?.key === "label" && (
+                      <span className="text-primary">{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
+                    )}
+                    {!sortConfig && <span className="text-[10px] uppercase tracking-wider ml-1 opacity-60">(Drag)</span>}
+                  </button>
+                </th>
+                <th className="text-left py-3 px-3 min-w-[120px] font-medium text-muted-foreground">
+                  <button
+                    className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+                    onClick={() => requestSort("value")}
+                  >
+                    Value
+                    {sortConfig?.key === "value" && (
+                      <span className="text-primary">{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
+                    )}
+                  </button>
+                </th>
+                <th className="text-left py-3 px-3 min-w-[120px] font-medium text-muted-foreground">Color</th>
+                <th className="text-left py-3 px-3 w-[100px] font-medium text-muted-foreground">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+                <SortableContext items={currentData.map((d) => d.id)} strategy={verticalListSortingStrategy}>
+                  {currentSortedData.map((row) => (
+                    <SortableRow
+                      key={row.id}
+                      row={row}
+                      onUpdateLabel={onUpdateLabel}
+                      onUpdateValue={onUpdateValue}
+                      onUpdateColor={onUpdateColor}
+                      onRemove={onRemoveRow}
+                      presetColors={PRESET_COLORS}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       <div className="p-4 pb-32 sm:pb-40 space-y-6" data-testid="data-visualizer">
@@ -283,18 +455,25 @@ export default function DataVisualizer() {
               isDockOpen ? "z-[70]" : "z-50"
             } flex flex-col items-center pointer-events-none group/dock`}
           >
-            {/* Paper Panel (Data Manager) - Smooth Accordion Rise matching dev/stable */}
+            {/* Paper Panel (Data Manager) */}
             <div 
               className={`pointer-events-auto bg-background dark:bg-[#121214] shadow-2xl rounded-2xl overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] origin-bottom flex flex-col transform-gpu isolate ${
                 isDockOpen 
-                  ? "w-[95vw] sm:w-[85vw] md:w-[800px] h-[75vh] max-h-[calc(100vh-120px)] opacity-100 mb-3 sm:mb-4 scale-100 border border-border/80" 
+                  ? "w-[95vw] sm:w-[90vw] md:w-[860px] h-[78vh] max-h-[calc(100vh-110px)] opacity-100 mb-3 sm:mb-4 scale-100 border border-border/80" 
                   : "w-0 h-0 opacity-0 mb-0 scale-95 border-0 pointer-events-none select-none"
               }`}
             >
               <div className="flex items-center justify-between p-4 border-b bg-muted/40">
-                <h2 className="font-semibold text-lg flex items-center gap-2">
-                  <Database className="w-5 h-5 text-primary" /> Data Manager
-                </h2>
+                <div className="flex items-center gap-3">
+                  <h2 className="font-semibold text-lg flex items-center gap-2">
+                    <Database className="w-5 h-5 text-primary" /> Data Manager
+                  </h2>
+                  {hasTable2 && (
+                    <span className="text-xs bg-primary/15 text-primary font-medium px-2.5 py-0.5 rounded-full border border-primary/20">
+                      Comparing 2 Tables
+                    </span>
+                  )}
+                </div>
                 <Button variant="ghost" size="icon" onClick={() => setIsDockOpen(false)} className="rounded-full h-8 w-8 hover:bg-muted">
                   <X className="w-4 h-4" />
                 </Button>
@@ -308,11 +487,9 @@ export default function DataVisualizer() {
                   }`}
                   onClick={(e) => {
                     const target = e.target as HTMLElement;
-                    // Don't toggle off if user clicks inside the text input
                     if (target.closest("input#global-chart-title")) {
                       return;
                     }
-                    
                     const nextState = !showTitle;
                     setShowTitle(nextState);
 
@@ -358,79 +535,144 @@ export default function DataVisualizer() {
                   )}
                 </div>
 
-                {/* Data Table */}
-                <div className="rounded-xl border bg-card p-4 sm:p-5 shadow-sm">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
-                    <h3 className="text-base font-medium flex items-center gap-2">
-                      Data Table {sortConfig && <span className="text-xs text-primary font-normal bg-primary/10 px-2 py-0.5 rounded-full">Sorted</span>}
-                    </h3>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="text-sm font-medium text-muted-foreground mr-1">Total: {total.toLocaleString()}</div>
-                      <Button variant="outline" size="sm" className="h-8" onClick={exportToCSV}>CSV</Button>
-                      <Button variant="outline" size="sm" className="h-8" onClick={exportToMarkdown}>MD</Button>
-                      <Button variant="default" size="sm" className="h-8 shadow-sm" onClick={addRow}>Add Row</Button>
-                    </div>
+                {/* Table Management Bar: Switch between Table 1 & Table 2 or Add Table 2 */}
+                <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-muted/40 rounded-xl border border-border/60">
+                  <div className="flex items-center gap-1.5 bg-background/80 p-1 rounded-xl border border-border/60 shadow-xs">
+                    <button
+                      onClick={() => setActiveTableTab("table1")}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                        activeTableTab === "table1" && dataManagerView === "tabs"
+                          ? "bg-primary text-primary-foreground shadow-xs font-semibold"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <TableIcon className="w-3.5 h-3.5" />
+                      <span>{table1Name}</span>
+                      <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-mono ${activeTableTab === "table1" && dataManagerView === "tabs" ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted"}`}>
+                        {data1.length}
+                      </span>
+                    </button>
+
+                    {hasTable2 && (
+                      <button
+                        onClick={() => setActiveTableTab("table2")}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                          activeTableTab === "table2" && dataManagerView === "tabs"
+                            ? "bg-primary text-primary-foreground shadow-xs font-semibold"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        <TableIcon className="w-3.5 h-3.5" />
+                        <span>{table2Name}</span>
+                        <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-mono ${activeTableTab === "table2" && dataManagerView === "tabs" ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted"}`}>
+                          {data2.length}
+                        </span>
+                      </button>
+                    )}
+
+                    {hasTable2 && (
+                      <>
+                        <div className="w-px h-4 bg-border/60 mx-1" />
+                        <button
+                          onClick={() => setDataManagerView(dataManagerView === "tabs" ? "split" : "tabs")}
+                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                            dataManagerView === "split"
+                              ? "bg-secondary text-secondary-foreground font-semibold shadow-xs"
+                              : "text-muted-foreground hover:text-foreground"
+                          }`}
+                          title="Show both tables together"
+                        >
+                          <Columns className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline">Split View</span>
+                        </button>
+                      </>
+                    )}
                   </div>
-                  <div className="overflow-x-auto rounded-lg border bg-background/50">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b bg-muted/50">
-                          <th className="text-left py-3 px-3 min-w-[160px] font-medium text-muted-foreground">
-                            <button
-                              className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
-                              onClick={() => requestSort("label")}
-                            >
-                              Label
-                              {sortConfig?.key === "label" && (
-                                <span className="text-primary">{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
-                              )}
-                              {!sortConfig && <span className="text-[10px] uppercase tracking-wider ml-1 opacity-60">(Drag)</span>}
-                            </button>
-                          </th>
-                          <th className="text-left py-3 px-3 min-w-[120px] font-medium text-muted-foreground">
-                            <button
-                              className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
-                              onClick={() => requestSort("value")}
-                            >
-                              Value
-                              {sortConfig?.key === "value" && (
-                                <span className="text-primary">{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
-                              )}
-                            </button>
-                          </th>
-                          <th className="text-left py-3 px-3 min-w-[120px] font-medium text-muted-foreground">Color</th>
-                          <th className="text-left py-3 px-3 w-[100px] font-medium text-muted-foreground">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                          <SortableContext items={data.map((d) => d.id)} strategy={verticalListSortingStrategy}>
-                            {sortedData.map((row) => (
-                              <SortableRow
-                                key={row.id}
-                                row={row}
-                                onUpdateLabel={updateLabel}
-                                onUpdateValue={updateValue}
-                                onUpdateColor={updateColor}
-                                onRemove={removeRow}
-                                presetColors={PRESET_COLORS}
-                              />
-                            ))}
-                          </SortableContext>
-                        </DndContext>
-                      </tbody>
-                    </table>
+
+                  <div className="flex items-center gap-2">
+                    {!hasTable2 ? (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="gap-2 text-xs h-9 shadow-sm font-medium"
+                        onClick={() => {
+                          setHasTable2(true);
+                          setActiveTableTab("table2");
+                          toast.success("Table 2 added! Now comparing 2 tables in all charts.", { duration: 2500 });
+                        }}
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Add New Table</span>
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-2.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/30"
+                        onClick={() => {
+                          setHasTable2(false);
+                          setActiveTableTab("table1");
+                          setDataManagerView("tabs");
+                          toast.success("Table 2 removed. Charts reverted to single table.", { duration: 1500 });
+                        }}
+                        title="Remove Table 2"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                        Remove Table 2
+                      </Button>
+                    )}
                   </div>
                 </div>
 
+                {/* Render Table(s) based on View Mode */}
+                {dataManagerView === "split" && hasTable2 ? (
+                  <div className="space-y-6">
+                    {renderSingleTable(1)}
+                    {renderSingleTable(2)}
+                  </div>
+                ) : (
+                  <div>
+                    {activeTableTab === "table1" || !hasTable2
+                      ? renderSingleTable(1)
+                      : renderSingleTable(2)}
+                  </div>
+                )}
+
                 {/* Markdown Input */}
-                <div className="rounded-xl border bg-card p-4 sm:p-5 shadow-sm">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base font-medium">Paste Data</h3>
+                <div className="rounded-xl border bg-card p-4 sm:p-5 shadow-sm space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-base font-medium">Paste Data</h3>
+                      {hasTable2 && (
+                        <div className="flex items-center gap-1.5 text-xs bg-muted/80 p-1 rounded-lg border">
+                          <span className="text-muted-foreground ml-1">Apply to:</span>
+                          <button
+                            onClick={() => setTargetPasteTable("table1")}
+                            className={`px-2 py-0.5 rounded font-medium transition-colors ${
+                              targetPasteTable === "table1"
+                                ? "bg-background text-foreground shadow-xs font-semibold"
+                                : "text-muted-foreground hover:text-foreground"
+                            }`}
+                          >
+                            {table1Name}
+                          </button>
+                          <button
+                            onClick={() => setTargetPasteTable("table2")}
+                            className={`px-2 py-0.5 rounded font-medium transition-colors ${
+                              targetPasteTable === "table2"
+                                ? "bg-background text-foreground shadow-xs font-semibold"
+                                : "text-muted-foreground hover:text-foreground"
+                            }`}
+                          >
+                            {table2Name}
+                          </button>
+                        </div>
+                      )}
+                    </div>
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      className="h-8 gap-1.5 shadow-sm hover:bg-muted/50"
+                      className="h-8 gap-1.5 shadow-sm hover:bg-muted/50 self-start sm:self-auto"
                       onClick={() => {
                         navigator.clipboard.writeText(markdownInput);
                         toast.success("Data copied to clipboard!", { duration: 1500 });
@@ -449,7 +691,9 @@ export default function DataVisualizer() {
                       onChange={(e) => setMarkdownInput(e.target.value)}
                     />
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                      <Button onClick={transformData} className="w-full sm:w-auto shadow-sm">Transform to Table</Button>
+                      <Button onClick={transformData} className="w-full sm:w-auto shadow-sm">
+                        Transform to {hasTable2 ? (targetPasteTable === "table2" ? table2Name : table1Name) : "Table"}
+                      </Button>
                       <div className="flex gap-2 w-full sm:w-auto">
                         <Button variant="secondary" size="sm" className="flex-1 sm:flex-none" onClick={() => loadExample("csv")}>CSV Example</Button>
                         <Button variant="secondary" size="sm" className="flex-1 sm:flex-none" onClick={() => loadExample("markdown")}>MD Example</Button>
@@ -460,7 +704,7 @@ export default function DataVisualizer() {
               </div>
             </div>
 
-            {/* Dock Controls Container with Smooth Morphing Transition */}
+            {/* Dock Controls Container */}
             {(() => {
             const isExpanded = !isDockMinimized || isDockOpen;
             return (
@@ -471,7 +715,7 @@ export default function DataVisualizer() {
                     : "opacity-60 hover:opacity-100 group-hover/dock:opacity-100 group-focus-within/dock:opacity-100 focus-within:opacity-100"
                 }`}
               >
-                {/* Floating Upper Minimize Button (floats directly above controls with smooth slide/fade) */}
+                {/* Floating Upper Minimize Button */}
                 <div 
                   className={`absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none transform-gpu transition-[transform,opacity] duration-250 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                     isExpanded && !isDockOpen
@@ -512,7 +756,6 @@ export default function DataVisualizer() {
                   onKeyDown={!isExpanded ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setIsDockMinimized(false); } } : undefined}
                   aria-label={!isExpanded ? "Expand dock controls" : undefined}
                 >
-                  {/* Minimized Content: Icon + "Tools & Data" + Chevron */}
                   <div 
                     className={`absolute inset-0 flex items-center justify-center gap-2 sm:gap-2.5 px-3 sm:px-4 pointer-events-none select-none transition-[opacity,transform] duration-200 transform-gpu whitespace-nowrap ${
                       !isExpanded
@@ -526,7 +769,6 @@ export default function DataVisualizer() {
                     <ChevronUp className="w-4 h-4 text-muted-foreground ml-0.5 shrink-0" />
                   </div>
 
-                  {/* Expanded Controls: Sort + Labels + Legend */}
                   <div 
                     className={`flex items-center w-full h-full justify-between transition-[opacity,transform] duration-200 transform-gpu whitespace-nowrap ${
                       isExpanded
@@ -626,7 +868,7 @@ export default function DataVisualizer() {
                   </div>
                 </div>
 
-                {/* Edit Data / Hide Data Button Pill with smooth scale/width collapse */}
+                {/* Edit Data / Hide Data Button Pill */}
                 <div 
                   className={`transition-[max-width,opacity,transform,margin] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] transform-gpu ${
                     isExpanded 
@@ -676,14 +918,17 @@ export default function DataVisualizer() {
               chartRef={barCardRef}
               onCopySvg={() => copyChartSvg(barCardRef.current, showTitle ? chartTitle : undefined)}
               onCopyPng={() => copyChartPng(barCardRef.current, showTitle ? chartTitle : undefined)}
-              onCopyHtml={() => copyChartEmbed({ type: 'bar', data: sortedData, options: { isHorizontal: barHorizontal, showLabels, title: showTitle ? chartTitle : undefined } })}
+              onCopyHtml={() => copyChartEmbed({ type: 'bar', data: sortedData1, data2: hasTable2 ? sortedData2 : undefined, table1Name, table2Name, options: { isHorizontal: barHorizontal, showLabels, title: showTitle ? chartTitle : undefined } })}
               onFullscreen={() => openFullscreen("bar")}
               showOrientation
               isHorizontal={barHorizontal}
               onToggleOrientation={() => setBarHorizontal(!barHorizontal)}
             >
               <BarChart 
-                data={sortedData} 
+                data={sortedData1}
+                data2={hasTable2 ? sortedData2 : null}
+                table1Name={table1Name}
+                table2Name={table2Name}
                 containerRef={barCardRef as React.RefObject<HTMLDivElement>}
                 isHorizontal={barHorizontal}
                 showLabels={showLabels}
@@ -697,8 +942,7 @@ export default function DataVisualizer() {
               chartRef={pieCardRef}
               customActions={
                 <div className="flex flex-wrap items-center gap-2">
-                  
-            <Select value={pieFactIndex.toString()} onValueChange={(val) => setPieFactIndex(Number(val))}>
+                  <Select value={pieFactIndex.toString()} onValueChange={(val) => setPieFactIndex(Number(val))}>
                     <SelectTrigger className="h-8 w-32 bg-transparent text-xs" style={{ fontSize: 12 }}>
                       <SelectValue placeholder="Fact Type" />
                     </SelectTrigger>
@@ -720,11 +964,24 @@ export default function DataVisualizer() {
               }
               onCopySvg={() => copyChartSvg(pieCardRef.current, showTitle ? chartTitle : undefined)}
               onCopyPng={() => copyChartPng(pieCardRef.current, showTitle ? chartTitle : undefined)}
-              onCopyHtml={() => copyChartEmbed({ type: 'pie', data: sortedData, total, options: { showFactText, factIndex: pieFactIndex, showLegend, title: showTitle ? chartTitle : undefined } })}
+              onCopyHtml={() => copyChartEmbed({ type: 'pie', data: sortedData1, data2: hasTable2 ? sortedData2 : undefined, total: total1, total2, table1Name, table2Name, options: { showFactText, factIndex: pieFactIndex, showLegend, title: showTitle ? chartTitle : undefined } })}
               onFullscreen={() => openFullscreen("pie")}
             >
               <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
-                <PieChart data={sortedData} total={total} containerRef={pieCardRef as React.RefObject<HTMLDivElement>} showLabels={showLabels} showLegend={showLegend} showFactText={showFactText} factIndex={pieFactIndex} onFactIndexChange={setPieFactIndex} />
+                <PieChart 
+                  data={sortedData1} 
+                  data2={hasTable2 ? sortedData2 : null}
+                  table1Name={table1Name}
+                  table2Name={table2Name}
+                  total={total1} 
+                  total2={total2}
+                  containerRef={pieCardRef as React.RefObject<HTMLDivElement>} 
+                  showLabels={showLabels} 
+                  showLegend={showLegend} 
+                  showFactText={showFactText} 
+                  factIndex={pieFactIndex} 
+                  onFactIndexChange={setPieFactIndex} 
+                />
               </div>
             </ChartCard>
           </div>
@@ -737,7 +994,7 @@ export default function DataVisualizer() {
               chartRef={stackedCardRef}
               onCopySvg={() => copyChartSvg(stackedCardRef.current, showTitle ? chartTitle : undefined)}
               onCopyPng={() => copyChartPng(stackedCardRef.current, showTitle ? chartTitle : undefined)}
-              onCopyHtml={() => copyChartEmbed({ type: 'stacked', data: sortedData, options: { isHorizontal: stackedHorizontal, showLabels, showRadial: stackedRadial, showFactText: showRadialFactText, factIndex: radialFactIndex, showLegend, title: showTitle ? chartTitle : undefined } })}
+              onCopyHtml={() => copyChartEmbed({ type: 'stacked', data: sortedData1, data2: hasTable2 ? sortedData2 : undefined, table1Name, table2Name, options: { isHorizontal: stackedHorizontal, showLabels, showRadial: stackedRadial, showFactText: showRadialFactText, factIndex: radialFactIndex, showLegend, title: showTitle ? chartTitle : undefined } })}
               onFullscreen={() => openFullscreen("stacked")}
               showOrientation={!stackedRadial}
               isHorizontal={stackedHorizontal}
@@ -769,7 +1026,20 @@ export default function DataVisualizer() {
               }
             >
               <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
-                <StackedChart data={sortedData} isHorizontal={stackedHorizontal} containerRef={stackedCardRef as React.Ref<HTMLDivElement>} showLabels={showLabels} showRadial={stackedRadial} showLegend={showLegend} showFactText={showRadialFactText} factIndex={radialFactIndex} onFactIndexChange={setRadialFactIndex} />
+                <StackedChart 
+                  data={sortedData1} 
+                  data2={hasTable2 ? sortedData2 : null}
+                  table1Name={table1Name}
+                  table2Name={table2Name}
+                  isHorizontal={stackedHorizontal} 
+                  containerRef={stackedCardRef as React.Ref<HTMLDivElement>} 
+                  showLabels={showLabels} 
+                  showRadial={stackedRadial} 
+                  showLegend={showLegend} 
+                  showFactText={showRadialFactText} 
+                  factIndex={radialFactIndex} 
+                  onFactIndexChange={setRadialFactIndex} 
+                />
               </div>
             </ChartCard>
 
@@ -780,24 +1050,24 @@ export default function DataVisualizer() {
               chartRef={lineCardRef}
               onCopySvg={() => copyChartSvg(lineCardRef.current, showTitle ? chartTitle : undefined)}
               onCopyPng={() => copyChartPng(lineCardRef.current, showTitle ? chartTitle : undefined)}
-              onCopyHtml={() => copyChartEmbed({ type: 'line', data: sortedData, options: { showLabels, showGradientArea, lineColor, showLegend, title: showTitle ? chartTitle : undefined } })}
+              onCopyHtml={() => copyChartEmbed({ type: 'line', data: sortedData1, data2: hasTable2 ? sortedData2 : undefined, table1Name, table2Name, options: { showLabels, showGradientArea, lineColor, lineColor2, showLegend, title: showTitle ? chartTitle : undefined } })}
               onFullscreen={() => openFullscreen("line")}
               customActions={
                 <div className="flex flex-wrap items-center gap-4">
                   <div className="flex items-center gap-2">
                     <label htmlFor="line-color" className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap">
-                      Line Color
+                      {hasTable2 ? `${table1Name} Color` : "Line Color"}
                     </label>
                     <input
                       id="line-color"
                       type="color"
-                      value={lineColor || sortedData[0]?.color || "#3b82f6"}
+                      value={lineColor || sortedData1[0]?.color || PRESET_COLORS[0]}
                       onChange={(e) => setLineColor(e.target.value)}
                       className="sr-only opacity-0 absolute pointer-events-none"
                       tabIndex={-1}
                     />
                     <Select 
-                      value={lineColor || sortedData[0]?.color || "#3b82f6"} 
+                      value={lineColor || sortedData1[0]?.color || PRESET_COLORS[0]} 
                       onValueChange={(val) => {
                         if (val === "custom_trigger") {
                           document.getElementById('line-color')?.click();
@@ -811,9 +1081,9 @@ export default function DataVisualizer() {
                           <div className="flex items-center gap-2 w-full text-left">
                             <div 
                               className="w-3 h-3 rounded-full shadow-inner shrink-0" 
-                              style={{ backgroundColor: lineColor || sortedData[0]?.color || "#3b82f6" }} 
+                              style={{ backgroundColor: lineColor || sortedData1[0]?.color || PRESET_COLORS[0] }} 
                             />
-                            <span className="truncate text-xs">{lineColor || sortedData[0]?.color || "#3b82f6"}</span>
+                            <span className="truncate text-xs">{lineColor || sortedData1[0]?.color || PRESET_COLORS[0]}</span>
                           </div>
                         </SelectValue>
                       </SelectTrigger>
@@ -823,24 +1093,10 @@ export default function DataVisualizer() {
                             <span className="text-xs">🎨 Custom Color...</span>
                           </div>
                         </SelectItem>
-                        {!(PRESET_COLORS as readonly string[]).includes(lineColor || sortedData[0]?.color || "#3b82f6") && (
-                          <SelectItem value={lineColor || sortedData[0]?.color || "#3b82f6"} className="hidden pr-4">
-                            <div className="flex items-center gap-2">
-                              <div 
-                                className="w-3 h-3 rounded-full shadow-inner shrink-0"
-                                style={{ backgroundColor: lineColor || sortedData[0]?.color || "#3b82f6" }}
-                              />
-                              <span className="font-mono text-xs">{lineColor || sortedData[0]?.color || "#3b82f6"}</span>
-                            </div>
-                          </SelectItem>
-                        )}
                         {PRESET_COLORS.map((c) => (
                           <SelectItem key={c} value={c} className="pr-4 cursor-pointer">
                             <div className="flex items-center gap-2">
-                              <div 
-                                className="w-3 h-3 rounded-full shadow-inner shrink-0"
-                                style={{ backgroundColor: c }}
-                              />
+                              <div className="w-3 h-3 rounded-full shadow-inner shrink-0" style={{ backgroundColor: c }} />
                               <span className="font-mono text-xs">{c}</span>
                             </div>
                           </SelectItem>
@@ -848,6 +1104,60 @@ export default function DataVisualizer() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {hasTable2 && (
+                    <div className="flex items-center gap-2">
+                      <label htmlFor="line-color-2" className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap">
+                        {table2Name} Color
+                      </label>
+                      <input
+                        id="line-color-2"
+                        type="color"
+                        value={lineColor2 || sortedData2[0]?.color || PRESET_COLORS[3]}
+                        onChange={(e) => setLineColor2(e.target.value)}
+                        className="sr-only opacity-0 absolute pointer-events-none"
+                        tabIndex={-1}
+                      />
+                      <Select 
+                        value={lineColor2 || sortedData2[0]?.color || PRESET_COLORS[3]} 
+                        onValueChange={(val) => {
+                          if (val === "custom_trigger_2") {
+                            document.getElementById('line-color-2')?.click();
+                          } else {
+                            setLineColor2(val);
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-fit h-7 gap-2 px-2">
+                          <SelectValue asChild>
+                            <div className="flex items-center gap-2 w-full text-left">
+                              <div 
+                                className="w-3 h-3 rounded-full shadow-inner shrink-0" 
+                                style={{ backgroundColor: lineColor2 || sortedData2[0]?.color || PRESET_COLORS[3] }} 
+                              />
+                              <span className="truncate text-xs">{lineColor2 || sortedData2[0]?.color || PRESET_COLORS[3]}</span>
+                            </div>
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="custom_trigger_2" className="pr-4 mb-1 border-b border-border/50 rounded-none cursor-pointer">
+                            <div className="flex items-center gap-2 text-foreground font-medium">
+                              <span className="text-xs">🎨 Custom Color...</span>
+                            </div>
+                          </SelectItem>
+                          {PRESET_COLORS.map((c) => (
+                            <SelectItem key={`c2-${c}`} value={c} className="pr-4 cursor-pointer">
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full shadow-inner shrink-0" style={{ backgroundColor: c }} />
+                                <span className="font-mono text-xs">{c}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-2">
                     <label htmlFor="show-gradient" className="text-xs text-muted-foreground cursor-pointer">
                       Gradient area
@@ -862,11 +1172,15 @@ export default function DataVisualizer() {
               }
             >
               <LineChart 
-                data={sortedData} 
+                data={sortedData1} 
+                data2={hasTable2 ? sortedData2 : null}
+                table1Name={table1Name}
+                table2Name={table2Name}
                 containerRef={lineCardRef as React.Ref<HTMLDivElement>}
                 showLabels={showLabels}
                 showGradientArea={showGradientArea}
                 lineColor={lineColor}
+                lineColor2={lineColor2}
               />
             </ChartCard>
           </div>
@@ -885,7 +1199,16 @@ export default function DataVisualizer() {
         onToggleOrientation={() => setBarHorizontal(!barHorizontal)}
       >
         {fullscreenChart === "bar" && (
-          <BarChart containerRef={fsRef} data={sortedData} isHorizontal={barHorizontal} showLabels={showLabels} isFullscreen={fullscreenChart === "bar"} />
+          <BarChart 
+            containerRef={fsRef} 
+            data={sortedData1} 
+            data2={hasTable2 ? sortedData2 : null}
+            table1Name={table1Name}
+            table2Name={table2Name}
+            isHorizontal={barHorizontal} 
+            showLabels={showLabels} 
+            isFullscreen={fullscreenChart === "bar"} 
+          />
         )}
       </FullscreenModal>
 
@@ -897,7 +1220,6 @@ export default function DataVisualizer() {
         onCopyPng={() => copyChartPng(fsRef.current, showTitle ? chartTitle : undefined)}
         customActions={
           <div className="flex items-center gap-2">
-            
             <Select value={pieFactIndex.toString()} onValueChange={(val) => setPieFactIndex(Number(val))}>
               <SelectTrigger className="h-8 w-32 bg-transparent text-xs" style={{ fontSize: 12 }}>
                 <SelectValue placeholder="Fact Type" />
@@ -921,7 +1243,21 @@ export default function DataVisualizer() {
       >
         {fullscreenChart === "pie" && (
           <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
-            <PieChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} total={total} showLabels={showLabels} showLegend={showLegend} showFactText={showFactText} isFullscreen={fullscreenChart === "pie"} factIndex={pieFactIndex} onFactIndexChange={setPieFactIndex} />
+            <PieChart 
+              containerRef={fsRef as React.RefObject<HTMLDivElement>} 
+              data={sortedData1} 
+              data2={hasTable2 ? sortedData2 : null}
+              table1Name={table1Name}
+              table2Name={table2Name}
+              total={total1} 
+              total2={total2}
+              showLabels={showLabels} 
+              showLegend={showLegend} 
+              showFactText={showFactText} 
+              isFullscreen={fullscreenChart === "pie"} 
+              factIndex={pieFactIndex} 
+              onFactIndexChange={setPieFactIndex} 
+            />
           </div>
         )}
       </FullscreenModal>
@@ -963,7 +1299,21 @@ export default function DataVisualizer() {
       >
         {fullscreenChart === "stacked" && (
           <div className={`w-full h-full ${!showLegend ? "fast-chart-legend-hidden" : ""}`}>
-            <StackedChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} isHorizontal={stackedHorizontal} showLabels={showLabels} showRadial={stackedRadial} isFullscreen={fullscreenChart === "stacked"} showLegend={showLegend} showFactText={showRadialFactText} factIndex={radialFactIndex} onFactIndexChange={setRadialFactIndex} />
+            <StackedChart 
+              containerRef={fsRef as React.RefObject<HTMLDivElement>} 
+              data={sortedData1} 
+              data2={hasTable2 ? sortedData2 : null}
+              table1Name={table1Name}
+              table2Name={table2Name}
+              isHorizontal={stackedHorizontal} 
+              showLabels={showLabels} 
+              showRadial={stackedRadial} 
+              isFullscreen={fullscreenChart === "stacked"} 
+              showLegend={showLegend} 
+              showFactText={showRadialFactText} 
+              factIndex={radialFactIndex} 
+              onFactIndexChange={setRadialFactIndex} 
+            />
           </div>
         )}
       </FullscreenModal>
@@ -978,28 +1328,25 @@ export default function DataVisualizer() {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <label htmlFor="fullscreen-line-color" className="text-xs text-muted-foreground cursor-pointer">
-                Line Color
+                {hasTable2 ? `${table1Name} Color` : "Line Color"}
               </label>
-              <Select value={lineColor || sortedData[0]?.color || "#3b82f6"} onValueChange={(color) => setLineColor(color)}>
+              <Select value={lineColor || sortedData1[0]?.color || PRESET_COLORS[0]} onValueChange={(color) => setLineColor(color)}>
                 <SelectTrigger id="fullscreen-line-color" className="w-fit h-7 gap-2 px-2">
                   <SelectValue asChild>
                     <div className="flex items-center gap-2 w-full text-left">
                       <div 
                         className="w-3 h-3 rounded-full shadow-inner shrink-0" 
-                        style={{ backgroundColor: lineColor || sortedData[0]?.color || "#3b82f6" }} 
+                        style={{ backgroundColor: lineColor || sortedData1[0]?.color || PRESET_COLORS[0] }} 
                       />
-                      <span className="truncate text-xs">{lineColor || sortedData[0]?.color || "#3b82f6"}</span>
+                      <span className="truncate text-xs">{lineColor || sortedData1[0]?.color || PRESET_COLORS[0]}</span>
                     </div>
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {PRESET_COLORS.map((c) => (
-                    <SelectItem key={c} value={c} className="pr-4">
+                    <SelectItem key={`fs-c1-${c}`} value={c} className="pr-4">
                       <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full shadow-inner shrink-0"
-                          style={{ backgroundColor: c }}
-                        />
+                        <div className="w-3 h-3 rounded-full shadow-inner shrink-0" style={{ backgroundColor: c }} />
                         <span className="font-mono text-xs">{c}</span>
                       </div>
                     </SelectItem>
@@ -1007,6 +1354,38 @@ export default function DataVisualizer() {
                 </SelectContent>
               </Select>
             </div>
+
+            {hasTable2 && (
+              <div className="flex items-center gap-2">
+                <label htmlFor="fullscreen-line-color-2" className="text-xs text-muted-foreground cursor-pointer">
+                  {table2Name} Color
+                </label>
+                <Select value={lineColor2 || sortedData2[0]?.color || PRESET_COLORS[3]} onValueChange={(color) => setLineColor2(color)}>
+                  <SelectTrigger id="fullscreen-line-color-2" className="w-fit h-7 gap-2 px-2">
+                    <SelectValue asChild>
+                      <div className="flex items-center gap-2 w-full text-left">
+                        <div 
+                          className="w-3 h-3 rounded-full shadow-inner shrink-0" 
+                          style={{ backgroundColor: lineColor2 || sortedData2[0]?.color || PRESET_COLORS[3] }} 
+                        />
+                        <span className="truncate text-xs">{lineColor2 || sortedData2[0]?.color || PRESET_COLORS[3]}</span>
+                      </div>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PRESET_COLORS.map((c) => (
+                      <SelectItem key={`fs-c2-${c}`} value={c} className="pr-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full shadow-inner shrink-0" style={{ backgroundColor: c }} />
+                          <span className="font-mono text-xs">{c}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="flex items-center gap-2">
               <label htmlFor="fullscreen-show-gradient" className="text-xs text-muted-foreground cursor-pointer">
                 Gradient area
@@ -1021,7 +1400,18 @@ export default function DataVisualizer() {
         }
       >
         {fullscreenChart === "line" && (
-          <LineChart containerRef={fsRef as React.RefObject<HTMLDivElement>} data={sortedData} showLabels={showLabels} showGradientArea={showGradientArea} lineColor={lineColor} isFullscreen={fullscreenChart === "line"} />
+          <LineChart 
+            containerRef={fsRef as React.RefObject<HTMLDivElement>} 
+            data={sortedData1} 
+            data2={hasTable2 ? sortedData2 : null}
+            table1Name={table1Name}
+            table2Name={table2Name}
+            showLabels={showLabels} 
+            showGradientArea={showGradientArea} 
+            lineColor={lineColor} 
+            lineColor2={lineColor2}
+            isFullscreen={fullscreenChart === "line"} 
+          />
         )}
       </FullscreenModal>
     </>
